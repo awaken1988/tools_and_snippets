@@ -4,7 +4,8 @@ Created on 2 May 2014
 @author: martin
 '''
 import random
-from tkinter import Tk, Canvas, Frame, BOTH, LEFT, Text, Label, Button, Y, X, BOTTOM
+from tkinter import Tk, Canvas, Frame, BOTH, LEFT, Text, Label, Button, Y, X, BOTTOM,\
+    Spinbox
 from tkinter import StringVar, OptionMenu
 
 
@@ -82,68 +83,71 @@ class GuiBasicSettings(Frame):
     
     def setCallback(self, aCallback):
         self.outerCallback = aCallback
+
+
+
+class GuiGenerateRandom(Frame):
+    def __init__(self, parent):
+        Frame.__init__(self, parent)
+        self.parent = parent
+        self.pack()
         
+        self._lbl = Label(self, text="no parameters")
+        self._lbl.pack()
+        
+    def getSettings(self):
+        return {}
+
+class GuiGenerateCount(Frame):
+    def __init__(self, parent):
+        Frame.__init__(self, parent)
+        self.parent = parent
+        self.pack()
+        
+        #step increment len
+        self._stepLenFrm  = Frame(self); self._stepLenFrm.pack()
+        self._stepLenLbl  = Label(self._stepLenFrm, text="Step Len: ");   self._stepLenLbl.pack(side=LEFT)
+        self._stepLenSpin = Spinbox(self._stepLenFrm, from_=0, to=1000); self._stepLenSpin.pack(side=LEFT)
+        
+        #start value
+        self._startFrm  = Frame(self)
+        self._startLbl  = Label(self._startFrm, text="Start Value: ");   self._startLbl.pack(side=LEFT)
+        self._startTxt  = Text(self._startFrm, width=20, height=1);   self._startTxt.pack(side=LEFT)
+        
+    def getSettings(self):
+        return  {   "StepLen":      self._stepLenSpin.get(),
+                    "StartValue":   self._startTxt.get()
+                }
+        
+        
+        
+    
+        
+
     
         
         
     
 
-class MainWindow(Frame):
-            
+class MainWindow(Frame):        
     def __init__(self, parent):
         Frame.__init__(self, parent)
         self.parent = parent
-        
-        self.parent.title = "ByteGenerator"
         self.pack(fill=BOTH, expand=1)
         
-        self.generators         = ["random", "counter"] #Type of generatos
-        self.generatorSelected  = StringVar()
-        self.generatorSelected.set(self.generators[0])
+        #basic settings
+        self.basicSettings = GuiBasicSettings(self); self.basicSettings.pack()
         
-        #filename
-        self._initFilenme()
-        
-        #create freame for each generator
-        self._initGenerators()
- 
-    def _initFilenme(self):
-        self.filenameFrm    = Frame(self)
-        self.filenameFrm.pack()
-        self.filenameLbl    = Label(self.filenameFrm, text="Filename: ")
-        self.filenameLbl.pack(side=LEFT)
-        self.filenameTxt    = Text(self.filenameFrm, height=1, width=30)
-        self.filenameTxt.pack(side=LEFT)
-        
-        #select a generator
-        genArgs = (self.filenameFrm, self.generatorSelected) + tuple(self.generators)
-        self.generatorOptMen = OptionMenu(*genArgs)
-        self.generatorOptMen.pack(side=LEFT)
-        self.generatorSelected.trace("w", self.changeGenerator)
-        
-        
-        self.createBtn      = Button(self.filenameFrm, text="create", command=self.create)
-        self.createBtn.pack(side=LEFT)
+        #generators
+        self.generatorFrames = ( GuiGenerateRandom(self), GuiGenerateCount(self) )
+        for i in self.generatorFrames:
+            i.pack_forget()
     
-    def _initGenerators(self): 
-        for i in self.generators:
-            currFrame   = Frame(self)
-            currFrame.pack(side=LEFT, expand=1, fill=BOTH)
-            
-            currLbl     = Label(currFrame, text=i)
-            currLbl.pack(side=LEFT, expand=1, fill=BOTH)
-            
-    def create(self):
-        print("create")
-    
-    def changeGenerator(self, *args):
-        print("changeGenerator to={}".format(self.generatorSelected.get()))
-        
         
         
         
 root    = Tk()
-ex      = GuiBasicSettings(root)
+ex      = MainWindow(root)
 root.mainloop()
         
 
