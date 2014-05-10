@@ -10,29 +10,13 @@ from tkinter import StringVar, OptionMenu
 
 
 
-def generateRandom(aFile, aFileSize, aSpecificSettings): 
-    random.seed()   
-    
-    blockSize   = 1024**2
-    buffer      = None;
-    bufferIndex = 0;
-     
+def generateRandom(aFileSize, aSpecificSettings): 
+    random.seed()    
     for i in range(0, aFileSize):
-        if buffer == None:
-            if (aFileSize-i)>=blockSize:
-                buffer = bytearray(blockSize)
-            else:
-                buffer = bytearray(aFileSize-i)
-            bufferIndex = 0
+        currVal = bytes([random.randrange(0, 256)])
+        yield currVal
         
-        buffer[bufferIndex] = random.randrange(0, 256)  
-        bufferIndex+=1
-            
-        if bufferIndex >= len(buffer):
-            aFile.write(bytes(buffer))
-            buffer = None 
-        
-def generateCounter(aFile, aFileSize, aSpecificSettings):
+def generateCounter(aFileSize, aSpecificSettings):
     aStart  = 0
     aIncLen = 0
     
@@ -46,11 +30,12 @@ def generateCounter(aFile, aFileSize, aSpecificSettings):
     for i in range(0, aFileSize):
         if aStart > 255: aStart = 0;
         currVal = bytes([aStart])
-        aFile.write(currVal)
+        yield currVal
         currIncLen = currIncLen + 1
         if currIncLen >= aIncLen:
             currIncLen = 0
             aStart     = aStart + 1;
+
 
 
             
@@ -252,7 +237,7 @@ class MainWindow(Frame):
         
         fileName        = self.basicSettings.getFileName()
         fileSize        = 0
-        blockSize       = 1024**2
+        blockSize       = 512
         currGeneratorGui    = self._generatorSelect.getCurrGeneratorGui()
 
         print(type(currGeneratorGui))
@@ -275,10 +260,29 @@ class MainWindow(Frame):
         except:
             self._infoLbl.config(fg=self._infoColorErr, text="cannot create file")
             return
+
+        def progress(aFileSize, aWritten, aText):
+            progr = str((aWritten/aFileSize)*100)+"%"
+            return aText+": "+progr
         
-        #write to file
-        currGenerator(currFile, fileSize, specSettings);
-        
+        try:
+            buff = b""
+            bytesWritten = 0
+            for i in currGenerator(fileSize, specSettings):
+                buff            += i
+                bytesWritten    += 1
+                if len(buff) > blockSize:
+                    currFile.write(buff)
+                    buff = b""
+                    self._infoLbl.config(fg=self._infoColorNormal, text=progress(fileSize, bytesWritten, fileName))
+            if len(buff) > 0:
+                 currFile.write(buff)
+                 buff = None
+                 self._infoLbl.config(fg=self._infoColorNormal, text=progress(fileSize, bytesWritten, aFileName))
+        except Exception as exc:
+            raise
+        finally:
+            currFile.close()
         
         
         
