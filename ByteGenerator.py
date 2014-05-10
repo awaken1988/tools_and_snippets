@@ -10,13 +10,13 @@ from tkinter import StringVar, OptionMenu
 
 
 
-def generateRandom(aFileSize, aSpecificSettings): 
+def generateRandom(aFile, aFileSize, aSpecificSettings): 
     random.seed()    
     for i in range(0, aFileSize):
         currVal = bytes([random.randrange(0, 256)])
-        yield currVal
+        aFile.write(currVal)
         
-def generateCounter(aFileSize, aSpecificSettings):
+def generateCounter(aFile, aFileSize, aSpecificSettings):
     aStart  = 0
     aIncLen = 0
     
@@ -30,7 +30,7 @@ def generateCounter(aFileSize, aSpecificSettings):
     for i in range(0, aFileSize):
         if aStart > 255: aStart = 0;
         currVal = bytes([aStart])
-        yield currVal
+        aFile.write(currVal)
         currIncLen = currIncLen + 1
         if currIncLen >= aIncLen:
             currIncLen = 0
@@ -87,8 +87,8 @@ class GuiBasicSettings(Frame):
         return self._fileTxt.get()
         
     def getFileSize(self):
-        mult = self.sizeUnits[self._sizeVar.get()]
-        val  = self._sizeTxt.get()
+        mult = int(self.sizeUnits[self._sizeVar.get()])
+        val  = int(self._sizeTxt.get())
         return val * mult   
     
     def setCallback(self, aCallback):
@@ -236,7 +236,7 @@ class MainWindow(Frame):
         
         fileName        = self.basicSettings.getFileName()
         fileSize        = 0
-        blockSize       = 512
+        blockSize       = 1024**2
         currGeneratorGui    = self._generatorSelect.getCurrGeneratorGui()
 
         print(type(currGeneratorGui))
@@ -246,7 +246,7 @@ class MainWindow(Frame):
         
         #cast filesize
         try:
-            fileSize = int(self.basicSettings.getFileSize())
+            fileSize = self.basicSettings.getFileSize()
             if fileSize < 1:
                 raise Exception("")
         except:
@@ -262,17 +262,9 @@ class MainWindow(Frame):
         
         #write to file
         try:
-            buff = b""
-            for i in currGenerator(fileSize, specSettings):
-                buff += i
-                if len(buff) > blockSize:
-                    currFile.write(buff)
-                    buff = b""
-            if len(buff) > 0:
-                 currFile.write(buff)
-                 buff = None
-        except as exc:
-            print ex
+           currGenerator(currFile, fileSize, specSettings);
+        except Exception as exc:
+            print(exc)
        
         
         
