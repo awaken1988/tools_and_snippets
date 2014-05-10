@@ -11,10 +11,26 @@ from tkinter import StringVar, OptionMenu
 
 
 def generateRandom(aFile, aFileSize, aSpecificSettings): 
-    random.seed()    
+    random.seed()   
+    
+    blockSize   = 1024**2
+    buffer      = None;
+    bufferIndex = 0;
+     
     for i in range(0, aFileSize):
-        currVal = bytes([random.randrange(0, 256)])
-        aFile.write(currVal)
+        if buffer == None:
+            if (aFileSize-i)>=blockSize:
+                buffer = bytearray(blockSize)
+            else:
+                buffer = bytearray(aFileSize-i)
+            bufferIndex = 0
+        
+        buffer[bufferIndex] = random.randrange(0, 256)  
+        bufferIndex+=1
+            
+        if bufferIndex >= len(buffer):
+            aFile.write(bytes(buffer))
+            buffer = None 
         
 def generateCounter(aFile, aFileSize, aSpecificSettings):
     aStart  = 0
@@ -261,11 +277,8 @@ class MainWindow(Frame):
             return
         
         #write to file
-        try:
-           currGenerator(currFile, fileSize, specSettings);
-        except Exception as exc:
-            print(exc)
-       
+        currGenerator(currFile, fileSize, specSettings);
+        
         
         
         
