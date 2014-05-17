@@ -7,7 +7,8 @@ import random
 from tkinter import Tk, Canvas, Frame, BOTH, LEFT, Text, Label, Button, Y, X, BOTTOM,\
     Spinbox, SUNKEN, NW, Entry
 from tkinter import StringVar, OptionMenu
-
+import _thread
+from test.fork_wait import _thread
 
 
 def generateRandom(aFileSize, aSpecificSettings): 
@@ -84,6 +85,11 @@ class GuiBasicSettings(Frame):
         print("_callbackBtn")
         self.outerCallback()
     
+    def enableButton(self, enabled=True):
+        if enabled:
+            self._fileBtn.config(state="normal")
+        else:
+            self._fileBtn.config(state="disabled")
     def getFileName(self):
         return self._fileTxt.get()
         
@@ -191,10 +197,9 @@ class MainWindow(Frame):
         self.parent = parent
         self.pack(fill=BOTH, expand=1)
         
-        
         #basic settings
         self.basicSettings = GuiBasicSettings(self); self.basicSettings.pack()
-        self.basicSettings.setCallback(self.generateFile)
+        self.basicSettings.setCallback( lambda: _thread.start_new_thread(self.generateFile, ()) )
         
         #separatr
         self._generatorSepFrm = Frame(self, bg="#000000", height=2)
@@ -235,6 +240,9 @@ class MainWindow(Frame):
     def generateFile(self):
         print("generate")
         
+         #firstly disable start button
+        self.basicSettings.enableButton(False)
+        
         fileName        = self.basicSettings.getFileName()
         fileSize        = 0
         blockSize       = 512
@@ -262,7 +270,7 @@ class MainWindow(Frame):
             return
 
         def progress(aFileSize, aWritten, aText):
-            progr = str((aWritten/aFileSize)*100)+"%"
+            progr = str(int((aWritten/aFileSize)*100))+"%"
             return aText+": "+progr
         
         try:
@@ -278,11 +286,12 @@ class MainWindow(Frame):
             if len(buff) > 0:
                  currFile.write(buff)
                  buff = None
-                 self._infoLbl.config(fg=self._infoColorNormal, text=progress(fileSize, bytesWritten, aFileName))
+                 self._infoLbl.config(fg=self._infoColorNormal, text=progress(fileSize, bytesWritten, fileName))
         except Exception as exc:
             raise
         finally:
             currFile.close()
+            self.basicSettings.enableButton(True)  #Enable Button
         
         
         
