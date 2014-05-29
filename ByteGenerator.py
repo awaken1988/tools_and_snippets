@@ -54,32 +54,29 @@ class GuiBasicSettings(Frame):
         
         self._initFile()
         self._initSize()
-    
+
     def _initFile(self):
-        self._fileFrm = Frame(self)
-        self._fileFrm.pack(padx=10, anchor=NW)
-        self._fileLbl = Label(self._fileFrm, text="File:       ")
-        self._fileLbl.pack(side=LEFT)
-        self._fileTxt = Entry(self._fileFrm)
+        self._fileLbl = Label(self, text="File:       ")
+        self._fileTxt = Entry(self)
         self._fileTxt.insert(0, "/tmp/out.txt")
-        self._fileTxt.pack(side=LEFT, fill=X, expand=1)
-        self._fileBtn = Button(self._fileFrm, text="Create", command=self._callbackFun)
-        self._fileBtn.pack(side=LEFT)
+        self._fileBtn = Button(self, text="Create", command=self._callbackFun)
+        self._fileLbl.grid(row=0, column=0)
+        self._fileTxt.grid(row=0, column=1)
+        self._fileBtn.grid(row=0, column=2)
     
     def _initSize(self):
-        self._sizeFrm = Frame(self)
-        self._sizeFrm.pack(padx=10, anchor=NW)
-        self._sizeLbl = Label(self._sizeFrm, text="FileSize:  ")
-        self._sizeLbl.pack(side=LEFT)
-        self._sizeTxt = Entry(self._sizeFrm)
+        self._sizeLbl = Label(self, text="FileSize:  ")
+        self._sizeTxt = Entry(self)
         self._sizeTxt.insert(0, "1024")
-        self._sizeTxt.pack(side=LEFT, fill=X, expand=1)
         
         self._sizeVar    = StringVar()
         self._sizeVar.set("Byte")       #FIXME: replace "Byte" with variable
-        sizeOptParam = (self._sizeFrm, self._sizeVar) + tuple(self.sizeUnits.keys()) 
+        sizeOptParam = (self, self._sizeVar) + tuple(self.sizeUnits.keys()) 
         self._sizeOptMen = OptionMenu(*sizeOptParam)
-        self._sizeOptMen.pack(side=LEFT)
+        
+        self._sizeLbl.grid(row=1, column=0)
+        self._sizeTxt.grid(row=1, column=1)
+        self._sizeOptMen.grid(row=1, column=2)
     
     def _callbackFun(self):
         print("_callbackBtn")
