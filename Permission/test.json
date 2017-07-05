@@ -1,0 +1,9 @@
+{
+  "setacl" : [
+    { "acl":      ["u:1001:rwx", "u:1000:r-x", "g:1000:r-x"],
+      "path":     ["test/dir2/dir22/dir222", "test/dir1"]
+    }
+  ],
+
+  "clean": true
+}
