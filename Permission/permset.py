@@ -25,6 +25,8 @@ def read_cfg(aCfgPath):
     return json.loads(file.read())
 
 def executeCmd(aCommand):
+    print(aCommand)
+    #return
     vRet = subprocess.call(aCommand, shell=True)
     if vRet != 0:
         raise Exception(aCommand)
@@ -39,19 +41,32 @@ def setacl(aSubCfg):
                 dirs = dirs + [(iSubDir, False)]
 
         #create acl
+        #TODO: make extra function
         for iAcl in iEntry["acl"]:
             for iDir in dirs:
                 #print("SETACL acl={}; recursive={} dir={}".format(iAcl, int(iDir[1]), iDir[0]) )
-                cmd = "setfacl "
+                cmd = "setfacl    "
                 if( iDir[1] ):
                     cmd += " -R "
                 else:
                     cmd += "    "
                 cmd += " -m "
                 cmd += iAcl + " " + iDir[0]
-                print(cmd)
                 executeCmd(cmd)
-
+        
+        #create default acl
+        #TODO: make extra function
+        for iAcl in iEntry["default_acl"]:
+            for iDir in dirs:
+                #print("SETACL acl={}; recursive={} dir={}".format(iAcl, int(iDir[1]), iDir[0]) )
+                cmd = "setfacl -d "
+                if( iDir[1] ):
+                    cmd += " -R "
+                else:
+                    cmd += "    "
+                cmd += " -m "
+                cmd += iAcl + " " + iDir[0]
+                executeCmd(cmd)
 
 
 if len(sys.argv) > 1 and sys.argv[1].endswith("json"):
@@ -62,12 +77,12 @@ else:
     sys.exit()
 
 
-cfg = read_cfg("test.json")
+cfg = read_cfg(os.path.basename(sys.argv[1]))
 
 if ("clean" in cfg) and cfg["clean"]:
     print("CLEAN: all permission to root")
-    executeCmd("setfacl -b -R -P ./")
-    executeCmd("chmod 755 -R ./")
-    executeCmd("chown root:root -R ./")
+    executeCmd("setfacl -b -R -P ./*")
+    executeCmd("chmod 750 -R ./*")
+    executeCmd("chown root:root -R ./*")
 if "setacl" in cfg:
     setacl(cfg["setacl"])
