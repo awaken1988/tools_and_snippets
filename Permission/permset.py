@@ -2,6 +2,7 @@ import os.path
 import json
 import subprocess
 import sys
+import os
 
 def get_script_path():
     return os.path.dirname(os.path.realpath(sys.argv[0]))
@@ -24,10 +25,9 @@ def read_cfg(aCfgPath):
     return json.loads(file.read())
 
 def executeCmd(aCommand):
-    return
-    #vRet = subprocess.call(aCommand, shell=True)
-    #if vRet != 0:
-    #    raise Exception(aCommand)
+    vRet = subprocess.call(aCommand, shell=True)
+    if vRet != 0:
+        raise Exception(aCommand)
 
 def setacl(aSubCfg):
     for iEntry in aSubCfg:
@@ -52,10 +52,15 @@ def setacl(aSubCfg):
                 print(cmd)
                 executeCmd(cmd)
 
-#if len(sys.argv) > 1 and sys.argv[1].endswidth("json"):
-#    os.chdir( os.path. )
 
-os.chdir( get_script_path() )
+
+if len(sys.argv) > 1 and sys.argv[1].endswith("json"):
+    os.chdir( os.path.dirname(sys.argv[1]) )
+else:
+    print("SYNOPSIS")
+    print("\tpermset.py file.json")
+    sys.exit()
+
 
 cfg = read_cfg("test.json")
 
@@ -63,6 +68,6 @@ if ("clean" in cfg) and cfg["clean"]:
     print("CLEAN: all permission to root")
     executeCmd("setfacl -b -R -P ./")
     executeCmd("chmod 755 -R ./")
-    executeCmd("chown martin -R ./")
+    executeCmd("chown root:root -R ./")
 if "setacl" in cfg:
     setacl(cfg["setacl"])
