@@ -31,7 +31,21 @@ def executeCmd(aCommand):
     if vRet != 0:
         raise Exception(aCommand)
 
-def setacl(aSubCfg):
+def setacl(aDir, aAcl, aIsRecursive=False, aIsDefault=False):
+    cmd = "setfacl "
+
+    if aIsRecursive:    cmd+="-R "
+    else:               cmd+="   "
+
+    if aIsDefault:      cmd+="-d "
+    else:               cmd+="   "
+
+    cmd+= "-m " + aAcl + " ";
+    cmd+= aDir + " ";
+
+    executeCmd(cmd)
+
+def executeJson(aSubCfg):
     for iEntry in aSubCfg:
         #create dir list
         dirs = []
@@ -41,33 +55,16 @@ def setacl(aSubCfg):
                 dirs = dirs + [(iSubDir, False)]
 
         #create acl
-        #TODO: make extra function
-        for iAcl in iEntry["acl"]:
-            for iDir in dirs:
-                #print("SETACL acl={}; recursive={} dir={}".format(iAcl, int(iDir[1]), iDir[0]) )
-                cmd = "setfacl    "
-                if( iDir[1] ):
-                    cmd += " -R "
-                else:
-                    cmd += "    "
-                cmd += " -m "
-                cmd += iAcl + " " + iDir[0]
-                executeCmd(cmd)
-        
-        #create default acl
-        #TODO: make extra function
-        for iAcl in iEntry["default_acl"]:
-            for iDir in dirs:
-                #print("SETACL acl={}; recursive={} dir={}".format(iAcl, int(iDir[1]), iDir[0]) )
-                cmd = "setfacl -d "
-                if( iDir[1] ):
-                    cmd += " -R "
-                else:
-                    cmd += "    "
-                cmd += " -m "
-                cmd += iAcl + " " + iDir[0]
-                executeCmd(cmd)
+        if "acl" in iEntry:
+            for iAcl in iEntry["acl"]:
+                for iDir in dirs:
+                    setacl(iDir[0], iAcl, iDir[1], False)
 
+        #create default acl
+        if "default_acl" in iEntry:
+            for iAcl in iEntry["default_acl"]:
+                for iDir in dirs:
+                    setacl(iDir[0], iAcl, iDir[1], True)
 
 if len(sys.argv) > 1 and sys.argv[1].endswith("json"):
     os.chdir( os.path.dirname(sys.argv[1]) )
@@ -85,4 +82,4 @@ if ("clean" in cfg) and cfg["clean"]:
     executeCmd("chmod 750 -R ./*")
     executeCmd("chown root:root -R ./*")
 if "setacl" in cfg:
-    setacl(cfg["setacl"])
+    executeJson(cfg["setacl"])
