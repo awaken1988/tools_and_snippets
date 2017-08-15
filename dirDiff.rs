@@ -46,7 +46,7 @@ fn walkdir(dir: &Path) -> Box<PathTree>
                             is_dir: false,
                             children: HashMap::new()};
     if dir.is_file()  {
-        println!("{}", dir.to_str().unwrap());
+        //println!("{}", dir.to_str().unwrap());
     } else {
         let dir_entries = fs::read_dir(dir.to_str().unwrap()).unwrap();
         ret.is_dir = true;
@@ -60,11 +60,14 @@ fn walkdir(dir: &Path) -> Box<PathTree>
     return Box::new(ret);
 }
 
-fn main()
+fn compare_dir(left: &PathTree, right: &PathTree)
 {
 
+}
 
-    let path_tree = walkdir(Path::new("E:/[music]/Beastie Boys/"));
+fn main()
+{
+    let path_tree = walkdir(Path::new("./testdata/"));
     //walkprint(&path_tree, 0);
     println!("{}", path_tree);
 

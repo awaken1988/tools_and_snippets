@@ -1,0 +1,8 @@
+[package]
+name = "rustTools"
+version = "0.0.1"
+authors = ["martin.k"]
+
+[[bin]]
+name = "dirDiff"
+path = "dirDiff.rs"
