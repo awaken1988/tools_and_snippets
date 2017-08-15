@@ -3,11 +3,12 @@ use std::fs::{self, DirEntry};
 use std::path::Path;
 use std::collections::HashMap;
 use std::fmt;
+use std::rc::Rc;
 
 #[derive(Debug)]
 struct PathTree {
-    children: HashMap<String, Box<PathTree>>,
-    //parent: Option<Box<PathTree>>,
+    children: HashMap<String, Rc<PathTree>>,
+    parent: Option<Rc<PathTree>>,
     name : String,
     is_dir : bool,
 }
@@ -40,9 +41,10 @@ impl fmt::Display for PathTree {
 
 
 
-fn walkdir(dir: &Path) -> Box<PathTree>
+fn walkdir(dir: &Path) -> Rc<PathTree>
 {
     let mut ret = PathTree{ name: dir.file_name().unwrap().to_str().unwrap().to_string(),
+                            parent: None,
                             is_dir: false,
                             children: HashMap::new()};
     if dir.is_file()  {
@@ -55,20 +57,29 @@ fn walkdir(dir: &Path) -> Box<PathTree>
             let child = walkdir(& entry.unwrap().path());
 
             ret.children.insert(child.name.clone(), child);
+            //child.parent = Some(Rc::new(ret))
         }
     }
-    return Box::new(ret);
+    return Rc::new(ret);
 }
 
 fn compare_dir(left: &PathTree, right: &PathTree)
 {
-
+    for (iPath, iChild) in left.children.iter() {
+        if( !right.children.contains_key(iPath) ) {
+            println!("-{}", iPath)
+        } else {
+            compare_dir(&*left.children[iPath],&*right.children[iPath]);
+        }
+    }
 }
 
 fn main()
 {
-    let path_tree = walkdir(Path::new("./testdata/"));
+    let left = walkdir(Path::new("./left"));
+    let right = walkdir(Path::new("./right"));
     //walkprint(&path_tree, 0);
-    println!("{}", path_tree);
+    //println!("{}", path_tree);
 
+    compare_dir(&*left, &*right);
 }
