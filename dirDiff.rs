@@ -45,11 +45,17 @@ impl fmt::Display for PathTree {
     {
         let mut ret = String::new();
 
-        let parent = (ptree.parent.as_ref()).unwrap();
-        let inner_str = full_path(&*parent.borrow());
-        //let ddd: () = &*ptree.parent.unwrap().borrow();
+        match (ptree.parent.as_ref()) {
+            None    => return ret,
+            Some(x) => {
+                let inner_str = full_path(&*x.borrow());
+                ret = inner_str;
+                return ret;
+            }
+        }
 
-        ret = inner_str + "/" + &ret;
+
+        //let ddd: () = &*ptree.parent.unwrap().borrow();
 
         return ret;
     }
