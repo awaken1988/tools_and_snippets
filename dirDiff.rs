@@ -40,28 +40,22 @@ impl fmt::Display for PathTree {
     }
 }
 
-//impl PathTree {
-    fn full_path(ptree: &PathTree) -> String
-    {
-        let mut ret = String::new();
 
-        match (ptree.parent.as_ref()) {
-            None    => return ret,
-            Some(x) => {
-                let inner_str = full_path(&*x.borrow());
-                ret = inner_str;
-                return ret;
-            }
+fn full_path(ptree: &PathTree) -> String
+{
+    let mut ret = ptree.name.clone();
+
+    match (ptree.parent.as_ref()) {
+        None    => return ret,
+        Some(x) => {
+            let inner_str = full_path(&*x.borrow());
+
+            return format!("{}/{}", inner_str, ret);
         }
-
-
-        //let ddd: () = &*ptree.parent.unwrap().borrow();
-
-        return ret;
     }
-//}
 
-
+    return ret;
+}
 
 fn walkdir(dir: &Path) -> Rc<RefCell<PathTree>>
 {
