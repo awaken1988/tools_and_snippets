@@ -2,6 +2,7 @@ use std::io;
 use std::fs::{self, DirEntry};
 use std::path::Path;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -43,13 +44,13 @@ impl fmt::Display for PathTree {
 
 fn full_path(ptree: &PathTree) -> String
 {
-    let mut ret = ptree.name.clone();
+    let mut ret = String::new();
 
     match (ptree.parent.as_ref()) {
         None    => return ret,
         Some(x) => {
+            ret = ptree.name.clone();
             let inner_str = full_path(&*x.borrow());
-
             return format!("{}/{}", inner_str, ret);
         }
     }
@@ -81,15 +82,28 @@ fn walkdir(dir: &Path) -> Rc<RefCell<PathTree>>
     return ret;
 }
 
-fn compare_dir(left: &PathTree, right: &PathTree)
+fn compare_dir(left: &PathTree, right: &PathTree, diff_prefix: &String)
 {
-    for (iPath, iChild) in left.children.iter() {
-        if !right.children.contains_key(iPath)  {
-            println!("-{}", full_path(&*iChild.borrow()))
-        } else {
-            compare_dir(&*left.children[iPath].borrow(), &*right.children[iPath].borrow());
+    let mut diff_map : HashSet<String> = HashSet::new();
+    let sides = [(left, right), (right, left)];
+
+    for (iNum, iSide) in sides.iter().enumerate()
+    {
+        if diff_map.contains(&iSide.0.name.clone()) {
+            continue;
+        };
+
+        let prefix = { if 0 == iNum {"-"} else { "+" } };
+        diff_map.insert(iSide.0.name.clone());
+        for (iPath, iChild) in iSide.0.children.iter() {
+            if !iSide.1.children.contains_key(iPath)  {
+                println!("{}{}",prefix,  full_path(&*iChild.borrow()))
+            } else {
+                compare_dir(&*iSide.0.children[iPath].borrow(), &*iSide.1.children[iPath].borrow(), &"-".to_string());
+            }
         }
     }
+
 }
 
 fn main()
@@ -104,5 +118,5 @@ fn main()
     //example: print type of variable
     //let ddd: () = *left.borrow();
 
-    compare_dir(&*left.borrow(), &*right.borrow());
+    compare_dir(&*left.borrow(), &*right.borrow(), &"?".to_string() );
 }
