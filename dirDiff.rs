@@ -51,7 +51,9 @@ fn full_path(ptree: &PathTree) -> String
         Some(x) => {
             ret = ptree.name.clone();
             let inner_str = full_path(&*x.borrow());
-            return format!("{}/{}", inner_str, ret);
+            let ref separator = { if inner_str.len() < 1 {""} else {"/"}};
+
+            return format!("{}{}{}", inner_str, separator, ret);
         }
     }
 
@@ -93,7 +95,7 @@ fn compare_dir(left: &PathTree, right: &PathTree, diff_prefix: &String)
             continue;
         };
 
-        let prefix = { if 0 == iNum {"-"} else { "+" } };
+        let prefix = { if 0 == iNum {"- "} else { "+ " } };
         diff_map.insert(iSide.0.name.clone());
         for (iPath, iChild) in iSide.0.children.iter() {
             if !iSide.1.children.contains_key(iPath)  {
