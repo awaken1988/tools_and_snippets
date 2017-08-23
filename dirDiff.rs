@@ -7,6 +7,7 @@ use std::collections::HashSet;
 use std::fmt;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::num::Wrapping;
 
 #[derive(Debug)]
 enum DiffCause
@@ -17,6 +18,7 @@ enum DiffCause
     FILE_SIZE,
     DIR_TO_FILE,
     FILE_TO_DIR,
+    FILESIZE(i64),
 }
 
 
@@ -29,7 +31,9 @@ struct DiffItem
 impl fmt::Display for DiffItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 
-        write!(f, "{:?} {}", self.cause, PathTree::full_path(&self.fs_item) );
+        let cause = format!("{:?}", self.cause);
+
+        write!(f, "{: <12}: {}", cause, PathTree::full_path(&self.fs_item) );
 
         return Ok(());
     }
@@ -140,6 +144,18 @@ impl PathTree {
                     diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: cause }) ;
                 }
 
+                //check if file size changed
+                let left_meta  = fs::metadata(curr_left.path.clone()).unwrap();
+                let right_meta = fs::metadata(curr_right.path.clone()).unwrap();
+                if( iNum == 0 && left_meta.len() != right_meta.len()
+                    && left_meta.is_file() && right_meta.is_file()  ) {
+                    let leftnum = Wrapping(left_meta.len() as i64);
+                    let rightnum = Wrapping(right_meta.len() as i64);
+
+                    diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::FILESIZE((rightnum-leftnum).0) }) ;
+                }
+
+
                 PathTree::compare_dir(&*iSide.0.children[iPath].borrow(), &*iSide.1.children[iPath].borrow(), diff_list);
 
             }
@@ -174,30 +190,6 @@ impl fmt::Display for PathTree {
     }
 }
 
-
-
-
-<<<<<<< HEAD
-fn compare_dir(left: &PathTree, right: &PathTree)
-{
-    for (iPath, iNext) in left.children.iter() {
-        println!("{:?}", iPath);
-    }
-}
-
-fn main()
-{
-    let left = walkdir(Path::new("./testdata/alsa/"));
-    //let right = walkdir(Path::new("./testdata/alsa1/"));
-    //walkprint(&path_tree, 0);
-    //println!("{}", path_tree);
-
-    //compare_dir(&*left, &*right);
-=======
-
-
-
-
 fn main()
 {
     let left = PathTree::walkdir(Path::new("./left"));
@@ -216,5 +208,4 @@ fn main()
     for iDiff in diff_list.iter() {
         println!("{}", iDiff);
     }
->>>>>>> refs/remotes/origin/master
 }
