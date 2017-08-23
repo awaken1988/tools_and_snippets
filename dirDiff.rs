@@ -117,12 +117,14 @@ impl PathTree {
             diff_map.insert(iSide.0.name.clone());
             for (iPath, iChild) in iSide.0.children.iter() {
                 if !iSide.1.children.contains_key(iPath)  {
-                    println!("{}{}",prefix,  PathTree::full_path(&*iChild.borrow()));
+                    let curr_pathtree: iChild.borrow();
+                    println!("{}{}",prefix,  PathTree::full_path(&*curr_pathtree));
                     if 0 == iNum {
-                        diff_list.push( DiffItem{ fs_item: iChild.borrow().clone(), cause: DiffCause::REMOVED }) ;
+                        diff_list.push( DiffItem{ fs_item: icurr_pathtree.clone(), cause: DiffCause::REMOVED }) ;
                     } else {
-                        diff_list.push( DiffItem{ fs_item: iChild.borrow().clone(), cause: DiffCause::ADDED }) ;
+                        diff_list.push( DiffItem{ fs_item: curr_pathtree.clone(), cause: DiffCause::ADDED }) ;
                     }
+                else if !i
                 } else {
                     PathTree::compare_dir(&*iSide.0.children[iPath].borrow(), &*iSide.1.children[iPath].borrow(), diff_list);
                 }
