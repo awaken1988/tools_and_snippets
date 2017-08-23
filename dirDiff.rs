@@ -119,9 +119,9 @@ impl PathTree {
                 if !iSide.1.children.contains_key(iPath)  {
                     println!("{}{}",prefix,  PathTree::full_path(&*iChild.borrow()));
                     if 0 == iNum {
-                        diff_list.push( DiffItem{ fs_item: iSide.1.clone(), cause: DiffCause::REMOVED }) ;
+                        diff_list.push( DiffItem{ fs_item: iChild.borrow().clone(), cause: DiffCause::REMOVED }) ;
                     } else {
-                        diff_list.push( DiffItem{ fs_item: iSide.1.clone(), cause: DiffCause::ADDED }) ;
+                        diff_list.push( DiffItem{ fs_item: iChild.borrow().clone(), cause: DiffCause::ADDED }) ;
                     }
                 } else {
                     PathTree::compare_dir(&*iSide.0.children[iPath].borrow(), &*iSide.1.children[iPath].borrow(), diff_list);
@@ -133,12 +133,11 @@ impl PathTree {
 
     fn full_path(ptree: &PathTree) -> String
     {
-        let mut ret = String::new();
+        let mut ret = ptree.name.clone();
 
         match (ptree.parent.as_ref()) {
             None    => return ret,
             Some(x) => {
-                ret = ptree.name.clone();
                 let inner_str = PathTree::full_path(&*x.borrow());
                 let ref separator = { if inner_str.len() < 1 {""} else {"/"}};
 
