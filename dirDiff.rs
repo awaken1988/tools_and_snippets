@@ -62,13 +62,17 @@ fn walkdir(dir: &Path) -> Box<PathTree>
 
 fn compare_dir(left: &PathTree, right: &PathTree)
 {
-
+    for (iPath, iNext) in left.children.iter() {
+        println!("{:?}", iPath);
+    }
 }
 
 fn main()
 {
-    let path_tree = walkdir(Path::new("./testdata/"));
+    let left = walkdir(Path::new("./testdata/alsa/"));
+    //let right = walkdir(Path::new("./testdata/alsa1/"));
     //walkprint(&path_tree, 0);
-    println!("{}", path_tree);
+    //println!("{}", path_tree);
 
+    //compare_dir(&*left, &*right);
 }
