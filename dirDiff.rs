@@ -15,6 +15,8 @@ enum DiffCause
     REMOVED,
     FILE_TIME,
     FILE_SIZE,
+    DIR_TO_FILE,
+    FILE_TO_DIR,
 }
 
 
@@ -116,18 +118,30 @@ impl PathTree {
             let prefix = { if 0 == iNum {"- "} else { "+ " } };
             diff_map.insert(iSide.0.name.clone());
             for (iPath, iChild) in iSide.0.children.iter() {
+                let curr_left = iChild.borrow();
+                //check if file/dir is avail on each side
                 if !iSide.1.children.contains_key(iPath)  {
-                    let curr_pathtree: iChild.borrow();
-                    println!("{}{}",prefix,  PathTree::full_path(&*curr_pathtree));
+
+                    println!("{}{}",prefix,  PathTree::full_path(&*curr_left));
                     if 0 == iNum {
-                        diff_list.push( DiffItem{ fs_item: icurr_pathtree.clone(), cause: DiffCause::REMOVED }) ;
+                        diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::REMOVED }) ;
                     } else {
-                        diff_list.push( DiffItem{ fs_item: curr_pathtree.clone(), cause: DiffCause::ADDED }) ;
+                        diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::ADDED }) ;
                     }
-                else if !i
-                } else {
-                    PathTree::compare_dir(&*iSide.0.children[iPath].borrow(), &*iSide.1.children[iPath].borrow(), diff_list);
+                    continue;
                 }
+
+                let curr_right = iSide.1.children[iPath].borrow();
+
+                //check file/dir changed
+                if( iNum == 0 && curr_left.is_dir != curr_right.is_dir) {
+                    let cause = {   if curr_left.is_dir {DiffCause::DIR_TO_FILE}
+                                    else {DiffCause::FILE_TO_DIR}};
+                    diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: cause }) ;
+                }
+
+                PathTree::compare_dir(&*iSide.0.children[iPath].borrow(), &*iSide.1.children[iPath].borrow(), diff_list);
+
             }
         }
 
@@ -138,7 +152,7 @@ impl PathTree {
         let mut ret = ptree.name.clone();
 
         match (ptree.parent.as_ref()) {
-            None    => return ret,
+            None    => return String::new(),
             Some(x) => {
                 let inner_str = PathTree::full_path(&*x.borrow());
                 let ref separator = { if inner_str.len() < 1 {""} else {"/"}};
