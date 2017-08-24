@@ -19,6 +19,7 @@ enum DiffCause
     DIR_TO_FILE,
     FILE_TO_DIR,
     FILESIZE(i64),
+    MODIFIED_TIME,
 }
 
 
@@ -33,7 +34,7 @@ impl fmt::Display for DiffItem {
 
         let cause = format!("{:?}", self.cause);
 
-        write!(f, "{: <12}: {}", cause, PathTree::full_path(&self.fs_item) );
+        write!(f, "{: <16}: {}", cause, PathTree::full_path(&self.fs_item) );
 
         return Ok(());
     }
@@ -142,6 +143,7 @@ impl PathTree {
                     let cause = {   if curr_left.is_dir {DiffCause::DIR_TO_FILE}
                                     else {DiffCause::FILE_TO_DIR}};
                     diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: cause }) ;
+                    continue;
                 }
 
                 //check if file size changed
@@ -153,6 +155,17 @@ impl PathTree {
                     let rightnum = Wrapping(right_meta.len() as i64);
 
                     diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::FILESIZE((rightnum-leftnum).0) }) ;
+                    continue;
+                }
+
+                //check for dateimte
+                if 0 == iNum {
+                    let left_time = left_meta.modified().unwrap();
+                    let right_time = right_meta.modified().unwrap();
+
+                    if( left_time != right_time && left_meta.is_file() && right_meta.is_file()) {
+                        diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::MODIFIED_TIME }) ;
+                    }
                 }
 
 
