@@ -9,7 +9,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::num::Wrapping;
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 enum DiffCause
 {
     ADDED,
@@ -109,6 +109,22 @@ impl PathTree {
         return ret;
     }
 
+    fn add_subdir(path: &PathTree, cause: DiffCause, diff_list: &mut Vec<DiffItem>)
+    {
+        if( !path.is_dir ) {
+            return;
+        }
+
+        for (iPath, iChild) in path.children.iter() {
+            let curr_child = iChild.borrow();
+            if !curr_child.is_dir {
+                diff_list.push( DiffItem{ fs_item: curr_child.clone(), cause: cause.clone() }) ;
+            } else {
+                PathTree::add_subdir(&curr_child, cause.clone(), diff_list);
+            }
+        }
+    }
+
     fn compare_dir(left: &PathTree, right: &PathTree, diff_list: &mut Vec<DiffItem>)
     {
         let mut diff_map : HashSet<String> = HashSet::new();
@@ -130,8 +146,10 @@ impl PathTree {
                     println!("{}{}",prefix,  PathTree::full_path(&*curr_left));
                     if 0 == iNum {
                         diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::REMOVED }) ;
+                        PathTree::add_subdir(&*curr_left, DiffCause::REMOVED, diff_list);
                     } else {
                         diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::ADDED }) ;
+                        PathTree::add_subdir(&*curr_left, DiffCause::ADDED, diff_list);
                     }
                     continue;
                 }
@@ -168,9 +186,7 @@ impl PathTree {
                     }
                 }
 
-
                 PathTree::compare_dir(&*iSide.0.children[iPath].borrow(), &*iSide.1.children[iPath].borrow(), diff_list);
-
             }
         }
 
@@ -205,7 +221,7 @@ impl fmt::Display for PathTree {
 
 fn main()
 {
-    let left = PathTree::walkdir(Path::new("./left"));
+    let left = PathTree::walkdir(Path::new("/etc/default"));
     let right = PathTree::walkdir(Path::new("./right"));
 
     //example print dir
