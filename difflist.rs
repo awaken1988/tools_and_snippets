@@ -34,11 +34,9 @@ pub struct DiffItem
 impl fmt::Display for DiffItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 
-        let mut filetype = String::from("FILE");
-
-        if self.fs_item.is_dir {
-            filetype = String::from("DIR ")
-        }
+        let filetype = {
+            if      self.fs_item.is_dir {"DIR "}
+            else                        {"FILE"}};
 
         let cause = format!("{:?}", self.cause);
         write!(f, "{} | {: <16} | {}",filetype, cause, PathTree::full_path(&self.fs_item) );

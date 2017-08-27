@@ -60,7 +60,11 @@ impl PathTree {
             //println!("{}", dir.to_str().unwrap());
 
         } else {
-            let dir_entries = fs::read_dir(dir.to_str().unwrap()).unwrap();
+            let dir_entries =  match fs::read_dir(dir.to_str().unwrap()) {
+                Ok(result) => result,
+                Err(e) => return ret
+            };
+
             ret.borrow_mut().is_dir = true;
 
             for entry in dir_entries {
@@ -109,7 +113,7 @@ impl PathTree {
                 //check if file/dir is avail on each side
                 if !iSide.1.children.contains_key(iPath)  {
 
-                    println!("{}{}",prefix,  PathTree::full_path(&*curr_left));
+                    //println!("{}{}",prefix,  PathTree::full_path(&*curr_left));
                     if 0 == iNum {
                         diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::REMOVED }) ;
                         PathTree::add_subdir(&*curr_left, DiffCause::REMOVED, diff_list);

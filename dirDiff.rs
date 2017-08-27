@@ -46,8 +46,8 @@ fn main()
         }
     }
 
-    let left_tree = PathTree::walkdir(Path::new("/etc/default"));
-    let right_tree = PathTree::walkdir(Path::new("./right"));
+    let left_tree = PathTree::walkdir(Path::new(&left));
+    let right_tree = PathTree::walkdir(Path::new(&right));
 
     let mut diff_list: Vec<DiffItem> = Vec::new();
     PathTree::compare_dir(&*left_tree.borrow(), &*right_tree.borrow(), &mut diff_list );
