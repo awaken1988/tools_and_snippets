@@ -8,231 +8,49 @@ use std::fmt;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::num::Wrapping;
+use std::env;
 
-#[derive(Debug,Clone)]
-enum DiffCause
-{
-    ADDED,
-    REMOVED,
-    FILE_TIME,
-    FILE_SIZE,
-    DIR_TO_FILE,
-    FILE_TO_DIR,
-    FILESIZE(i64),
-    MODIFIED_TIME,
-}
+mod difflist;
+mod pathtree;
 
-
-struct DiffItem
-{
-    fs_item: PathTree,
-    cause: DiffCause,
-}
-
-impl fmt::Display for DiffItem {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-
-        let cause = format!("{:?}", self.cause);
-
-        write!(f, "{: <16}: {}", cause, PathTree::full_path(&self.fs_item) );
-
-        return Ok(());
-    }
-}
+use pathtree::*;
+use difflist::*;
 
 //-----------------------------------------------------------
 //
 // PathTree stores the directory structure
 //
 //-----------------------------------------------------------
-#[derive(Debug)]
-struct PathTree {
-    children: HashMap<String, Rc<RefCell<PathTree>>>,
-    parent: Option<Rc<RefCell<PathTree>>>,
-    name : String,
-    is_dir : bool,
-    path: PathBuf,
-}
 
-impl Clone for PathTree {
-    fn clone(&self) -> PathTree
-    {
-        PathTree{
-            children: self.children.clone(),
-            parent: self.parent.clone(),
-            name: self.name.clone(),
-            is_dir: self.is_dir.clone(),
-            path: self.path.clone(),
-        }
-    }
-}
 
-impl PathTree {
-    fn walkprint(&self, depth: u32, f: &mut fmt::Formatter)
-    {
-        for i in 0..depth {
-            write!(f, "    ");
-        }
 
-        write!(f, "{}\n", self.name);
-
-        if self.is_dir {
-            for child in self.children.values() {
-                child.borrow().walkprint( depth+1, f );
-            }
-        }
-    }
-
-    fn walkdir(dir: &Path) -> Rc<RefCell<PathTree>>
-    {
-        let mut ret = Rc::new(RefCell::new(PathTree{ name: dir.file_name().unwrap().to_str().unwrap().to_string(),
-                                parent: None,
-                                is_dir: false,
-                                children: HashMap::new(),
-                                path: dir.to_path_buf()}));
-        if dir.is_file()  {
-            //println!("{}", dir.to_str().unwrap());
-
-        } else {
-            let dir_entries = fs::read_dir(dir.to_str().unwrap()).unwrap();
-            ret.borrow_mut().is_dir = true;
-
-            for entry in dir_entries {
-                let child = PathTree::walkdir(& entry.unwrap().path());
-
-                let name = child.borrow().name.clone();
-
-                ret.borrow_mut().children.insert(name, child.clone());
-                child.borrow_mut().parent = Some(ret.clone());
-            }
-        }
-        return ret;
-    }
-
-    fn add_subdir(path: &PathTree, cause: DiffCause, diff_list: &mut Vec<DiffItem>)
-    {
-        if( !path.is_dir ) {
-            return;
-        }
-
-        for (iPath, iChild) in path.children.iter() {
-            let curr_child = iChild.borrow();
-            if !curr_child.is_dir {
-                diff_list.push( DiffItem{ fs_item: curr_child.clone(), cause: cause.clone() }) ;
-            } else {
-                PathTree::add_subdir(&curr_child, cause.clone(), diff_list);
-            }
-        }
-    }
-
-    fn compare_dir(left: &PathTree, right: &PathTree, diff_list: &mut Vec<DiffItem>)
-    {
-        let mut diff_map : HashSet<String> = HashSet::new();
-        let sides = [(left, right), (right, left)];
-
-        for (iNum, iSide) in sides.iter().enumerate()
-        {
-            if diff_map.contains(&iSide.0.name.clone()) {
-                continue;
-            };
-
-            let prefix = { if 0 == iNum {"- "} else { "+ " } };
-            diff_map.insert(iSide.0.name.clone());
-            for (iPath, iChild) in iSide.0.children.iter() {
-                let curr_left = iChild.borrow();
-                //check if file/dir is avail on each side
-                if !iSide.1.children.contains_key(iPath)  {
-
-                    println!("{}{}",prefix,  PathTree::full_path(&*curr_left));
-                    if 0 == iNum {
-                        diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::REMOVED }) ;
-                        PathTree::add_subdir(&*curr_left, DiffCause::REMOVED, diff_list);
-                    } else {
-                        diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::ADDED }) ;
-                        PathTree::add_subdir(&*curr_left, DiffCause::ADDED, diff_list);
-                    }
-                    continue;
-                }
-
-                let curr_right = iSide.1.children[iPath].borrow();
-
-                //check file/dir changed
-                if( iNum == 0 && curr_left.is_dir != curr_right.is_dir) {
-                    let cause = {   if curr_left.is_dir {DiffCause::DIR_TO_FILE}
-                                    else {DiffCause::FILE_TO_DIR}};
-                    diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: cause }) ;
-                    continue;
-                }
-
-                //check if file size changed
-                let left_meta  = fs::metadata(curr_left.path.clone()).unwrap();
-                let right_meta = fs::metadata(curr_right.path.clone()).unwrap();
-                if( iNum == 0 && left_meta.len() != right_meta.len()
-                    && left_meta.is_file() && right_meta.is_file()  ) {
-                    let leftnum = Wrapping(left_meta.len() as i64);
-                    let rightnum = Wrapping(right_meta.len() as i64);
-
-                    diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::FILESIZE((rightnum-leftnum).0) }) ;
-                    continue;
-                }
-
-                //check for dateimte
-                if 0 == iNum {
-                    let left_time = left_meta.modified().unwrap();
-                    let right_time = right_meta.modified().unwrap();
-
-                    if( left_time != right_time && left_meta.is_file() && right_meta.is_file()) {
-                        diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::MODIFIED_TIME }) ;
-                    }
-                }
-
-                PathTree::compare_dir(&*iSide.0.children[iPath].borrow(), &*iSide.1.children[iPath].borrow(), diff_list);
-            }
-        }
-
-    }
-
-    fn full_path(ptree: &PathTree) -> String
-    {
-        let mut ret = ptree.name.clone();
-
-        match (ptree.parent.as_ref()) {
-            None    => return String::new(),
-            Some(x) => {
-                let inner_str = PathTree::full_path(&*x.borrow());
-                let ref separator = { if inner_str.len() < 1 {""} else {"/"}};
-
-                return format!("{}{}{}", inner_str, separator, ret);
-            }
-        }
-
-        return ret;
-    }
-}
-
-impl fmt::Display for PathTree {
-
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.walkprint(0, f);
-
-        return Ok(());
-    }
-}
 
 fn main()
 {
-    let left = PathTree::walkdir(Path::new("/etc/default"));
-    let right = PathTree::walkdir(Path::new("./right"));
+    let mut left = String::new();
+    let mut right = String::new();
 
-    //example print dir
-    //println!("{}", *left.borrow());
-    //println!("{}", *right.borrow());
+    for (i, arg) in env::args().enumerate() {
+        if 0 == i {continue;}
 
-    //example: print type of variable
-    //let ddd: () = *left.borrow();
+        match &arg {
+
+            _ => {
+                if left.is_empty() {
+                    left = arg;
+                } else {
+                    right = arg;
+                }
+            }
+
+        }
+    }
+
+    let left_tree = PathTree::walkdir(Path::new("/etc/default"));
+    let right_tree = PathTree::walkdir(Path::new("./right"));
 
     let mut diff_list: Vec<DiffItem> = Vec::new();
-    PathTree::compare_dir(&*left.borrow(), &*right.borrow(), &mut diff_list );
+    PathTree::compare_dir(&*left_tree.borrow(), &*right_tree.borrow(), &mut diff_list );
 
     for iDiff in diff_list.iter() {
         println!("{}", iDiff);
