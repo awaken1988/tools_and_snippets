@@ -51,12 +51,7 @@ impl PathTree {
 
     pub fn walkdir(dir: &Path) -> Rc<RefCell<PathTree>>
     {
-        //println!("{:?}", dir);
-        
-        let filename_osstr = dir.file_name().expect(&format!("dir.file_name() failed.{:?}", dir));
-        let filename = &*filename_osstr.to_string_lossy();
-        
-        let mut ret = Rc::new(RefCell::new(PathTree{ name: filename.to_string(),
+        let mut ret = Rc::new(RefCell::new(PathTree{ name: dir.file_name().unwrap().to_str().unwrap().to_string(),
                                 parent: None,
                                 is_dir: false,
                                 children: HashMap::new(),
@@ -139,33 +134,25 @@ impl PathTree {
                     continue;
                 }
 
-
-
+                //check if file size changed
                 let left_meta  = fs::metadata(curr_left.path.clone()).unwrap();
                 let right_meta = fs::metadata(curr_right.path.clone()).unwrap();
-                
-                if let ( Ok(left_meta), Ok(right_meta) ) = (fs::metadata(curr_left.path.clone(), 
-                    fs::metadata(curr_right.path.clone()).unwrap())) )  {
+                if( iNum == 0 && left_meta.len() != right_meta.len()
+                    && left_meta.is_file() && right_meta.is_file()  ) {
+                    let leftnum = Wrapping(left_meta.len() as i64);
+                    let rightnum = Wrapping(right_meta.len() as i64);
 
-                    //check if file size changed
-                    if( iNum == 0 && left_meta.len() != right_meta.len()
-                        && left_meta.is_file() && right_meta.is_file()  ) {
-                        let leftnum = Wrapping(left_meta.len() as i64);
-                        let rightnum = Wrapping(right_meta.len() as i64);
+                    diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::FILESIZE((rightnum-leftnum).0) }) ;
+                    continue;
+                }
 
-                        diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::FILESIZE((rightnum-leftnum).0) }) ;
-                        continue;
-                    }
+                //check for dateimte
+                if 0 == iNum {
+                    let left_time = left_meta.modified().unwrap();
+                    let right_time = right_meta.modified().unwrap();
 
-                    //check for dateimte
-                    if 0 == iNum {
-                        let left_time = left_meta.modified().unwrap();
-                        let right_time = right_meta.modified().unwrap();
-
-                        if( left_time != right_time && left_meta.is_file() && right_meta.is_file()) {
-                            diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::MODIFIED_TIME }) ;
-                            continue;
-                        }
+                    if( left_time != right_time && left_meta.is_file() && right_meta.is_file()) {
+                        diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::MODIFIED_TIME }) ;
                     }
                 }
 
