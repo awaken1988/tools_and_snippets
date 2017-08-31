@@ -95,6 +95,43 @@ impl PathTree {
         }
     }
 
+    fn compare_file(left: &PathTree,
+                    right: &PathTree,
+                    diff_list: &mut Vec<DiffItem>) -> bool
+    {
+        if let (Ok(left_meta), Ok(right_meta)) =
+            (fs::metadata(left.path.clone()), fs::metadata(right.path.clone())){
+
+                let is_file_only = left_meta.is_file() && right_meta.is_file();
+
+                //check if file size changed
+                if( left_meta.len() != right_meta.len()
+                    && is_file_only  ) {
+                    let leftnum = Wrapping(left_meta.len() as i64);
+                    let rightnum = Wrapping(right_meta.len() as i64);
+
+                    diff_list.push( DiffItem{ fs_item: left.clone(), cause: DiffCause::FILESIZE((rightnum-leftnum).0) }) ;
+                    return true;
+                }
+
+                //check for dateimte
+                if is_file_only  {
+                    let left_time = left_meta.modified().unwrap();
+                    let right_time = right_meta.modified().unwrap();
+
+                    if( left_time != right_time && left_meta.is_file() && right_meta.is_file()) {
+                        diff_list.push( DiffItem{ fs_item: left.clone(), cause: DiffCause::MODIFIED_TIME }) ;
+                        return true;
+                    }
+                }
+        } else {
+            diff_list.push( DiffItem{ fs_item: left.clone(), cause: DiffCause::ACCESS_ERROR }) ;
+            return true;
+        }
+
+        return false;
+    }
+
     pub fn compare_dir(left: &PathTree, right: &PathTree, diff_list: &mut Vec<DiffItem>)
     {
         let mut diff_map : HashSet<String> = HashSet::new();
@@ -134,25 +171,9 @@ impl PathTree {
                     continue;
                 }
 
-                //check if file size changed
-                let left_meta  = fs::metadata(curr_left.path.clone()).unwrap();
-                let right_meta = fs::metadata(curr_right.path.clone()).unwrap();
-                if( iNum == 0 && left_meta.len() != right_meta.len()
-                    && left_meta.is_file() && right_meta.is_file()  ) {
-                    let leftnum = Wrapping(left_meta.len() as i64);
-                    let rightnum = Wrapping(right_meta.len() as i64);
-
-                    diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::FILESIZE((rightnum-leftnum).0) }) ;
-                    continue;
-                }
-
-                //check for dateimte
                 if 0 == iNum {
-                    let left_time = left_meta.modified().unwrap();
-                    let right_time = right_meta.modified().unwrap();
-
-                    if( left_time != right_time && left_meta.is_file() && right_meta.is_file()) {
-                        diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::MODIFIED_TIME }) ;
+                    if PathTree::compare_file(&*curr_left, &*curr_right, diff_list) {
+                        continue;
                     }
                 }
 

@@ -22,6 +22,7 @@ pub enum DiffCause
     FILE_TO_DIR,
     FILESIZE(i64),
     MODIFIED_TIME,
+    ACCESS_ERROR,
 }
 
 
