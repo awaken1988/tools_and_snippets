@@ -51,7 +51,7 @@ impl PathTree {
 
     pub fn walkdir(dir: &Path) -> Rc<RefCell<PathTree>>
     {
-        let mut ret = Rc::new(RefCell::new(PathTree{ name: dir.file_name().unwrap().to_str().unwrap().to_string(),
+        let mut ret = Rc::new(RefCell::new(PathTree{ name: dir.file_name().unwrap().to_string_lossy().to_string(),
                                 parent: None,
                                 is_dir: false,
                                 children: HashMap::new(),
@@ -154,11 +154,12 @@ impl PathTree {
                     if 0 == iNum {
                         diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::REMOVED }) ;
                         PathTree::add_subdir(&*curr_left, DiffCause::REMOVED, diff_list);
+                        continue;
                     } else {
                         diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::ADDED }) ;
                         PathTree::add_subdir(&*curr_left, DiffCause::ADDED, diff_list);
+                        continue;
                     }
-                    continue;
                 }
 
                 let curr_right = iSide.1.children[iPath].borrow();
