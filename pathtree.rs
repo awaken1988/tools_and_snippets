@@ -148,6 +148,9 @@ impl PathTree {
             for (iPath, iChild) in iSide.0.children.iter() {
                 let curr_left = iChild.borrow();
                 //check if file/dir is avail on each side
+                
+                //println!("{:?} {:?}", iNum, iPath );
+                
                 if !iSide.1.children.contains_key(iPath)  {
 
                     //println!("{}{}",prefix,  PathTree::full_path(&*curr_left));
@@ -177,9 +180,14 @@ impl PathTree {
                         continue;
                     }
                 }
-
-                PathTree::compare_dir(&*iSide.0.children[iPath].borrow(), &*iSide.1.children[iPath].borrow(), diff_list);
+                
+                if 0 == iNum && curr_left.is_dir { 
+                    PathTree::compare_dir(&*iSide.0.children[iPath].borrow(), &*iSide.1.children[iPath].borrow(), diff_list);
+                } else {
+                    PathTree::compare_dir(&*iSide.1.children[iPath].borrow(), &*iSide.0.children[iPath].borrow(), diff_list);
+                }
             }
+
         }
 
     }

@@ -50,6 +50,9 @@ fn main()
     let right_tree = PathTree::walkdir(Path::new(&right));
 
     let mut diff_list: Vec<DiffItem> = Vec::new();
+    
+    println!("diff {:?}", left);
+    println!("diff {:?}", right);
     PathTree::compare_dir(&*left_tree.borrow(), &*right_tree.borrow(), &mut diff_list );
 
     for iDiff in diff_list.iter() {
