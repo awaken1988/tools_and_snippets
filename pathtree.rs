@@ -151,7 +151,7 @@ impl PathTree {
                 let curr_left = iChild.borrow();
                 //check if file/dir is avail on each side
                 
-                println!("{:?} {:?}", iNum, iChild.borrow().path );
+                //println!("{:?} {:?}", iNum, iChild.borrow().path );
                 
                 if !iSide.1.children.contains_key(iPath)  {
 
