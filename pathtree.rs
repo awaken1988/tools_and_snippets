@@ -139,17 +139,19 @@ impl PathTree {
 
         for (iNum, iSide) in sides.iter().enumerate()
         {
-            if diff_map.contains(&iSide.0.name.clone()) {
-                continue;
-            };
-
             let prefix = { if 0 == iNum {"- "} else { "+ " } };
-            diff_map.insert(iSide.0.name.clone());
+            
             for (iPath, iChild) in iSide.0.children.iter() {
+
+                if diff_map.contains(&iPath.clone()) {
+                    continue;
+                };
+                diff_map.insert(iPath.clone());
+
                 let curr_left = iChild.borrow();
                 //check if file/dir is avail on each side
                 
-                //println!("{:?} {:?}", iNum, iPath );
+                println!("{:?} {:?}", iNum, iChild.borrow().path );
                 
                 if !iSide.1.children.contains_key(iPath)  {
 
@@ -167,24 +169,23 @@ impl PathTree {
 
                 let curr_right = iSide.1.children[iPath].borrow();
 
-                //check file/dir changed
-                if( iNum == 0 && curr_left.is_dir != curr_right.is_dir) {
-                    let cause = {   if curr_left.is_dir {DiffCause::DIR_TO_FILE}
-                                    else {DiffCause::FILE_TO_DIR}};
-                    diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: cause }) ;
-                    continue;
-                }
-
                 if 0 == iNum {
-                    if PathTree::compare_file(&*curr_left, &*curr_right, diff_list) {
+
+                    // dir changed to file or otherwise
+                    if( curr_left.is_dir && !curr_right.is_dir ) {
+                        diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::DIR_TO_FILE }) ;
                         continue;
+                    } else if ( !curr_left.is_dir && curr_right.is_dir ) {
+                        diff_list.push( DiffItem{ fs_item: curr_left.clone(), cause: DiffCause::FILE_TO_DIR }) ;
+                        continue; 
                     }
-                }
-                
-                if 0 == iNum && curr_left.is_dir { 
+
+                    //compare file
+                    //if !curr_left.is_dir && PathTree::compare_file(&*curr_left, &*curr_right, diff_list) {
+                    //    continue;
+                    //}
+
                     PathTree::compare_dir(&*iSide.0.children[iPath].borrow(), &*iSide.1.children[iPath].borrow(), diff_list);
-                } else {
-                    PathTree::compare_dir(&*iSide.1.children[iPath].borrow(), &*iSide.0.children[iPath].borrow(), diff_list);
                 }
             }
 
