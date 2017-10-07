@@ -1,8 +1,8 @@
 import sys
 from antlr4 import *
-from antlr_generated.demoLexer import demoLexer
-from antlr_generated.demoParser import demoParser
-from antlr_generated.demoListener import demoListener
+from build_py.demoLexer import demoLexer
+from build_py.demoParser import demoParser
+from build_py.demoListener import demoListener
  
 class MyDemoListener(demoListener):
 
@@ -11,10 +11,9 @@ class MyDemoListener(demoListener):
 
     def enterAddition(self, ctx:demoParser.AdditionContext):
         print( ctx.getText() )
-    
+        
     def exitAddition(self, ctx:demoParser.AdditionContext):
         print( ctx.getText() )
-
 
 
 

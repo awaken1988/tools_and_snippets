@@ -1,8 +1,8 @@
 #!/bin/bash
 
 
-ANTLR_PYTHON="antlr_py"
-ANTLR_JAVA="antlr_java"
+ANTLR_PYTHON="build_py"
+ANTLR_JAVA="build_java"
 
 export CLASSPATH="./antlr-4.7-complete.jar:${ANTLR_JAVA}/*"
 
