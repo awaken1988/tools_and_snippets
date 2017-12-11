@@ -34,6 +34,27 @@ struct diff_t
     cause_t cause;
 };
 
+
+static vector<path> diff_path(const set<path> aLeft, const set<path> aRight)
+{
+    vector<path> ret;
+    set_difference(aLeft.begin(), aLeft.end(), aRight.begin(), aRight.end(), inserter(ret, ret.begin()));   //TODO: what is an inserter :-O
+    return ret;
+}
+
+static set<path> dir_list_relative(const path& aPath, const path& aBase)
+{
+    set<path> ret;
+
+    for(directory_entry& child_path: directory_iterator(aPath)) {
+        ret.insert( relative(child_path.path(), aBase) );
+    }
+
+    return ret;
+}
+
+
+
 void iterate_dir_recursively(path aLeftBase, 
                              path aRightBase,
                              path aSubPath,
@@ -43,32 +64,23 @@ void iterate_dir_recursively(path aLeftBase,
     const path left(  path(aLeftBase)+=aSubPath  );
     const path right(  path(aRightBase)+=aSubPath  );
 
-
     if( !exists(left) ) {
         throw "left side path cannot be invalid";
     }
 
-    set<path> left_set, right_set;
+    auto left_set = dir_list_relative(left, aLeftBase);
+    auto right_set = dir_list_relative(right, aRightBase);
 
-    for(directory_entry& child_path: directory_iterator(left)) {
-        left_set.insert( relative(child_path.path(), aLeftBase) );
-    }
-    for(directory_entry& child_path: directory_iterator(right)) {
-        right_set.insert( relative(child_path.path(), aRightBase) );
-    }
-
-    vector<path> leftOnly;
-    set_difference( left_set.begin(),left_set.end(), right_set.begin(), right_set.end(), inserter(leftOnly, leftOnly.begin()) );
-    for(path iLeft: leftOnly) {
+    //added
+    for(const path& iLeft: diff_path(left_set, right_set) ) {
         const path curr = path(aLeftBase)+=iLeft;
-        cout<<indent_str(aLevel)<<"--"<<iLeft<<endl;
+        cout<<indent_str(aLevel)<<"++"<<iLeft<<endl;
     }
 
-    vector<path> rightOnly;
-    set_difference( right_set.begin(), right_set.end(), left_set.begin(),left_set.end(), inserter(rightOnly, rightOnly.begin()) );
-    for(path iRight: rightOnly) {
-        const path curr = path(aRightBase)+=iRight;
-        cout<<indent_str(aLevel)<<"++"<<iRight<<endl;
+    //deleted
+    for(const path& iRight: diff_path(right_set, left_set) ) {
+        const path curr = path(aLeftBase)+=iRight;
+        cout<<indent_str(aLevel)<<"--"<<iRight<<endl;
     }
 
     vector<path> intersectionOnly;
