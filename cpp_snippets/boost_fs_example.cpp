@@ -100,6 +100,28 @@ static set<path> dir_list_relative(const path& aPath, const path& aBase)
 }
 
 
+vector<shared_ptr<diff_t>> iterate_dir_recursively_same(
+                             path aBase, 
+                             path aSubPath,
+                             cause_t aCause)
+{
+    vector<shared_ptr<diff_t>> ret;
+    const path full_path(  path(aBase)+=aSubPath  );
+
+    for(directory_entry& iEntry: directory_iterator(full_path)) {
+
+        const path relat = relative(iEntry.path(), aBase);
+
+        if( is_directory(iEntry.path()) ) {
+            auto child_entries = iterate_dir_recursively_same(aBase, relat, aCause);
+            ret.push_back( make_shared<diff_t>(relat, aCause, child_entries) );
+        } else {
+            ret.push_back( make_shared<diff_t>(relat, aCause) );
+        }
+    }
+
+    return ret;
+}
 
 vector<shared_ptr<diff_t>> iterate_dir_recursively(path aLeftBase, 
                              path aRightBase,
@@ -122,12 +144,22 @@ vector<shared_ptr<diff_t>> iterate_dir_recursively(path aLeftBase,
 
     //deleted
     for(const path& iLeft: diff_path(left_set, right_set) ) {
-        ret.push_back( make_shared<diff_t>(iLeft, cause_t::REMOVED) ) ;
+        auto diff =  make_shared<diff_t>(iLeft, cause_t::REMOVED);
+        const path child = path(aLeftBase)/iLeft;
+        if( is_directory( child ) ) {
+            diff->childs = iterate_dir_recursively_same(aLeftBase, iLeft, cause_t::REMOVED);
+        }
+        ret.push_back(diff) ;
     }
 
     //added
     for(const path& iRight: diff_path(right_set, left_set) ) {
-        ret.push_back( make_shared<diff_t>(iRight, cause_t::ADDED) ) ;
+        auto diff =  make_shared<diff_t>(iRight, cause_t::ADDED);
+        const path child = path(aRightBase)/iRight;
+        if( is_directory( child ) ) {
+            diff->childs = iterate_dir_recursively_same(aRightBase, iRight, cause_t::ADDED);
+        }
+        ret.push_back(diff) ;
     }
 
     //changed
@@ -149,8 +181,10 @@ vector<shared_ptr<diff_t>> iterate_dir_recursively(path aLeftBase,
         }
         //TODO: compare file by date, btrfs-checksum...
 
+        cout<<"-"<<endl;
         if( cause_t::SAME != cause ) {
-            ret.push_back( make_shared<diff_t>(iIntersection, cause) );
+            auto diff_entry = make_shared<diff_t>(iIntersection, cause);
+            ret.push_back( diff_entry );
         }
         else if ( is_directory(curr_left) ) {
             auto child_diff = iterate_dir_recursively(aLeftBase, aRightBase, iIntersection, cause_t::SAME, aLevel+1 );   
