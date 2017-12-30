@@ -185,26 +185,31 @@ namespace filesys
         return ret;
     }
  */
- /*    void print_dir_recursive( vector<shared_ptr<diff_t>> aDiffList, int aDepth )
-    {
-        using boost::format;
-        using boost::io::group;
 
-        for( auto iParent: aDiffList )
-        {
-            cout<< indent_str(aDepth)
-                << format("%1%:  %2%")
-                % cause_t_str(iParent->cause, true) 
-                % iParent->last_element_slash()
-                <<endl;
-            
-            if( is_directory(iParent->item) ) {
-                cout << indent_str(aDepth) << "\\---"<<endl;;
-            }
-            print_dir_recursive(iParent->childs, aDepth+1);
-        }
-    }
- */
+void print_dir_recursive( shared_ptr<diff_t> aDiff, int aDepth )
+{
+	using boost::format;
+	using boost::io::group;
+
+	for( auto iChild: aDiff->childs )
+	{
+		cout<< indent_str(aDepth)
+			<< format("%1%:  %2%")
+			% cause_t_str(iChild.second->cause, false)
+			% iChild.second->item
+			<< " " <<iChild.second->parent.get()
+			<<endl;
+
+		const bool isDir = is_directory(iChild.second->left_absolute())
+				|| is_directory(iChild.second->right_absolute());
+
+		if( isDir ) {
+			cout << indent_str(aDepth) << "\\---"<<endl;;
+			print_dir_recursive(iChild.second, aDepth+1);
+		}
+	}
+}
+
 
 
     static void create_dir_list_rek(  
@@ -237,7 +242,8 @@ namespace filesys
                 next_item->item_relative_base = relative(iEntry.path(), curr_base);
                 next_item->left_base = aLeftBase;
                 next_item->right_base = aRightBase;
-                next_item->cause == cause_t::SAME;
+                next_item->cause = cause_t::SAME;
+                next_item->parent = aParent;
 
                 sides_childs[iSide][next_item->item] = next_item;
                 //cout<<indent_str(aLevel)<<next_item->item<<"        :           :::::"<< next_item->item_relative_base<<endl;
@@ -292,6 +298,10 @@ namespace filesys
             }
         }
 
+        for(auto iEntries: aParent->childs) {
+        	aParent->childs_vec.push_back(iEntries.second);
+        }
+
     }
 
 
@@ -306,8 +316,6 @@ namespace filesys
 
         return ret;
     }
-
-
 
 }
 

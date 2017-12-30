@@ -27,7 +27,7 @@ public:
 private:
     void setupModelData();
 
-    filesys::diff_t*  rootItem;
+    shared_ptr<filesys::diff_t>  rootItem;
 };
 
 #endif // TREEMODEL_H

@@ -34,6 +34,7 @@ namespace filesys
         cause_t cause;
         shared_ptr<diff_t> parent;
         map<path, shared_ptr<diff_t>> childs;
+        vector<shared_ptr<diff_t>> childs_vec;
 
         path left_base;
         path right_base;
@@ -48,6 +49,7 @@ namespace filesys
 
     path last_element(path aPath);
 
+    void print_dir_recursive( shared_ptr<diff_t> aDiff, int aDepth );
 }
 
 
