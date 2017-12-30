@@ -1,9 +1,11 @@
 
 #include "treemodel.h"
 #include <QStringList>
+#include <QBrush>
 
 enum class column_e {
     ITEM_NAME=0,
+    ITEM_CAUSE,
     DIFF_SIZE,
     LEN,
 };
@@ -31,23 +33,45 @@ QVariant TreeModel::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    if (role != Qt::DisplayRole)
-        return QVariant();
 
-    if( nullptr == index.internalPointer() )
-    	return QVariant();
 
-    filesys::diff_t* item = static_cast<filesys::diff_t*>(index.internalPointer());
+    if (role == Qt::DisplayRole) {
+        if( nullptr == index.internalPointer() )
+        	return QVariant();
 
-    if( index.column() == static_cast<int>(column_e::ITEM_NAME) ) {
-        return QString( item->item.string().c_str() );
-    } 
-    else if(  index.column() == static_cast<int>(column_e::DIFF_SIZE)  ) {
-        return "blubb";
+        filesys::diff_t* item = static_cast<filesys::diff_t*>(index.internalPointer());
+
+        if( index.column() == static_cast<int>(column_e::ITEM_NAME) ) {
+            return QString( item->item.string().c_str() );
+        }
+        else if(  index.column() == static_cast<int>(column_e::ITEM_CAUSE)  ) {
+			 return filesys::cause_t_str( item->cause ).c_str();
+		 }
+        else if(  index.column() == static_cast<int>(column_e::DIFF_SIZE)  ) {
+            return "blubb";
+        }
+        else {
+            return QVariant();
+        }
     }
-    else {
-        return QVariant();
-    }   
+    else if( role == Qt::BackgroundRole ) {
+    	using namespace filesys;
+
+    	filesys::diff_t* item = static_cast<filesys::diff_t*>(index.internalPointer());
+
+    	switch( item->cause )
+    	{
+    	case cause_t::ADDED: 		return QBrush( Qt::green );
+    	case cause_t::REMOVED:		return QBrush( Qt::cyan );
+    	case cause_t::DIR_TO_FILE:	return QBrush( Qt::red );
+    	case cause_t::FILE_TO_DIR:	return QBrush( Qt::red );
+    	case cause_t::CONTENT:		return QBrush( Qt::red );
+    	default:					return QVariant();
+    	}
+    }
+
+
+    return QVariant();
 }
 
 Qt::ItemFlags TreeModel::flags(const QModelIndex &index) const

@@ -1,0 +1,10 @@
+/Debug/
+*.o
+.cproject
+.project
+.qmake.stash
+.settings
+.dirdiff
+Makefile
+moc_predefs.h
+dirdiff
