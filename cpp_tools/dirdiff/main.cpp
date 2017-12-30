@@ -9,7 +9,7 @@
 
 int main(int argc, char **argv)
 {
-    QApplication app(argc, argv);
+   /*  QApplication app(argc, argv);
     
     TreeModel model(nullptr);
 
@@ -20,5 +20,8 @@ int main(int argc, char **argv)
     view.show();
 
 
-    return app.exec();
+    return app.exec(); */
+
+    filesys::diff_tree(path("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets/"), path("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets_copy/"));
+
 }

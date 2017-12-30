@@ -5,6 +5,7 @@
 #include <memory>
 #include <set>
 #include <cassert>
+#include <array>
 #include <boost/filesystem.hpp>
 #include "boost/format.hpp"
 using namespace boost::filesystem;
@@ -46,51 +47,30 @@ namespace filesys
     {
         switch(aCause)
         {
-        case cause_t::SAME:     return !aUserFriendly ? "SAME"    : "=" ;
-        case cause_t::REMOVED:  return !aUserFriendly ? "REMOVED" : "-" ;
-        case cause_t::ADDED:    return !aUserFriendly ? "ADDED"   : "+" ;
-        case cause_t::CONTENT:  return !aUserFriendly ? "CONTENT" : "~" ;
-        case cause_t::TYPE:     return !aUserFriendly ? "TYPE"    : "?" ;
+        case cause_t::SAME:     		return !aUserFriendly ? "SAME"    : "=" ;
+        case cause_t::REMOVED:  		return !aUserFriendly ? "REMOVED" : "-" ;
+        case cause_t::ADDED:    		return !aUserFriendly ? "ADDED"   : "+" ;
+        case cause_t::CONTENT:  		return !aUserFriendly ? "CONTENT" : "~" ;
+        case cause_t::FILE_TO_DIR:  	return !aUserFriendly ? "FILE_TO_DIR" : " " ;
+        case cause_t::DIR_TO_FILE:		return !aUserFriendly ? "DIR_TO_FILE"    : " " ;
+
         }
 
         return "cause_t-unknown";
     }
 
- 
-    diff_t::diff_t()
-        : cause(cause_t::SAME) {}
-
-    diff_t::diff_t(path aItem, cause_t aCause, shared_ptr<diff_t> aParent )
-        : item(aItem), cause(aCause), parent(aParent) {}
-
-    diff_t::diff_t(path aItem, cause_t aCause, shared_ptr<diff_t> aParent, vector<shared_ptr<diff_t>> aChilds )
-        : item(aItem), cause(aCause), parent(aParent), childs(aChilds) {}
-
-    path diff_t::last_element() const 
+    path last_element(path aPath)
     {   
         path ret;
 
-        for(auto iElements: item) {
+        for(auto iElements: aPath) {
             ret = iElements;
         }
 
         return ret;
     }
 
-    path diff_t::last_element_slash()
-    {
-        path ret = last_element();
-
-        if( is_directory(item) ) {
-            ret+="/";
-        }
-
-        return ret;
-    }
-
-
-
-    static vector<path> diff_path(const set<path> aLeft, const set<path> aRight)
+ /*    static vector<path> diff_path(const set<path> aLeft, const set<path> aRight)
     {
         vector<path> ret;
         set_difference(aLeft.begin(), aLeft.end(), aRight.begin(), aRight.end(), inserter(ret, ret.begin()));   //TODO: what is an inserter :-O
@@ -204,8 +184,8 @@ namespace filesys
 
         return ret;
     }
-
-    void print_dir_recursive( vector<shared_ptr<diff_t>> aDiffList, int aDepth )
+ */
+ /*    void print_dir_recursive( vector<shared_ptr<diff_t>> aDiffList, int aDepth )
     {
         using boost::format;
         using boost::io::group;
@@ -224,5 +204,110 @@ namespace filesys
             print_dir_recursive(iParent->childs, aDepth+1);
         }
     }
+ */
+
+
+    static void create_dir_list_rek(  
+        path aLeftBase, 
+        path aRightBase,
+        path aSubPath,
+        shared_ptr<diff_t>& aParent,
+        int aLevel=0) 
+    {
+        const path left(  path(aLeftBase)+=aSubPath );
+        const path right(  path(aRightBase)+=aSubPath  );
+        const vector<path> sides{ left, right };
+        array<map<path, shared_ptr<diff_t>>, 2> sides_childs;
+
+        const int sides_start = cause_t::ADDED == aParent->cause || cause_t::FILE_TO_DIR == aParent->cause
+        	? 1 : 0;
+        const int sides_end   = cause_t::REMOVED == aParent->cause || cause_t::DIR_TO_FILE == aParent->cause
+        	? 1 : 2;
+        //collect list
+
+        for(int iSide=sides_start; iSide<sides_end; iSide++) {
+        	bool isLeft = 0 == iSide;
+            for(directory_entry iEntry: directory_iterator(sides[iSide]) ) {
+                const path left(  path(aLeftBase)+=iEntry.path() );
+                const path right(  path(aRightBase)+=iEntry.path()  );
+                const path curr_base = isLeft ? aLeftBase : aRightBase;
+
+                auto next_item = make_shared<diff_t>();
+                next_item->item = last_element(iEntry.path());
+                next_item->item_relative_base = relative(iEntry.path(), curr_base);
+                next_item->left_base = aLeftBase;
+                next_item->right_base = aRightBase;
+                next_item->cause == cause_t::SAME;
+
+                sides_childs[iSide][next_item->item] = next_item;
+                //cout<<indent_str(aLevel)<<next_item->item<<"        :           :::::"<< next_item->item_relative_base<<endl;
+            }
+        }
+
+        //create difflist
+        set<path> used;
+        for(int iSide=sides_start; iSide<sides_end; iSide++) {
+        	bool isLeft = 0 == iSide;
+        	auto& otherSide = sides_childs[isLeft ? 1 : 0];
+            for( auto iCurrSide: sides_childs[iSide] ) {
+
+            	if( used.find( iCurrSide.second->item) != used.end() )
+            		continue;
+
+            	bool isIncluded = otherSide.find(iCurrSide.first) != otherSide.end();
+            	bool isDir = is_directory( iCurrSide.second->x_absolute(iSide) );
+            	bool isOtherDir = isIncluded && is_directory(otherSide.find(iCurrSide.first)->second->x_absolute(!iSide));
+
+            	if( cause_t::SAME == aParent->cause ) {
+					if( isLeft && !isIncluded  ) {
+						iCurrSide.second->cause = cause_t::REMOVED;
+					}
+					else if( !isLeft && !isIncluded  ) {
+						iCurrSide.second->cause = cause_t::ADDED;
+					}
+					else if( isDir && !isOtherDir) {
+						iCurrSide.second->cause = isLeft ? cause_t::DIR_TO_FILE : cause_t::FILE_TO_DIR;
+					}
+					else if( !isDir && isOtherDir) {
+						iCurrSide.second->cause = isLeft ? cause_t::FILE_TO_DIR : cause_t::DIR_TO_FILE;
+					}
+            	}
+            	else {
+            		iCurrSide.second->cause = aParent->cause;
+            	}
+
+            	used.insert( iCurrSide.second->item );
+
+            	aParent->childs[iCurrSide.first] = iCurrSide.second;
+            	cout<<indent_str(aLevel)<<aParent->childs[iCurrSide.first]->item<<" "<<cause_t_str(aParent->childs[iCurrSide.first]->cause)<<endl;
+
+            	if( isDir ) {
+            		create_dir_list_rek(aLeftBase,
+						aRightBase,
+						iCurrSide.second->item_relative_base,
+						iCurrSide.second,
+						aLevel+1);
+            	}
+
+            }
+        }
+
+    }
+
+
+    shared_ptr<diff_t> diff_tree(path aLeftBase, path aRightBase)
+    {
+        auto ret = make_shared<diff_t>();
+
+        ret->left_base = aLeftBase;
+        ret->right_base = aRightBase;
+
+        create_dir_list_rek(aLeftBase, aRightBase, "", ret);
+
+        return ret;
+    }
+
+
+
 }
 

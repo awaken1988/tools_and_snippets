@@ -2,6 +2,12 @@
 #include "treemodel.h"
 #include <QStringList>
 
+enum class column_e {
+    ITEM_NAME=0,
+    DIFF_SIZE,
+    LEN,
+};
+
 TreeModel::TreeModel(QObject *parent)
     : QAbstractItemModel(parent)
 {
@@ -17,10 +23,7 @@ TreeModel::~TreeModel()
 
 int TreeModel::columnCount(const QModelIndex &parent) const
 {
-    if (parent.isValid())
-        return static_cast<filesys::diff_t*>(parent.internalPointer())->childs.size();
-    else
-        return 1;
+    return static_cast<int>(column_e::LEN);
 }
 
 QVariant TreeModel::data(const QModelIndex &index, int role) const
@@ -31,9 +34,18 @@ QVariant TreeModel::data(const QModelIndex &index, int role) const
     if (role != Qt::DisplayRole)
         return QVariant();
 
+
     filesys::diff_t* item = static_cast<filesys::diff_t*>(index.internalPointer());
 
-    return QString( item->last_element().string().c_str() );
+    if( index.column() == static_cast<int>(column_e::ITEM_NAME) ) {
+        return QString( item->last_element().string().c_str() );
+    } 
+    else if(  index.column() == static_cast<int>(column_e::DIFF_SIZE)  ) {
+        return "blubb";
+    }
+    else {
+        return QVariant();
+    }   
 }
 
 Qt::ItemFlags TreeModel::flags(const QModelIndex &index) const

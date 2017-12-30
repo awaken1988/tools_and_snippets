@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include <set>
+#include <map>
 #include <cassert>
 #include <boost/filesystem.hpp>
 #include "boost/format.hpp"
@@ -20,7 +21,8 @@ namespace filesys
         REMOVED,
         ADDED,
         CONTENT,
-        TYPE,
+        FILE_TO_DIR,
+		DIR_TO_FILE,
     };
 
     string cause_t_str(cause_t aCause, bool aUserFriendly=false);
@@ -28,27 +30,24 @@ namespace filesys
     struct diff_t 
     {
         path item;
+        path item_relative_base;
         cause_t cause;
         shared_ptr<diff_t> parent;
-        vector<shared_ptr<diff_t>> childs;
+        map<path, shared_ptr<diff_t>> childs;
 
-        diff_t();
-        diff_t(path aItem, cause_t aCause, shared_ptr<diff_t> aParent );
-        diff_t(path aItem, cause_t aCause, shared_ptr<diff_t> aParent, vector<shared_ptr<diff_t>> aChilds );
+        path left_base;
+        path right_base;
 
-        path last_element() const;
-        path last_element_slash();
+        path left_absolute() { return   path(left_base)+=item_relative_base; }
+        path right_absolute() { return path(right_base)+=item_relative_base; }
+        path x_absolute(int x) { return x ? right_absolute() :  left_absolute(); }
 
     };
 
+    shared_ptr<diff_t> diff_tree(path aLeftBase, path aRightBase); 
 
-    vector<shared_ptr<diff_t>> iterate_dir_recursively(
-        path aLeftBase, 
-        path aRightBase,
-        path aSubPath, 
-        shared_ptr<diff_t> aParent);
+    path last_element(path aPath);
 
-    void print_dir_recursive( vector<shared_ptr<diff_t>> aDiffList, int aDepth=0 );
 }
 
 

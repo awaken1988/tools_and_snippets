@@ -6,8 +6,6 @@
 #include <QVariant>
 #include "filesys.h"
 
-class TreeItem;
-
 class TreeModel : public QAbstractItemModel
 {
     Q_OBJECT

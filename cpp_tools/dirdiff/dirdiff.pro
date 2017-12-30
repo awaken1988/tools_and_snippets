@@ -1,10 +1,11 @@
 QT += gui widgets
 
 SOURCES =   main.cpp \
-            filesys.cpp \
-            treemodel.cpp
+            filesys.cpp 
+                     
+#            treemodel.cpp
 
-HEADERS = treemodel.h
+#HEADERS = treemodel.h
 
 CONFIG += debug
 
