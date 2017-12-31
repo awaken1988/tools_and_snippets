@@ -99,11 +99,16 @@ QModelIndex TreeModel::index(int row, int column, const QModelIndex &parent)
 
     filesys::diff_t* parentItem;
 
-    if (!parent.isValid())
+    if (!parent.isValid()) {
         parentItem = rootItem.get();
-    else
+    }
+    else {
         parentItem = static_cast<filesys::diff_t*>(parent.internalPointer());
+    }
 
+    if( row >= parentItem->childs_vec.size() ) {
+    	return QModelIndex();
+    }
 
     return createIndex(row, column, parentItem->childs_vec[row].get());
 }
@@ -157,7 +162,7 @@ void TreeModel::setupModelData()
     path  left("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets/");
     path right("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets_copy/");
 
-    rootItem = filesys::diff_tree(left, right);
+    rootItem = filesys::diff_tree(left, left);
 
     filesys::print_dir_recursive(rootItem, 0);
 }
