@@ -1,7 +1,8 @@
 QT += gui widgets
 
 SOURCES =   main.cpp \
-            filesys.cpp \          
+            filesys.cpp \      
+            fsdiff.cpp \    
            	treemodel.cpp \
            	sortfilterproxy.cpp
 

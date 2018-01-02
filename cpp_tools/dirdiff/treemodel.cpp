@@ -39,13 +39,13 @@ QVariant TreeModel::data(const QModelIndex &index, int role) const
         if( nullptr == index.internalPointer() )
         	return QVariant();
 
-        filesys::diff_t* item = static_cast<filesys::diff_t*>(index.internalPointer());
+        fsdiff::diff_t* item = static_cast<fsdiff::diff_t*>(index.internalPointer());
 
         if( index.column() == static_cast<int>(column_e::ITEM_NAME) ) {
-            return QString( item->item.string().c_str() );
+            return QString( item->getLastName().c_str());
         }
         else if(  index.column() == static_cast<int>(column_e::ITEM_CAUSE)  ) {
-			 return filesys::cause_t_str( item->cause ).c_str();
+			return fsdiff::cause_t_str( item->cause ).c_str();
 		 }
         else if(  index.column() == static_cast<int>(column_e::DIFF_SIZE)  ) {
             return "blubb";
@@ -55,17 +55,17 @@ QVariant TreeModel::data(const QModelIndex &index, int role) const
         }
     }
     else if( role == Qt::BackgroundRole ) {
-    	using namespace filesys;
+    	using namespace fsdiff;
 
-    	filesys::diff_t* item = static_cast<filesys::diff_t*>(index.internalPointer());
+    	fsdiff::diff_t* item = static_cast<fsdiff::diff_t*>(index.internalPointer());
 
     	switch( item->cause )
     	{
     	case cause_t::ADDED: 		return QBrush( Qt::green );
-    	case cause_t::REMOVED:		return QBrush( Qt::cyan );
+    	case cause_t::DELETED:		return QBrush( Qt::cyan );
     	case cause_t::DIR_TO_FILE:	return QBrush( Qt::red );
     	case cause_t::FILE_TO_DIR:	return QBrush( Qt::red );
-    	case cause_t::CONTENT:		return QBrush( Qt::red );
+    	//case cause_t::CONTENT:		return QBrush( Qt::red );
     	default:					return QVariant();
     	}
     }
@@ -97,20 +97,20 @@ QModelIndex TreeModel::index(int row, int column, const QModelIndex &parent)
     if (!hasIndex(row, column, parent))
         return QModelIndex();
 
-    filesys::diff_t* parentItem;
+    fsdiff::diff_t* parentItem;
 
     if (!parent.isValid()) {
         parentItem = rootItem.get();
     }
     else {
-        parentItem = static_cast<filesys::diff_t*>(parent.internalPointer());
+        parentItem = static_cast<fsdiff::diff_t*>(parent.internalPointer());
     }
 
-    if( row >= parentItem->childs_vec.size() ) {
+    if( row >= parentItem->childs.size() ) {
     	return QModelIndex();
     }
 
-    return createIndex(row, column, parentItem->childs_vec[row].get());
+    return createIndex(row, column, parentItem->childs[row].get());
 }
 
 QModelIndex TreeModel::parent(const QModelIndex &index) const
@@ -118,10 +118,10 @@ QModelIndex TreeModel::parent(const QModelIndex &index) const
     if (!index.isValid())
         return QModelIndex();
 
-    filesys::diff_t* childItem = static_cast<filesys::diff_t*>(index.internalPointer());
+    fsdiff::diff_t* childItem = static_cast<fsdiff::diff_t*>(index.internalPointer());
     if( nullptr == childItem )
     	return QModelIndex();
-    filesys::diff_t* parentItem = childItem->parent.get();
+    fsdiff::diff_t* parentItem = childItem->parent.get();
 
     if (parentItem == rootItem.get() || nullptr == parentItem) {
         //cout<<"failed "<<parentItem<<endl;
@@ -129,8 +129,8 @@ QModelIndex TreeModel::parent(const QModelIndex &index) const
     }
 
     int row = 0;
-    for(int i=0; i<parentItem->childs_vec.size(); i++) {
-        if( parentItem->childs_vec[i]->item == childItem->item ) {
+    for(int i=0; i<parentItem->childs.size(); i++) {
+        if( parentItem->childs[i]->fullpath[0] == childItem->fullpath[0] ) {
             row = i;
         }
     }
@@ -140,19 +140,19 @@ QModelIndex TreeModel::parent(const QModelIndex &index) const
 
 int TreeModel::rowCount(const QModelIndex &parent) const
 {
-    filesys::diff_t* parentItem = nullptr;
+    fsdiff::diff_t* parentItem = nullptr;
     if (parent.column() > 0)
         return 0;
 
     if (!parent.isValid())
         parentItem = rootItem.get();
     else
-        parentItem = static_cast<filesys::diff_t*>(parent.internalPointer());
+        parentItem = static_cast<fsdiff::diff_t*>(parent.internalPointer());
 
     if( nullptr == parentItem )
     	return 0;
 
-    int ret = parentItem->childs_vec.size();
+    int ret = parentItem->childs.size();
     //cout<<ret<<endl;
     return ret;
 }
@@ -162,7 +162,6 @@ void TreeModel::setupModelData()
     path  left("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets/");
     path right("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets_copy/");
 
-    rootItem = filesys::diff_tree(left, left);
-
-    filesys::print_dir_recursive(rootItem, 0);
+    rootItem = fsdiff::compare(left, right);
+    //rootItem = fsdiff::list_dir_rekursive(left);
 }

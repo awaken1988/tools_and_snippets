@@ -70,6 +70,7 @@ namespace filesys
         return ret;
     }
 
+
  /*    static vector<path> diff_path(const set<path> aLeft, const set<path> aRight)
     {
         vector<path> ret;

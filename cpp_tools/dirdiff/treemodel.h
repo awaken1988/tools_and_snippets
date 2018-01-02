@@ -5,6 +5,7 @@
 #include <QModelIndex>
 #include <QVariant>
 #include "filesys.h"
+#include "fsdiff.h"
 
 class TreeModel : public QAbstractItemModel
 {
@@ -27,7 +28,7 @@ public:
 private:
     void setupModelData();
 
-    shared_ptr<filesys::diff_t>  rootItem;
+    shared_ptr<fsdiff::diff_t>  rootItem;
 };
 
 #endif // TREEMODEL_H
