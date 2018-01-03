@@ -50,6 +50,8 @@ namespace fsdiff
 
 		path getLastName(idx_t aIdx=LEFT);
 		bool isBase();
+
+		int debug_id;
 	};
 
 	shared_ptr<diff_t> list_dir_rekursive(path aAbsoluteBase);

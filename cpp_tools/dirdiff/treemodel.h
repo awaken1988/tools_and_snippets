@@ -12,7 +12,7 @@ class TreeModel : public QAbstractItemModel
     Q_OBJECT
 
 public:
-    TreeModel(QObject *parent);
+    TreeModel(QObject *parent, std::shared_ptr<fsdiff::diff_t> aDiffTree);
     ~TreeModel();
 
     QVariant data(const QModelIndex &index, int role) const override;

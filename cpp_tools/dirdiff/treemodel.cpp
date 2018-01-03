@@ -10,12 +10,10 @@ enum class column_e {
     LEN,
 };
 
-TreeModel::TreeModel(QObject *parent)
+TreeModel::TreeModel(QObject *parent, std::shared_ptr<fsdiff::diff_t> aDiffTree)
     : QAbstractItemModel(parent)
 {
-    QList<QVariant> rootData;
-    rootData << "Files" << "Summary";
-    setupModelData();
+    rootItem = aDiffTree;
 }
 
 TreeModel::~TreeModel()

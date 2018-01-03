@@ -43,6 +43,8 @@ namespace fsdiff
 		return false;
 	}
 
+
+	int next_debug_id = 1000000;
 	static shared_ptr<diff_t> impl_list_dir_rekursive(path aAbsoluteBase, path aOwnPath, shared_ptr<diff_t> aParent)
 	{
 		shared_ptr<diff_t> ret = make_shared<diff_t>();
@@ -51,6 +53,7 @@ namespace fsdiff
 		ret->baseDir[diff_t::LEFT]  = aAbsoluteBase;
 		ret->cause = cause_t::SAME;
 		ret->parent = aParent;
+		ret->debug_id = ++next_debug_id;
 
 		if( !is_directory( aOwnPath ) )
 			return ret;

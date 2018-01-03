@@ -4,10 +4,12 @@ SOURCES =   main.cpp \
             filesys.cpp \      
             fsdiff.cpp \    
            	treemodel.cpp \
-           	sortfilterproxy.cpp
+           	sortfilterproxy.cpp \
+           	maingui.cpp
 
 HEADERS = 	treemodel.h \
-			sortfilterproxy.h
+			sortfilterproxy.h \
+			maingui.h
 
 CONFIG += debug
 
