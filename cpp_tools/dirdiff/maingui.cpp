@@ -6,6 +6,7 @@
  */
 
 #include "maingui.h"
+#include <QMimeDatabase>
 
 
 MainGui::MainGui( std::shared_ptr<fsdiff::diff_t> aDiffTree )
@@ -71,8 +72,15 @@ void MainGui::clicked_diffitem(const QModelIndex &index)
 	}
 
 	for(int iSide=0; iSide<m_cmp_detail.size(); iSide++) {
+
 		auto curr = m_cmp_detail[iSide];
 		QGridLayout* sideLayout = new QGridLayout();
+
+		if( cause_t::ADDED == diff->cause && iSide != diff_t::LEFT )
+			continue;
+		if( cause_t::DELETED == diff->cause && iSide != diff_t::RIGHT )
+			continue;
+
 
 		//full path
 		{
@@ -81,6 +89,31 @@ void MainGui::clicked_diffitem(const QModelIndex &index)
 			QLabel* fullPath 		= new QLabel(path, curr);
 			sideLayout->addWidget(fullPathText, 0, 0);
 			sideLayout->addWidget(fullPath, 0, 1);
+		}
+		//last name
+		{
+			QString path = diff->getLastName().string().c_str();
+			QLabel* fullPathText 	= new QLabel("Last Name:", curr);
+			QLabel* fullPath 		= new QLabel(path, curr);
+			sideLayout->addWidget(fullPathText, 1, 0);
+			sideLayout->addWidget(fullPath, 1, 1);
+		}
+		//last name
+		{
+			QString type = "unkown file";
+
+			if( is_directory( diff->fullpath[iSide] ) ) {
+				type = "dir";
+			} else {
+				QMimeDatabase db;
+				QMimeType mime = db.mimeTypeForFile(diff->fullpath[iSide].string().c_str());
+				type = mime.name();
+			}
+
+			QLabel* fullPathText 	= new QLabel("Type:", curr);
+			QLabel* fullPath 		= new QLabel(type, curr);
+			sideLayout->addWidget(fullPathText, 2, 0);
+			sideLayout->addWidget(fullPath, 2, 1);
 		}
 
 		curr->setLayout(sideLayout);

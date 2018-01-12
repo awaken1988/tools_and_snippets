@@ -124,13 +124,15 @@ namespace fsdiff
 				continue;
 			}
 
+			impl_copy_diff(iChild, *right_iter);
+
 			if( isDirLeft ) {
 				impl_compare(iChild, *right_iter);
 			}
 		}
 
 		for(auto& iChild: aRight->childs) {
-			auto found =  find_if(aLeft->childs.begin(), aLeft->childs.end(), [&iChild](shared_ptr<diff_t> aDiff) {
+			auto found =  find_if(aLeft->childs.begin(), aLeft->childs.end(), [&iChild](shared_ptr<diff_t>& aDiff) {
 				return aDiff->getLastName() == iChild->getLastName();
 			});
 
