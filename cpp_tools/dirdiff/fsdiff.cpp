@@ -85,6 +85,21 @@ namespace fsdiff
 		}
 	}
 
+	static void impl_move(shared_ptr<diff_t> aDiff, diff_t::idx_t aIdxFrom, diff_t::idx_t aIdxTo, bool aIsRek)
+	{
+		aDiff->fullpath[aIdxTo] = aDiff->fullpath[aIdxFrom];
+		aDiff->fullpath[aIdxFrom] = path();
+
+		aDiff->baseDir[aIdxTo] = aDiff->baseDir[aIdxFrom];
+		aDiff->baseDir[aIdxFrom] = path();
+
+		if( aIsRek ) {
+			for(auto& iChild: aDiff->childs) {
+				impl_move(iChild, aIdxFrom, aIdxTo, aIsRek);
+			}
+		}
+	}
+
 	static shared_ptr<diff_t> impl_compare(shared_ptr<diff_t> aLeft, shared_ptr<diff_t> aRight)
 	{
 		for(auto& iChild: aLeft->childs) {
@@ -139,6 +154,7 @@ namespace fsdiff
 			if( found == aLeft->childs.end() ) {
 				impl_set_cause_rekurively(iChild, cause_t::ADDED);
 				iChild->parent = aLeft;
+				impl_move(iChild, diff_t::LEFT, diff_t::RIGHT, true);
 				aLeft->childs.push_back( iChild );
 			}
 		};
