@@ -55,7 +55,7 @@ namespace fsdiff
 
 
 	int next_debug_id = 1000000;
-	static shared_ptr<diff_t> impl_list_dir_rekursive(path aAbsoluteBase, path aOwnPath, shared_ptr<diff_t> aParent)
+	static shared_ptr<diff_t> impl_list_dir_rekursive(path aAbsoluteBase, path aOwnPath, diff_t* aParent)
 	{
 		shared_ptr<diff_t> ret = make_shared<diff_t>();
 
@@ -69,7 +69,7 @@ namespace fsdiff
 			return ret;
 
 		for(directory_entry iEntry: directory_iterator( ret->fullpath[diff_t::LEFT] ) ) {
-			ret->childs.push_back( impl_list_dir_rekursive(aAbsoluteBase, iEntry.path(), ret) );
+			ret->childs.push_back( impl_list_dir_rekursive(aAbsoluteBase, iEntry.path(), ret.get()) );
 		}
 
 		return ret;
@@ -81,13 +81,13 @@ namespace fsdiff
 	}
 
 
-	static void impl_copy_diff(shared_ptr<diff_t> aLeft, shared_ptr<diff_t> aRight)
+	static void impl_copy_diff(shared_ptr<diff_t>& aLeft, shared_ptr<diff_t>& aRight)
 	{
 		aLeft->fullpath[diff_t::RIGHT] = aRight->fullpath[diff_t::LEFT];
 		aLeft->baseDir[diff_t::RIGHT] = aRight->baseDir[diff_t::LEFT];
 	}
 
-	static void impl_set_cause_rekurively(shared_ptr<diff_t> aDiff, cause_t aCause)
+	static void impl_set_cause_rekurively(shared_ptr<diff_t>& aDiff, cause_t aCause)
 	{
 		aDiff->cause = aCause;
 		for(auto& iChild: aDiff->childs) {
@@ -110,7 +110,7 @@ namespace fsdiff
 		}
 	}
 
-	static shared_ptr<diff_t> impl_compare(shared_ptr<diff_t> aLeft, shared_ptr<diff_t> aRight)
+	static void impl_compare(shared_ptr<diff_t>& aLeft, shared_ptr<diff_t>& aRight)
 	{
 		for(auto& iChild: aLeft->childs) {
 			auto right_iter =  find_if(aRight->childs.begin(), aRight->childs.end(), [&iChild](shared_ptr<diff_t>& aDiff) {
@@ -141,7 +141,7 @@ namespace fsdiff
 				iChild->childs.clear();
 				iChild->childs = (*right_iter)->childs;
 				for(auto& iChildChild: iChild->childs) {
-					iChildChild->parent = iChild;
+					iChildChild->parent = iChild.get();
 				}
 
 				impl_set_cause_rekurively(iChild, iChild->cause);
@@ -163,7 +163,7 @@ namespace fsdiff
 
 			if( found == aLeft->childs.end() ) {
 				impl_set_cause_rekurively(iChild, cause_t::ADDED);
-				iChild->parent = aLeft;
+				iChild->parent = aLeft.get();
 				impl_move(iChild, diff_t::LEFT, diff_t::RIGHT, true);
 				aLeft->childs.push_back( iChild );
 			}
@@ -187,7 +187,7 @@ namespace fsdiff
 
 		cout<<indent_str(aDepth)<<"* "<<endl;
 		cout<<indent_str(aDepth)<<"debug_id="<<aTree->debug_id<<endl;
-		cout<<indent_str(aDepth)<<"parent="<<aTree->parent.get()<<endl;
+		cout<<indent_str(aDepth)<<"parent="<<aTree->parent<<endl;
 		cout<<indent_str(aDepth)<<"self="<<aTree.get()<<endl;
 		cout<<indent_str(aDepth)<<"left  fullpath"<<aTree->fullpath[diff_t::LEFT]<<endl;
 		cout<<indent_str(aDepth)<<"right fullpath"<<aTree->fullpath[diff_t::RIGHT]<<endl;

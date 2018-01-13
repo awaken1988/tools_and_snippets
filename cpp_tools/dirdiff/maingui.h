@@ -38,6 +38,8 @@ protected:
 	TreeModel* m_model;
 	SortFilterProxy* m_filter;
 	QGridLayout* m_layout;
+
+	const bool m_with_filter = false;
 };
 
 #endif /* MAINGUI_H_ */

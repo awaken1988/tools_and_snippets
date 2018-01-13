@@ -21,8 +21,10 @@ MainGui::MainGui( std::shared_ptr<fsdiff::diff_t> aDiffTree )
 	m_filter = new SortFilterProxy(this);		//TODO: who is destroying this object
 	m_model = new TreeModel(this, aDiffTree);
 
-	m_filter->clear();
-	m_filter->setSourceModel(m_model);
+	if( m_with_filter ) {
+		m_filter->clear();
+		m_filter->setSourceModel(m_model);
+	}
 
 	QGridLayout* layout = new QGridLayout;
 	m_layout = layout;
@@ -30,7 +32,7 @@ MainGui::MainGui( std::shared_ptr<fsdiff::diff_t> aDiffTree )
 	//tree
 	{
 		QTreeView* treeView = new QTreeView(this);
-		treeView->setModel(m_filter);
+		treeView->setModel( m_with_filter ? static_cast<QAbstractItemModel*>(m_filter) : static_cast<QAbstractItemModel*>(m_model));
 		layout->addWidget(treeView, 0, 0, 1, 2);
 
 		QObject::connect(treeView, &QTreeView::clicked, this, &MainGui::clicked_diffitem);
@@ -59,11 +61,12 @@ MainGui::~MainGui()
 
 void MainGui::clicked_diffitem(const QModelIndex &index)
 {
-	return;
-
 	using namespace fsdiff;
 
-	QModelIndex sourceIndex = m_filter->mapToSource(index);
+	QModelIndex sourceIndex = index;
+	if( m_with_filter ) {
+		sourceIndex = m_filter->mapToSource(index);
+	}
 
 	if( !sourceIndex.isValid() )
 		return;
@@ -89,8 +92,11 @@ void MainGui::clicked_diffitem(const QModelIndex &index)
 		if( cause_t::ADDED == diff->cause && iSide != diff_t::RIGHT
 			|| cause_t::DELETED == diff->cause && iSide != diff_t::LEFT )
 		{
-			QWidget* wg = new QWidget(curr);
-			sideLayout->addWidget(wg, sideLayout->rowCount(), 0);
+			QLabel* lbl = new QLabel( fsdiff::cause_t_str(diff->cause).c_str() , curr);
+			sideLayout->addWidget(lbl, sideLayout->rowCount(), 0, 2, 1);
+			sideLayout->setColumnStretch(0, 1);
+			curr->setLayout(sideLayout);
+			continue;
 		}
 
 		int row = 0;

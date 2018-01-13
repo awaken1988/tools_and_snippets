@@ -28,6 +28,8 @@ int TreeModel::columnCount(const QModelIndex &parent) const
 
 QVariant TreeModel::data(const QModelIndex &index, int role) const
 {
+	using namespace fsdiff;
+
     if (!index.isValid())
         return QVariant();
 
@@ -39,8 +41,11 @@ QVariant TreeModel::data(const QModelIndex &index, int role) const
 
         fsdiff::diff_t* item = static_cast<fsdiff::diff_t*>(index.internalPointer());
 
+        const bool is_added = fsdiff::cause_t::ADDED == item->cause;
+        const diff_t::idx_t idx_side = is_added ? diff_t::RIGHT : diff_t::LEFT;
+
         if( index.column() == static_cast<int>(column_e::ITEM_NAME) ) {
-            return QString( item->getLastName().c_str());
+            return QString( item->getLastName(idx_side).c_str() );
         }
         else if(  index.column() == static_cast<int>(column_e::ITEM_CAUSE)  ) {
 			return fsdiff::cause_t_str( item->cause ).c_str();
@@ -119,10 +124,9 @@ QModelIndex TreeModel::parent(const QModelIndex &index) const
     fsdiff::diff_t* childItem = static_cast<fsdiff::diff_t*>(index.internalPointer());
     if( nullptr == childItem )
     	return QModelIndex();
-    fsdiff::diff_t* parentItem = childItem->parent.get();
+    fsdiff::diff_t* parentItem = childItem->parent;
 
     if (parentItem == rootItem.get() || nullptr == parentItem) {
-        //cout<<"failed "<<parentItem<<endl;
     	return QModelIndex();
     }
 

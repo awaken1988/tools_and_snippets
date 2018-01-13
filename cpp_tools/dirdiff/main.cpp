@@ -19,9 +19,9 @@ int main(int argc, char **argv)
 	auto left_tree = fsdiff::list_dir_rekursive(left);
 	auto difftree = fsdiff::compare(left, right);
 
-	fsdiff::dump(difftree);
+	fsdiff::dump( difftree );
 
-	MainGui gui( left_tree );
+	MainGui gui( difftree );
 	gui.show();
 
 //	TreeModel model(nullptr);

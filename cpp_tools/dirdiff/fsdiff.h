@@ -45,7 +45,7 @@ namespace fsdiff
 		array<path, 2> fullpath;
 		cause_t cause;
 
-		shared_ptr<diff_t> parent;
+		diff_t* parent;
 		vector<shared_ptr<diff_t>>	childs;
 
 		path getLastName(idx_t aIdx=LEFT);
