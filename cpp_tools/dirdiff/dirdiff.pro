@@ -5,11 +5,13 @@ SOURCES =   main.cpp \
             fsdiff.cpp \    
            	treemodel.cpp \
            	sortfilterproxy.cpp \
-           	maingui.cpp
+           	maingui.cpp \
+           	detailgui.cpp
 
 HEADERS = 	treemodel.h \
 			sortfilterproxy.h \
-			maingui.h
+			maingui.h \
+			detailgui.h
 
 CONFIG += debug
 

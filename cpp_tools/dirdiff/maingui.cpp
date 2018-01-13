@@ -6,6 +6,7 @@
  */
 
 #include "maingui.h"
+#include "detaildui.h"
 #include <QMimeDatabase>
 #include <QSpacerItem>
 #include <QVBoxLayout>
@@ -78,98 +79,13 @@ void MainGui::clicked_diffitem(const QModelIndex &index)
 
 	//recreate widgets
 	{
-		for(int iSide=0; iSide<m_cmp_detail.size(); iSide++) {
+		for(size_t iSide=0; iSide<m_cmp_detail.size(); iSide++) {
 			delete m_cmp_detail[iSide];
 		}
 		init_left_right_info();
 	}
 
-	for(int iSide=0; iSide<m_cmp_detail.size(); iSide++) {
-
-		auto curr = m_cmp_detail[iSide];
-		QGridLayout* sideLayout = new QGridLayout();
-
-		if( cause_t::ADDED == diff->cause && iSide != diff_t::RIGHT
-			|| cause_t::DELETED == diff->cause && iSide != diff_t::LEFT )
-		{
-			QLabel* lbl = new QLabel( fsdiff::cause_t_str(diff->cause).c_str() , curr);
-			sideLayout->addWidget(lbl, sideLayout->rowCount(), 0, 2, 1);
-			sideLayout->setColumnStretch(0, 1);
-			curr->setLayout(sideLayout);
-			continue;
-		}
-
-		int row = 0;
-
-		//symbol
-		{
-			QFileIconProvider icon_provider;
-			QIcon icon = icon_provider.icon( QFileInfo(diff->fullpath[iSide].string().c_str()) );
-
-			QLabel* icon_label = new QLabel(curr);
-			icon_label->setPixmap(icon.pixmap(80,80));
-
-			sideLayout->addWidget(icon_label, row, 1);
-
-		} row++;
-
-		//full path
-		{
-			QString path = diff->fullpath[iSide].string().c_str();
-			QLabel* fullPathText 	= new QLabel("Full Path:", curr);
-			QLabel* fullPath 		= new QLabel(path, curr);
-			sideLayout->addWidget(fullPathText, row, 0);
-			sideLayout->addWidget(fullPath, row, 1);
-		} row++;
-
-		//base dir
-		{
-			QString path = diff->baseDir[iSide].string().c_str();
-			QLabel* fullPathText 	= new QLabel("Base Dir:", curr);
-			QLabel* fullPath 		= new QLabel(path, curr);
-			sideLayout->addWidget(fullPathText, row, 0);
-			sideLayout->addWidget(fullPath, row, 1);
-		} row++;
-
-		//last name
-		{
-			QString path = diff->getLastName().string().c_str();
-			QLabel* fullPathText 	= new QLabel("Last Name:", curr);
-			QLabel* fullPath 		= new QLabel(path, curr);
-			sideLayout->addWidget(fullPathText, row, 0);
-			sideLayout->addWidget(fullPath, row, 1);
-		} row++;
-
-		//last name
-		{
-			QString type = "unkown file";
-
-			if( is_directory( diff->fullpath[iSide] ) ) {
-				type = "dir";
-			} else {
-				QMimeDatabase db;
-				QMimeType mime = db.mimeTypeForFile(diff->fullpath[iSide].string().c_str());
-				type = mime.name();
-			}
-
-			QLabel* fullPathText 	= new QLabel("Type:", curr);
-			QLabel* fullPath 		= new QLabel(type, curr);
-			sideLayout->addWidget(fullPathText, row, 0);
-			sideLayout->addWidget(fullPath, row, 1);
-		} row++;
-
-		//stretch
-		{
-			sideLayout->setColumnStretch(1, 1);
-
-			QWidget* wg = new QWidget(curr);
-			sideLayout->addWidget(wg, sideLayout->rowCount(), 0);
-			sideLayout->setRowStretch(sideLayout->rowCount()-1, 1);
-		}
-
-		curr->setLayout(sideLayout);
-	}
-
+	detailgui::show(diff, m_cmp_detail[0], m_cmp_detail[1]);
 }
 
 void MainGui::init_left_right_info()
