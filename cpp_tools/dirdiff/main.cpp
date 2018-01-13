@@ -16,9 +16,12 @@ int main(int argc, char **argv)
 	path  left("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets/");
 	path right("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets_copy/");
 
+	auto left_tree = fsdiff::list_dir_rekursive(left);
 	auto difftree = fsdiff::compare(left, right);
 
-	MainGui gui( difftree );
+	fsdiff::dump(difftree);
+
+	MainGui gui( left_tree );
 	gui.show();
 
 //	TreeModel model(nullptr);

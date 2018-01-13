@@ -18,11 +18,11 @@
 
 MainGui::MainGui( std::shared_ptr<fsdiff::diff_t> aDiffTree )
 {
-	m_filter = new SortFilterProxy();		//TODO: who is destroying this object
+	m_filter = new SortFilterProxy(this);		//TODO: who is destroying this object
 	m_model = new TreeModel(this, aDiffTree);
 
+	m_filter->clear();
 	m_filter->setSourceModel(m_model);
-
 
 	QGridLayout* layout = new QGridLayout;
 	m_layout = layout;
@@ -59,9 +59,12 @@ MainGui::~MainGui()
 
 void MainGui::clicked_diffitem(const QModelIndex &index)
 {
+	return;
+
 	using namespace fsdiff;
 
 	QModelIndex sourceIndex = m_filter->mapToSource(index);
+
 	if( !sourceIndex.isValid() )
 		return;
 	diff_t* diff = static_cast<diff_t*>(sourceIndex.internalPointer());

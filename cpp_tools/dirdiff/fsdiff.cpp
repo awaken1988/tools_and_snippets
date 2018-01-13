@@ -10,6 +10,16 @@
 namespace fsdiff
 {
 
+	static string indent_str(int aLevel)
+	{
+		string ret;
+
+		for(int i=0; i<aLevel; i++)
+			ret += "    ";
+
+		return ret;
+	}
+
 	string cause_t_str(cause_t aCause)
 	{
 		switch(aCause)
@@ -103,7 +113,7 @@ namespace fsdiff
 	static shared_ptr<diff_t> impl_compare(shared_ptr<diff_t> aLeft, shared_ptr<diff_t> aRight)
 	{
 		for(auto& iChild: aLeft->childs) {
-			auto right_iter =  find_if(aRight->childs.begin(), aRight->childs.end(), [&iChild](shared_ptr<diff_t> aDiff) {
+			auto right_iter =  find_if(aRight->childs.begin(), aRight->childs.end(), [&iChild](shared_ptr<diff_t>& aDiff) {
 				return aDiff->getLastName() == iChild->getLastName();
 			});
 
@@ -169,6 +179,25 @@ namespace fsdiff
 		impl_compare(left, right);
 
 		return left;
+	}
+
+	void dump(shared_ptr<diff_t> &aTree, int aDepth)
+	{
+		using namespace std;
+
+		cout<<indent_str(aDepth)<<"* "<<endl;
+		cout<<indent_str(aDepth)<<"debug_id="<<aTree->debug_id<<endl;
+		cout<<indent_str(aDepth)<<"parent="<<aTree->parent.get()<<endl;
+		cout<<indent_str(aDepth)<<"self="<<aTree.get()<<endl;
+		cout<<indent_str(aDepth)<<"left  fullpath"<<aTree->fullpath[diff_t::LEFT]<<endl;
+		cout<<indent_str(aDepth)<<"right fullpath"<<aTree->fullpath[diff_t::RIGHT]<<endl;
+		cout<<indent_str(aDepth)<<"left  baseDir"<<aTree->baseDir[diff_t::LEFT]<<endl;
+		cout<<indent_str(aDepth)<<"right baseDir"<<aTree->baseDir[diff_t::RIGHT]<<endl;
+
+
+		for(auto& iChild: aTree->childs) {
+			dump(iChild, aDepth+1);
+		}
 	}
 
 } /* namespace fsdiff */

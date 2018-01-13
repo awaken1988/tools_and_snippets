@@ -58,6 +58,7 @@ namespace fsdiff
 
 	shared_ptr<diff_t> compare(path aAbsoluteLeft, path aAbsoluteRight);
 
+	void dump(shared_ptr<diff_t> & aTree, int aDepth=0);
 
 } /* namespace fsdiff */
 

@@ -128,7 +128,7 @@ QModelIndex TreeModel::parent(const QModelIndex &index) const
 
     int row = 0;
     for(int i=0; i<parentItem->childs.size(); i++) {
-        if( parentItem->childs[i]->fullpath[0] == childItem->fullpath[0] ) {
+        if( parentItem->childs[i].get() == childItem  ) {
             row = i;
         }
     }

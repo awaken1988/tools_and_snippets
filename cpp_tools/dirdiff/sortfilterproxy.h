@@ -13,10 +13,11 @@
 
 class SortFilterProxy : public QSortFilterProxyModel {
 public:
-	SortFilterProxy();
+	SortFilterProxy(QObject* aParent);
 	virtual ~SortFilterProxy();
 
 	bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
+	bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
 };
 
 #endif /* SORTFILTERPROXY_H_ */
