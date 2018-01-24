@@ -10,6 +10,9 @@
 #include <QLabel>
 #include <QMimeDatabase>
 #include <QFileIconProvider>
+#include <QPlainTextEdit>
+#include <QPixmap>
+#include <boost/filesystem/fstream.hpp>
 
 
 
@@ -64,22 +67,52 @@ namespace detailgui
 		}
 
 		//mime
+		QString mime_type = "";
 		{
-			QString type = "unkown file";
-
-			if( is_directory( aDiff->fullpath[aIdx] ) ) {
-				type = "dir";
-			} else {
+			if( is_regular_file( aDiff->fullpath[aIdx] ) ) {
 				QMimeDatabase db;
 				QMimeType mime = db.mimeTypeForFile(aDiff->fullpath[aIdx].string().c_str());
-				type = mime.name();
+				mime_type = mime.name();
 			}
 
 			QLabel* fullPathText 	= new QLabel("Type:", aParent);
-			QLabel* fullPath 		= new QLabel(type, aParent);
+			QLabel* fullPath 		= new QLabel(mime_type, aParent);
 			aGrid->addWidget(fullPathText, aGrid->rowCount(), 0);
 			aGrid->addWidget(fullPath, aGrid->rowCount()-1, 1);
 		}
+
+		//open diff item
+		if( mime_type.startsWith("text") )
+		{
+			QPlainTextEdit* plainText = new QPlainTextEdit(aParent);
+
+			QSizePolicy policy = plainText->sizePolicy();
+			policy.setVerticalStretch(2);
+			plainText->setSizePolicy(policy);
+
+			boost::filesystem::ifstream file(aDiff->fullpath[aIdx]);
+			string content;
+			while( getline(file, content) ) {
+				plainText->appendPlainText(content.c_str());
+			}
+
+
+			aGrid->addWidget(plainText, aGrid->rowCount(), 0, 3, 2);
+		}
+		else if( mime_type.startsWith("image") )
+		{
+			QLabel* lbl = new QLabel;
+
+			QPixmap pxmp( aDiff->fullpath[aIdx].c_str() );
+			pxmp =pxmp.scaledToHeight(80, Qt::FastTransformation );
+
+			lbl->setPixmap(pxmp);
+
+
+
+			aGrid->addWidget(lbl, aGrid->rowCount(), 0, 3, 2, Qt::AlignHCenter);
+		}
+
 
 	}
 
