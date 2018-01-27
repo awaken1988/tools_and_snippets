@@ -9,7 +9,6 @@
 #define SORTFILTERPROXY_H_
 
 #include <QSortFilterProxyModel>
-#include "filesys.h"
 
 class SortFilterProxy : public QSortFilterProxyModel {
 public:

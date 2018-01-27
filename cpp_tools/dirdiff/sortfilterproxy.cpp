@@ -22,8 +22,8 @@ SortFilterProxy::~SortFilterProxy() {
 
 bool SortFilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
-	using namespace filesys;
 	using namespace std;
+	using namespace fsdiff;
 
 	cout<<"sourceRow="<<sourceRow<<"; row="<<sourceParent.row()<<"; col="<<sourceParent.column()
 			<<"; ptr="<<sourceParent.internalPointer()<<endl;
@@ -35,8 +35,6 @@ bool SortFilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex &sourceP
 
 
 	if( cause_t::ADDED == left_ptr->cause)
-		return false;
-	if( cause_t::REMOVED == left_ptr->cause)
 		return false;
 
 	return true;

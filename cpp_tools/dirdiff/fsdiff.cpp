@@ -124,7 +124,6 @@ namespace fsdiff
 
 			const bool isInRight = right_iter != aRight->childs.end();
 			const bool isDirLeft = is_directory( iChild->fullpath[diff_t::LEFT] );
-			bool copy_right = true;
 
 			if( !isInRight ) {
 				iChild->cause = cause_t::DELETED;

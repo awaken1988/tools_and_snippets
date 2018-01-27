@@ -1,7 +1,6 @@
 QT += gui widgets
 
-SOURCES =   main.cpp \
-            filesys.cpp \      
+SOURCES =   main.cpp \     
             fsdiff.cpp \    
            	treemodel.cpp \
            	sortfilterproxy.cpp \
@@ -16,3 +15,5 @@ HEADERS = 	treemodel.h \
 CONFIG += debug
 
 unix:LIBS += -lboost_system -lboost_filesystem 
+
+QMAKE_CXXFLAGS += -Wno-unused-variable -Wno-unused-parameter

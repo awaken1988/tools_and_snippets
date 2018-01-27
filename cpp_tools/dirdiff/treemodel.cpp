@@ -109,7 +109,7 @@ QModelIndex TreeModel::index(int row, int column, const QModelIndex &parent)
         parentItem = static_cast<fsdiff::diff_t*>(parent.internalPointer());
     }
 
-    if( row >= parentItem->childs.size() ) {
+    if( (size_t)row >= parentItem->childs.size() ) {
     	return QModelIndex();
     }
 
@@ -131,7 +131,7 @@ QModelIndex TreeModel::parent(const QModelIndex &index) const
     }
 
     int row = 0;
-    for(int i=0; i<parentItem->childs.size(); i++) {
+    for(size_t i=0; i<parentItem->childs.size(); i++) {
         if( parentItem->childs[i].get() == childItem  ) {
             row = i;
         }

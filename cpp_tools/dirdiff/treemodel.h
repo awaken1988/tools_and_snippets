@@ -4,7 +4,6 @@
 #include <QAbstractItemModel>
 #include <QModelIndex>
 #include <QVariant>
-#include "filesys.h"
 #include "fsdiff.h"
 
 class TreeModel : public QAbstractItemModel

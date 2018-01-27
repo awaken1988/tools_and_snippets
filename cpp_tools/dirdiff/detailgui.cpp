@@ -126,8 +126,8 @@ namespace detailgui
 
 			QGridLayout* sideLayout = new QGridLayout();
 
-			if( cause_t::ADDED == aDiff->cause && iSide != diff_t::RIGHT
-				|| cause_t::DELETED == aDiff->cause && iSide != diff_t::LEFT )
+			if( (cause_t::ADDED == aDiff->cause && iSide != diff_t::RIGHT)
+				|| (cause_t::DELETED == aDiff->cause && iSide != diff_t::LEFT) )
 			{
 				QLabel* lbl = new QLabel( fsdiff::cause_t_str(aDiff->cause).c_str() , curr);
 				sideLayout->addWidget(lbl, sideLayout->rowCount(), 0, 2, 1);
@@ -143,8 +143,6 @@ namespace detailgui
 				sideLayout->addWidget(wg, sideLayout->rowCount(), 0);
 				sideLayout->setRowStretch(sideLayout->rowCount()-1, 1);
 			}
-
-			int row = 0;
 
 			curr->setLayout(sideLayout);
 
