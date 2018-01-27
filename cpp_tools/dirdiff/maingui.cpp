@@ -94,6 +94,10 @@ void MainGui::init_left_right_info()
 		m_cmp_detail = { new QGroupBox("Left"), new QGroupBox("Right") };
 
 		for(int i=0; i<2; i++) {
+
+			m_cmp_detail[i]->setSizePolicy( QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding) );
+
+
 			m_layout->addWidget(m_cmp_detail[i], 1, i);
 		}
 	}

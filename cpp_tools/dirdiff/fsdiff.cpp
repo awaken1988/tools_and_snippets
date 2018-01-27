@@ -65,11 +65,16 @@ namespace fsdiff
 		ret->parent = aParent;
 		ret->debug_id = ++next_debug_id;
 
-		if( !is_directory( aOwnPath ) )
-			return ret;
+		try {
+			if( !is_directory( aOwnPath ) )
+				return ret;
 
-		for(directory_entry iEntry: directory_iterator( ret->fullpath[diff_t::LEFT] ) ) {
-			ret->childs.push_back( impl_list_dir_rekursive(aAbsoluteBase, iEntry.path(), ret.get()) );
+			for(directory_entry iEntry: directory_iterator( ret->fullpath[diff_t::LEFT] ) ) {
+				ret->childs.push_back( impl_list_dir_rekursive(aAbsoluteBase, iEntry.path(), ret.get()) );
+			}
+		}
+		catch(boost::filesystem::filesystem_error& e) {
+			cout<<"cannot access: "<<ret->fullpath[diff_t::LEFT]<<endl;
 		}
 
 		return ret;

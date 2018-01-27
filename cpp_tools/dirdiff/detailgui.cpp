@@ -53,6 +53,7 @@ namespace detailgui
 			QString path = aDiff->fullpath[aIdx].string().c_str();
 			QLabel* fullPathText 	= new QLabel("Full Path:", aParent);
 			QLabel* fullPath 		= new QLabel(path, aParent);
+			fullPath->setWordWrap(true);
 			aGrid->addWidget(fullPathText, aGrid->rowCount(), 0);
 			aGrid->addWidget(fullPath, aGrid->rowCount()-1, 1);
 		}
