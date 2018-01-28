@@ -58,6 +58,10 @@ namespace fsdiff
 
 	shared_ptr<diff_t> compare(path aAbsoluteLeft, path aAbsoluteRight);
 
+	int64_t diff_size(diff_t& aTree);
+
+	string pretty_print_size(int64_t aSize);
+
 	void dump(shared_ptr<diff_t> & aTree, int aDepth=0);
 
 } /* namespace fsdiff */

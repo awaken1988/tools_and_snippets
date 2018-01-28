@@ -185,6 +185,24 @@ namespace fsdiff
 		return left;
 	}
 
+	int64_t diff_size(diff_t& aTree)
+	{
+		uintmax_t file_sizes[] = {0, 0};
+
+		for(int iSide=0; iSide<2; iSide++) {
+			if(! is_regular_file(aTree.fullpath.at(iSide)) )
+				continue;
+			file_sizes[iSide] = file_size(aTree.fullpath.at(iSide));
+		}
+
+		return static_cast<int64_t>(file_sizes[1])-static_cast<int64_t>(file_sizes[0]);
+	}
+
+	string pretty_print_size(int64_t aSize)
+	{
+
+	}
+
 	void dump(shared_ptr<diff_t> &aTree, int aDepth)
 	{
 		using namespace std;

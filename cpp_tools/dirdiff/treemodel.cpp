@@ -51,7 +51,9 @@ QVariant TreeModel::data(const QModelIndex &index, int role) const
 			return fsdiff::cause_t_str( item->cause ).c_str();
 		 }
         else if(  index.column() == static_cast<int>(column_e::DIFF_SIZE)  ) {
-            return "blubb";
+            auto sdiff = fsdiff::diff_size(*item);
+
+        	return QString("%1").arg(sdiff);
         }
         else {
             return QVariant();

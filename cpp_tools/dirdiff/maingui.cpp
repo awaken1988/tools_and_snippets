@@ -5,8 +5,8 @@
  *      Author: martin
  */
 
+#include <detailgui.h>
 #include "maingui.h"
-#include "detaildui.h"
 #include <QMimeDatabase>
 #include <QSpacerItem>
 #include <QVBoxLayout>
@@ -15,7 +15,6 @@
 #include <QIcon>
 #include <QPushButton>
 #include <QLabel>
-
 
 MainGui::MainGui( std::shared_ptr<fsdiff::diff_t> aDiffTree )
 {
@@ -37,9 +36,13 @@ MainGui::MainGui( std::shared_ptr<fsdiff::diff_t> aDiffTree )
 		layout->addWidget(treeView, 0, 0, 1, 2);
 
 		QObject::connect(treeView, &QTreeView::clicked, this, &MainGui::clicked_diffitem);
+
+		treeView->setColumnWidth(0, 300);
 	}
 
 	//left right box
+	m_detail_tab = new QTabWidget(this);
+	layout->addWidget(m_detail_tab, 1, 0, 1, 2);
 	init_left_right_info();
 
 //	{
@@ -78,29 +81,33 @@ void MainGui::clicked_diffitem(const QModelIndex &index)
 	cout<<"clicked"<<endl;
 
 	//recreate widgets
-	{
-		for(size_t iSide=0; iSide<m_cmp_detail.size(); iSide++) {
-			delete m_cmp_detail[iSide];
-		}
-		init_left_right_info();
-	}
+	init_left_right_info();
 
-	detailgui::show(diff, m_cmp_detail[0], m_cmp_detail[1]);
+
+	auto tab_changed_fun = [&](int aIdx) {
+		if( aIdx < 0)
+			return;
+		m_detail_tab_idx = aIdx;
+	};
+
+	//detail tab: filename, path, mime
+	m_detail_tab->addTab(detailgui::show_detail(diff), "Details");
+	QObject::connect(m_detail_tab, &QTabWidget::tabBarClicked, tab_changed_fun);
+
+	//content
+	const int content_tab_idx = m_detail_tab->addTab(detailgui::show_content(diff), "Content");
+	QObject::connect(m_detail_tab, &QTabWidget::tabBarClicked, tab_changed_fun);
+
+	//restore las tab
+	m_detail_tab_idx = m_detail_tab->count() <= m_detail_tab_idx ? 0 : m_detail_tab_idx;
+	m_detail_tab->setCurrentIndex(m_detail_tab_idx);
+
+
 }
 
 void MainGui::init_left_right_info()
 {
-	{
-		m_cmp_detail = { new QGroupBox("Left"), new QGroupBox("Right") };
-
-		for(int i=0; i<2; i++) {
-
-			m_cmp_detail[i]->setSizePolicy( QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding) );
-
-
-			m_layout->addWidget(m_cmp_detail[i], 1, i);
-		}
-	}
+		m_detail_tab->clear();
 }
 
 

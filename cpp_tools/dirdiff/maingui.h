@@ -38,6 +38,8 @@ protected:
 	TreeModel* m_model;
 	SortFilterProxy* m_filter;
 	QGridLayout* m_layout;
+	QTabWidget* m_detail_tab;
+	int m_detail_tab_idx=0;
 
 	const bool m_with_filter = false;
 };
