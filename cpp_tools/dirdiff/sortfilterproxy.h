@@ -9,6 +9,7 @@
 #define SORTFILTERPROXY_H_
 
 #include <QSortFilterProxyModel>
+#include "fsdiff.h"
 
 class SortFilterProxy : public QSortFilterProxyModel {
 public:
@@ -17,6 +18,11 @@ public:
 
 	bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
 	bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
+
+	void set_cause_filter(fsdiff::cause_t aCause, bool aEnabled);
+
+protected:
+	set<fsdiff::cause_t> m_items_show;
 };
 
 #endif /* SORTFILTERPROXY_H_ */

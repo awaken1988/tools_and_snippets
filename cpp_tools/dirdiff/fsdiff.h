@@ -15,6 +15,7 @@
 #include <set>
 #include <map>
 #include <cassert>
+#include <functional>
 #include <boost/filesystem.hpp>
 #include "boost/format.hpp"
 
@@ -33,6 +34,8 @@ namespace fsdiff
 	};
 
 	string cause_t_str(cause_t aCause);
+
+	const set<cause_t>& cause_t_list();
 
 	struct diff_t
 	{
@@ -63,6 +66,8 @@ namespace fsdiff
 	string pretty_print_size(int64_t aSize);
 
 	void dump(shared_ptr<diff_t> & aTree, int aDepth=0);
+
+	void foreach_diff_item(const diff_t& aTree, std::function<void(const diff_t& aTree)> aFunction);
 
 } /* namespace fsdiff */
 

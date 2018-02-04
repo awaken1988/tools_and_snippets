@@ -35,13 +35,14 @@ protected:
 
 protected:
 	std::array<QGroupBox*, 2> m_cmp_detail;
+	QTreeView* m_tree_view;
 	TreeModel* m_model;
 	SortFilterProxy* m_filter;
 	QGridLayout* m_layout;
 	QTabWidget* m_detail_tab;
 	int m_detail_tab_idx=0;
 
-	const bool m_with_filter = false;
+	const bool m_with_filter = true;
 };
 
 #endif /* MAINGUI_H_ */

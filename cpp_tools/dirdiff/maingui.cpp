@@ -15,34 +15,61 @@
 #include <QIcon>
 #include <QPushButton>
 #include <QLabel>
+#include <QCheckBox>
+#include <QHBoxLayout>
 
 MainGui::MainGui( std::shared_ptr<fsdiff::diff_t> aDiffTree )
 {
-	m_filter = new SortFilterProxy(this);		//TODO: who is destroying this object
 	m_model = new TreeModel(this, aDiffTree);
 
 	if( m_with_filter ) {
-		m_filter->clear();
+		m_filter = new SortFilterProxy(this);		//TODO: who is destroying this object
 		m_filter->setSourceModel(m_model);
 	}
 
 	QGridLayout* layout = new QGridLayout;
 	m_layout = layout;
 
+	//filter
+	{
+		QHBoxLayout* filter_layout = new QHBoxLayout;
+
+		for(auto iCause: fsdiff::cause_t_list()) {
+			auto* chBx = new QCheckBox( fsdiff::cause_t_str(iCause).c_str(), this );
+			chBx->setCheckState(Qt::Checked);
+			filter_layout->addWidget(chBx);
+
+			QObject::connect(chBx, &QCheckBox::stateChanged, [iCause, this](int aState) {
+				m_filter->set_cause_filter(iCause, static_cast<bool>(aState));
+				cout<<"change filter: name="<<cause_t_str(iCause)<<"; state="<<aState<<endl;
+			});
+		}
+
+		filter_layout->addStretch(1);
+		QPushButton* btnExpandAll = new QPushButton("Expand All");
+		filter_layout->addWidget(btnExpandAll);
+
+		QObject::connect(btnExpandAll, &QPushButton::clicked, [this]() {
+			m_tree_view->expandAll();
+		});
+
+		layout->addLayout(filter_layout, layout->rowCount(), 0, 1, 2);
+	}
+
 	//tree
 	{
-		QTreeView* treeView = new QTreeView(this);
-		treeView->setModel( m_with_filter ? static_cast<QAbstractItemModel*>(m_filter) : static_cast<QAbstractItemModel*>(m_model));
-		layout->addWidget(treeView, 0, 0, 1, 2);
+		m_tree_view = new QTreeView(this);
+		m_tree_view->setModel( m_with_filter ? static_cast<QAbstractItemModel*>(m_filter) : static_cast<QAbstractItemModel*>(m_model));
+		layout->addWidget(m_tree_view, layout->rowCount(), 0, 1, 2);
 
-		QObject::connect(treeView, &QTreeView::clicked, this, &MainGui::clicked_diffitem);
+		QObject::connect(m_tree_view, &QTreeView::clicked, this, &MainGui::clicked_diffitem);
 
-		treeView->setColumnWidth(0, 300);
+		m_tree_view->setColumnWidth(0, 300);
 	}
 
 	//left right box
 	m_detail_tab = new QTabWidget(this);
-	layout->addWidget(m_detail_tab, 1, 0, 1, 2);
+	layout->addWidget(m_detail_tab, layout->rowCount(), 0, 1, 2);
 	init_left_right_info();
 
 //	{

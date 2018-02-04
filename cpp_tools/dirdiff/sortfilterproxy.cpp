@@ -10,9 +10,9 @@
 #include <iostream>
 
 SortFilterProxy::SortFilterProxy(QObject* aParent)
-	: QSortFilterProxyModel(aParent)
+	: 	QSortFilterProxyModel(aParent),
+		m_items_show(fsdiff::cause_t_list())
 {
-	// TODO Auto-generated constructor stub
 
 }
 
@@ -24,20 +24,24 @@ bool SortFilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex &sourceP
 {
 	using namespace std;
 	using namespace fsdiff;
-
-	cout<<"sourceRow="<<sourceRow<<"; row="<<sourceParent.row()<<"; col="<<sourceParent.column()
-			<<"; ptr="<<sourceParent.internalPointer()<<endl;
+	bool ret = false;
 
 	QModelIndex index0 = sourceModel()->index(sourceRow, 0, sourceParent);
-
 	diff_t* left_ptr = static_cast<diff_t*>(index0.internalPointer());
 
+	cout<<"sourceRow="<<sourceRow<<"; row="<<sourceParent.row()<<"; col="<<sourceParent.column()
+				<<"; ptr="<<sourceParent.internalPointer()<<" debug_id="<<left_ptr->debug_id<<endl;
 
 
-	if( cause_t::ADDED == left_ptr->cause)
-		return false;
 
-	return true;
+	fsdiff::foreach_diff_item(*left_ptr, [&ret,this](const diff_t& aTree) {
+		for(auto iCause: m_items_show) {
+			if( aTree.cause == iCause )
+				ret = true;
+		}
+	});
+
+	return ret;
 }
 
 bool SortFilterProxy::lessThan(const QModelIndex &left, const QModelIndex &right) const
@@ -50,3 +54,16 @@ bool SortFilterProxy::lessThan(const QModelIndex &left, const QModelIndex &right
 	return left_ptr->debug_id < right_ptr->debug_id;
 
 }
+
+void SortFilterProxy::set_cause_filter(fsdiff::cause_t aCause, bool aEnabled)
+{
+	if( aEnabled )
+		m_items_show.insert(aCause);
+	else
+		m_items_show.erase(aCause);
+
+	this->invalidateFilter();
+}
+
+
+

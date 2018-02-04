@@ -6,6 +6,7 @@
  */
 
 #include "fsdiff.h"
+#include "sys/stat.h"
 
 namespace fsdiff
 {
@@ -31,7 +32,17 @@ namespace fsdiff
 			case cause_t::DIR_TO_FILE:	return "DIR_TO_FILE";
 			default: return "UNKNOWN";
 		}
+	}
 
+	const set<cause_t>& cause_t_list()
+	{
+		static set<cause_t> values = { cause_t::SAME,
+			cause_t::ADDED,
+			cause_t::DELETED,
+			cause_t::FILE_TO_DIR,
+			cause_t::DIR_TO_FILE, };
+
+		return values;
 	}
 
 	path diff_t::getLastName(idx_t aIdx)
@@ -53,6 +64,32 @@ namespace fsdiff
 		return false;
 	}
 
+	static bool impl_check_access(const path& aPath)
+	{
+		try {
+			if( is_regular_file(aPath) ) {
+				//check if we have access permissions to read
+				file_status result = status(aPath);
+				if( !(result.permissions() & (S_IRUSR|S_IRGRP|S_IROTH)) )
+					return false;
+
+				file_size(aPath);
+			} else if( is_directory(aPath) ) {
+				for(directory_entry iEntry: directory_iterator( aPath ) ) {
+					//do nothing
+				}
+			}
+			else {
+				return false;	// until now we only handly normal files an directory
+			}
+		}
+		catch(boost::filesystem::filesystem_error& e) {
+			cout<<"cannot access: "<<aPath<<endl;
+			return false;
+		}
+
+		return true;
+	}
 
 	int next_debug_id = 1000000;
 	static shared_ptr<diff_t> impl_list_dir_rekursive(path aAbsoluteBase, path aOwnPath, diff_t* aParent)
@@ -65,17 +102,19 @@ namespace fsdiff
 		ret->parent = aParent;
 		ret->debug_id = ++next_debug_id;
 
-		try {
-			if( !is_directory( aOwnPath ) )
-				return ret;
+		if( !is_directory( ret->fullpath[diff_t::LEFT] ) )
+			return ret;
+		if( !impl_check_access( ret->fullpath[diff_t::LEFT] ) )
+			return ret;
 
-			for(directory_entry iEntry: directory_iterator( ret->fullpath[diff_t::LEFT] ) ) {
-				ret->childs.push_back( impl_list_dir_rekursive(aAbsoluteBase, iEntry.path(), ret.get()) );
-			}
+		for(directory_entry iEntry: directory_iterator( ret->fullpath[diff_t::LEFT] ) ) {
+
+			if( !impl_check_access(iEntry.path() ) )
+				continue;
+
+			ret->childs.push_back( impl_list_dir_rekursive(aAbsoluteBase, iEntry.path(), ret.get()) );
 		}
-		catch(boost::filesystem::filesystem_error& e) {
-			cout<<"cannot access: "<<ret->fullpath[diff_t::LEFT]<<endl;
-		}
+
 
 		return ret;
 	}
@@ -219,6 +258,15 @@ namespace fsdiff
 
 		for(auto& iChild: aTree->childs) {
 			dump(iChild, aDepth+1);
+		}
+	}
+
+	void foreach_diff_item(const diff_t& aTree, std::function<void(const diff_t& aTree)> aFunction)
+	{
+		aFunction(aTree);
+
+		for(auto iChild: aTree.childs) {
+			foreach_diff_item(*iChild, aFunction);
 		}
 	}
 

@@ -12,15 +12,20 @@
 //TODO: select directory dialog
 //TODO: detail box and to long strings
 
+//FIXME: all filesystem actions should be moved to fsdiff
+//			- saved in a try/catch call
+//			- can return nothing
+
 int main(int argc, char **argv)
 {
+	QApplication::setSetuidAllowed(true);
 	QApplication app(argc, argv);
 
 	path  left("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets/");
 	path right("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets_copy/");
 
-	//path  left("/usr/share/");
-	//path right("/home/martin/Dropbox/");
+	//path  left("/media/xc3po_root/.xc3po_snapshots/2017_07_03__20_30/");
+	//path right("/media/xc3po_root/.xc3po_snapshots/2018_01_26__22_37/");
 
 	auto left_tree = fsdiff::list_dir_rekursive(left);
 	auto difftree = fsdiff::compare(left, right);

@@ -13,6 +13,7 @@
 #include <QPixmap>
 #include <QFrame>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem/exception.hpp>
 #include <detailgui.h>
 
 
@@ -93,14 +94,21 @@ namespace detailgui
 		{
 			QLabel* fullPathText 	= new QLabel("Filesize:");
 			QLabel* fullPath 		= new QLabel;
+			boost::system::error_code err;
 
-			auto filesize = boost::filesystem::file_size(aDiff->fullpath[aIdx]);
-
-			if( boost::filesystem::is_regular_file( aDiff->fullpath[aIdx] ) ) {
-				fullPath->setText(
-						QString("%1").arg(
-								filesize) );
+			auto filesize = boost::filesystem::file_size(aDiff->fullpath[aIdx], err);
+			if( boost::system::errc::success ==  err.value() ) {
+				if( boost::filesystem::is_regular_file( aDiff->fullpath[aIdx] ) ) {
+					fullPath->setText(
+							QString("%1").arg(
+									filesize) );
+				}
 			}
+			else {
+				fullPath->setText("cannot determine size");
+			}
+
+
 
 			aGrid->addWidget(fullPathText, row++, 0+col_offset);
 			aGrid->addWidget(fullPath, row-1, 1+col_offset);
@@ -172,10 +180,18 @@ namespace detailgui
 			policy.setVerticalStretch(2);
 			plainText->setSizePolicy(policy);
 
-			boost::filesystem::ifstream file(aFilePath.c_str());
 			string content;
-			while( getline(file, content) ) {
-				plainText->appendPlainText(content.c_str());
+
+			//TODO: what type of exception thrown?
+			try {
+				boost::filesystem::ifstream file(aFilePath.c_str());
+
+				while( getline(file, content) ) {
+					plainText->appendPlainText(content.c_str());
+				}
+			}
+			catch(...) {
+
 			}
 
 			plainText->setReadOnly(1);
