@@ -1,6 +1,8 @@
 #include "treemodel.h"
 #include "sortfilterproxy.h"
 #include "maingui.h"
+#include <vector>
+#include <boost/filesystem.hpp>
 #include <QApplication>
 #include <QtGui>
 #include <QWidget>
@@ -16,21 +18,34 @@
 //			- saved in a try/catch call
 //			- can return nothing
 
+auto getPathByArg(int argc, char **argv)
+{
+	std::vector<boost::filesystem::path> ret;
+
+	for(int iArg=0; iArg<argc && ret.size() < 2; iArg++) {
+		auto curr_path = boost::filesystem::path(argv[iArg]);
+
+		if( boost::filesystem::is_directory(curr_path) ) {
+			ret.push_back(curr_path);
+		}
+	}
+
+	return ret;
+}
+
 int main(int argc, char **argv)
 {
 	QApplication::setSetuidAllowed(true);
 	QApplication app(argc, argv);
 
-	path  left("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets/");
-	path right("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets_copy/");
+	auto diff_paths = getPathByArg(argc, argv);
 
-	//path  left("/media/xc3po_root/.xc3po_snapshots/2017_07_03__20_30/");
-	//path right("/media/xc3po_root/.xc3po_snapshots/2018_01_26__22_37/");
+	if( diff_paths.size() < 2 ) {
+		std::cout<<"no paths given as argument; TODO: show gui"<<endl;
+		return 1;
+	}
 
-	auto left_tree = fsdiff::list_dir_rekursive(left);
-	auto difftree = fsdiff::compare(left, right);
-
-	//fsdiff::dump( difftree );
+	auto difftree = fsdiff::compare(diff_paths[0], diff_paths[1]);
 
 	MainGui gui( difftree );
 	gui.show();
@@ -38,21 +53,11 @@ int main(int argc, char **argv)
 	QMainWindow mainWindow;
 	gui.resize(QDesktopWidget().availableGeometry(&mainWindow).size() * 0.7);;
 
-//	TreeModel model(nullptr);
-//	QTreeView view(nullptr);
-//	SortFilterProxy sfp;
-//
-//	sfp.setSourceModel(&model);
-//
-//	view.setModel(&sfp);
-//	view.setMinimumWidth(800);
-//	view.setMinimumHeight(800);
-//	view.show();
-//
-//	//sfp.setFilterRole( Qt::DisplayRole );
-//	//sfp.setFilterKeyColumn(0);
 
 	return app.exec();
-
-	//filesys::diff_tree(path("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets/"), path("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets_copy/"));
 }
+
+//path  left("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets/");
+//path right("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets_copy/");
+//path  left("/media/xc3po_root/.xc3po_snapshots/2017_07_03__20_30/");
+//path right("/media/xc3po_root/.xc3po_snapshots/2018_01_26__22_37/");

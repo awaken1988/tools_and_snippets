@@ -33,13 +33,23 @@ bool SortFilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex &sourceP
 				<<"; ptr="<<sourceParent.internalPointer()<<" debug_id="<<left_ptr->debug_id<<endl;
 
 
+	if( m_cause_cache.find(left_ptr) == m_cause_cache.end() ) {
+		fsdiff::foreach_diff_item(*left_ptr, [&ret,this,left_ptr](const diff_t& aTree) {
+			m_cause_cache[left_ptr].insert(aTree.cause);
+		});
+	}
 
-	fsdiff::foreach_diff_item(*left_ptr, [&ret,this](const diff_t& aTree) {
-		for(auto iCause: m_items_show) {
-			if( aTree.cause == iCause )
-				ret = true;
+	for(auto iCause: m_items_show) {
+
+		auto& curr = m_cause_cache[left_ptr];
+
+		if( curr.find(iCause) != curr.end() ) {
+			return true;
 		}
-	});
+	}
+
+
+
 
 	return ret;
 }

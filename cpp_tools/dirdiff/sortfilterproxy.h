@@ -10,6 +10,8 @@
 
 #include <QSortFilterProxyModel>
 #include "fsdiff.h"
+#include <map>
+#include <set>
 
 class SortFilterProxy : public QSortFilterProxyModel {
 public:
@@ -22,7 +24,8 @@ public:
 	void set_cause_filter(fsdiff::cause_t aCause, bool aEnabled);
 
 protected:
-	set<fsdiff::cause_t> m_items_show;
+	std::set<fsdiff::cause_t> m_items_show;
+	mutable std::map<fsdiff::diff_t*, std::set<fsdiff::cause_t> > m_cause_cache;
 };
 
 #endif /* SORTFILTERPROXY_H_ */
