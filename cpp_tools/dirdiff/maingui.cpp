@@ -7,6 +7,7 @@
 
 #include <detailgui.h>
 #include "maingui.h"
+#include "opengui.h"
 #include <QMimeDatabase>
 #include <QSpacerItem>
 #include <QVBoxLayout>
@@ -17,10 +18,23 @@
 #include <QLabel>
 #include <QCheckBox>
 #include <QHBoxLayout>
+#include <QApplication>
 
-MainGui::MainGui( std::shared_ptr<fsdiff::diff_t> aDiffTree )
+MainGui::MainGui(  )
 {
-	m_model = new TreeModel(this, aDiffTree);
+
+}
+
+MainGui::~MainGui()
+{
+
+}
+
+void MainGui::startDiff(std::vector<boost::filesystem::path> aPaths)
+{
+	auto difftree = fsdiff::compare(aPaths[0], aPaths[1]);
+
+	m_model = new TreeModel(this, difftree);
 
 	if( m_with_filter ) {
 		m_filter = new SortFilterProxy(this);		//TODO: who is destroying this object
@@ -46,12 +60,27 @@ MainGui::MainGui( std::shared_ptr<fsdiff::diff_t> aDiffTree )
 		}
 
 		filter_layout->addStretch(1);
-		QPushButton* btnExpandAll = new QPushButton("Expand All");
-		filter_layout->addWidget(btnExpandAll);
 
-		QObject::connect(btnExpandAll, &QPushButton::clicked, [this]() {
-			m_tree_view->expandAll();
-		});
+
+		//collapse all
+		{
+			auto ret = new QPushButton("Collapse All");
+			QObject::connect(ret, &QPushButton::clicked, [this]() {
+				m_tree_view->collapseAll();
+			});
+			filter_layout->addWidget(ret);
+		};
+
+		//expand all
+		{
+			auto ret = new QPushButton("Expand All");
+			QObject::connect(ret, &QPushButton::clicked, [this]() {
+				m_tree_view->expandAll();
+			});
+			filter_layout->addWidget(ret);
+		};
+
+
 
 		layout->addLayout(filter_layout, layout->rowCount(), 0, 1, 2);
 	}
@@ -83,11 +112,6 @@ MainGui::MainGui( std::shared_ptr<fsdiff::diff_t> aDiffTree )
 //	}
 
 	setLayout( layout );
-}
-
-MainGui::~MainGui()
-{
-
 }
 
 void MainGui::clicked_diffitem(const QModelIndex &index)

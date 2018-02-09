@@ -7,6 +7,10 @@
 
 #include "fsdiff.h"
 #include "sys/stat.h"
+#include <tuple>
+#include <array>
+#include <cmath>
+#include <boost/format.hpp>
 
 namespace fsdiff
 {
@@ -239,7 +243,24 @@ namespace fsdiff
 
 	string pretty_print_size(int64_t aSize)
 	{
+		bool isNeg = aSize < 0;
 
+		vector<string> sizes = {"bytes", "KiB", "MiB", "GiB"};
+
+		int log = static_cast<int>( log2(abs(aSize)) / log2(1024) );
+		const string byte_output = (boost::format("%1% %2%") % aSize % sizes[0]).str();
+
+		if( log < 1) {
+			return byte_output;
+		}
+
+		if( log >= sizes.size() )
+			log = sizes.size()-1;
+
+		return (boost::format("%|1$.1f| %|2$| ( %|3$| )")
+			% (aSize/pow(1024, log))
+			% sizes[log]
+			% byte_output).str();
 	}
 
 	void dump(shared_ptr<diff_t> &aTree, int aDepth)

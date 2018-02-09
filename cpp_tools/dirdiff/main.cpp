@@ -1,6 +1,7 @@
 #include "treemodel.h"
 #include "sortfilterproxy.h"
 #include "maingui.h"
+#include "opengui.h"
 #include <vector>
 #include <boost/filesystem.hpp>
 #include <QApplication>
@@ -9,6 +10,7 @@
 #include <QTreeView>
 #include <QDesktopWidget>
 #include <QMainWindow>
+#include <QTimer>
 
 //TODO: QT redraw scrollbars
 //TODO: select directory dialog
@@ -38,21 +40,37 @@ int main(int argc, char **argv)
 	QApplication::setSetuidAllowed(true);
 	QApplication app(argc, argv);
 
-	auto diff_paths = getPathByArg(argc, argv);
+	MainGui* mainGui = nullptr;
 
-	if( diff_paths.size() < 2 ) {
-		std::cout<<"no paths given as argument; TODO: show gui"<<endl;
-		return 1;
-	}
+	QTimer::singleShot(0, [&](){
 
-	auto difftree = fsdiff::compare(diff_paths[0], diff_paths[1]);
+		auto diffpath = getPathByArg(argc, argv);
+		bool ok = false;
 
-	MainGui gui( difftree );
-	gui.show();
+		if( diffpath.size() < 2 ) {
+			OpenGui openPaths;
 
-	QMainWindow mainWindow;
-	gui.resize(QDesktopWidget().availableGeometry(&mainWindow).size() * 0.7);;
+			if( QDialog::Accepted == openPaths.exec() ) {
+				diffpath = openPaths.m_paths_str;
+				ok = true;
+			}
+			else {
+				QApplication::exit(0);
+			}
+		}
+		else {
+			ok = true;
+		}
 
+		if( ok ) {
+			QMainWindow mainWindow;
+
+			mainGui = new MainGui();
+			mainGui->resize(QDesktopWidget().availableGeometry(&mainWindow).size() * 0.7);;
+			mainGui->startDiff(diffpath);
+			mainGui->show();
+		}
+	});
 
 	return app.exec();
 }

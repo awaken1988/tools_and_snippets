@@ -29,8 +29,8 @@ bool SortFilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex &sourceP
 	QModelIndex index0 = sourceModel()->index(sourceRow, 0, sourceParent);
 	diff_t* left_ptr = static_cast<diff_t*>(index0.internalPointer());
 
-	cout<<"sourceRow="<<sourceRow<<"; row="<<sourceParent.row()<<"; col="<<sourceParent.column()
-				<<"; ptr="<<sourceParent.internalPointer()<<" debug_id="<<left_ptr->debug_id<<endl;
+//	cout<<"sourceRow="<<sourceRow<<"; row="<<sourceParent.row()<<"; col="<<sourceParent.column()
+//				<<"; ptr="<<sourceParent.internalPointer()<<" debug_id="<<left_ptr->debug_id<<endl;
 
 
 	if( m_cause_cache.find(left_ptr) == m_cause_cache.end() ) {

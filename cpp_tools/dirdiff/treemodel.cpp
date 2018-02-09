@@ -52,8 +52,7 @@ QVariant TreeModel::data(const QModelIndex &index, int role) const
 		 }
         else if(  index.column() == static_cast<int>(column_e::DIFF_SIZE)  ) {
             auto sdiff = fsdiff::diff_size(*item);
-
-        	return QString("%1").arg(sdiff);
+        	return QString("%1").arg( pretty_print_size(sdiff).c_str() );
         }
         else {
             return QVariant();
@@ -157,7 +156,7 @@ int TreeModel::rowCount(const QModelIndex &parent) const
     	return 0;
 
     int ret = parentItem->childs.size();
-    //cout<<ret<<endl;
+
     return ret;
 }
 
