@@ -15,6 +15,7 @@
 #include <QGroupBox>
 #include <QTreeView>
 #include <QLabel>
+#include <QMainWindow>
 #include <QPushButton>
 #include "fsdiff.h"
 #include "treemodel.h"
@@ -24,7 +25,7 @@
 
 
 
-class MainGui : public QWidget
+class MainGui : public QMainWindow
 {
 public:
 	MainGui();

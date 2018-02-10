@@ -16,6 +16,7 @@
 #include <QStyle>
 #include <QMainWindow>
 #include <QDesktopWidget>
+#include <QFileDialog>
 
 OpenGui::OpenGui(QWidget *parent)
 	: QDialog(parent)
@@ -43,6 +44,17 @@ OpenGui::OpenGui(QWidget *parent)
 		else {
 			m_paths[iSide]->setText("/home/martin/Dropbox/Programming/tools_and_snippets/cpp_snippets_copy/");
 		}
+
+		decltype(m_paths[iSide]) curr_paths = m_paths[iSide];
+
+		//show directory dialog
+		QObject::connect(bntDialog, &QPushButton::clicked, [this,curr_paths](int a) {
+			QFileDialog dialog(this);
+			dialog.setFileMode(QFileDialog::DirectoryOnly);
+			if( dialog.exec() ) {
+				curr_paths->setText(dialog.selectedFiles()[0]);
+			}
+		});
 
 		mainLayout->addWidget(lblChoose, iSide, 0);
 		mainLayout->addWidget(m_paths[iSide], iSide, 1);

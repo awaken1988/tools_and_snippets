@@ -19,6 +19,7 @@
 #include <QCheckBox>
 #include <QHBoxLayout>
 #include <QApplication>
+#include <QStatusBar>
 
 MainGui::MainGui(  )
 {
@@ -32,6 +33,8 @@ MainGui::~MainGui()
 
 void MainGui::startDiff(std::vector<boost::filesystem::path> aPaths)
 {
+	statusBar()->showMessage("diff...");
+
 	auto difftree = fsdiff::compare(aPaths[0], aPaths[1]);
 
 	m_model = new TreeModel(this, difftree);
@@ -101,17 +104,13 @@ void MainGui::startDiff(std::vector<boost::filesystem::path> aPaths)
 	layout->addWidget(m_detail_tab, layout->rowCount(), 0, 1, 2);
 	init_left_right_info();
 
-//	{
-//		QPushButton* btn = new QPushButton("test", this);
-//
-//		QObject::connect(btn, &QPushButton::clicked, [=](bool checked) {
-//			for(int iSide=0; iSide<m_cmp_detail.size(); iSide++) {
-//				qDeleteAll(m_cmp_detail[iSide]->findChildren<QWidget*>("", Qt::FindDirectChildrenOnly));
-//			}
-//		});
-//	}
+	//add to widgets to QMainWindow
+	{
+		auto centralWidget = new QWidget();
+		centralWidget->setLayout(layout);
+		setCentralWidget(centralWidget);
+	}
 
-	setLayout( layout );
 }
 
 void MainGui::clicked_diffitem(const QModelIndex &index)
