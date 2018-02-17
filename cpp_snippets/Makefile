@@ -2,9 +2,12 @@ CXXFLAGS= -g -O0
 OBJECTS := $(patsubst %.cpp,out/%, $(wildcard *.cpp))
 
 
-.PHONY : all
+.PHONY : all mkdir
 
-all: $(OBJECTS)
+all: mkdir | $(OBJECTS)
+
+mkdir:
+	-@mkdir out 2> /dev/null | true
 
 out/%:	%.cpp
 	g++ $(CXXFLAGS) $< -o $@
