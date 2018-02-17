@@ -19,7 +19,11 @@ with move:
     copy_ctors_called: 0
     move_ctors_called: 1000
 
-with emplace
+with emplace_back:
+    2902813439
+    ctors_called: 1000
+    copy_ctors_called: 0
+    move_ctors_called: 0
 */
 
 
