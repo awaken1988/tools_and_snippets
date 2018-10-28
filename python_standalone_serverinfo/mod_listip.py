@@ -1,5 +1,6 @@
 import subprocess
 import re
+from mod_base import *
 
 def get_interfaces():
     ret = []
@@ -26,14 +27,14 @@ def get_interface_ether(aInterface):
         if macht_if:
             return macht_if.group(1)
 
-class ModListip:
-    def __ini__(self): 
-        pass
+class ModListip(ModBase):
+    def __init__(self): 
+        ModBase.__init__(self)
 
     def get_name(self):
        return "Host IP-Addresses"
 
-    def content(self):
+    def action(self, aActionArg):
         content = "<table>"
         content += "<tr><th>Interface</th><th>MAC</th></tr>"
 
@@ -56,7 +57,6 @@ class ModListip:
         content += "</table>"
 
         return content
-
 
 
   
