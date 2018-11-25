@@ -1,3 +1,42 @@
+#example of a json configuration
+#   the script should located in the parent folder
+#
+#
+# {
+#     "setacl" :  
+#     [
+#         {
+#             "acl":          [ "u:martin:rwx" ],
+#             "default_acl":  [ "u:martin:rwx" ],
+#             "path":         [
+#                                 "free", "non-free", "private", "Dropbox", "purchased", "vm"
+#                             ]    
+#         },
+#         {
+#             "acl" :           [ "u:martin:rwx", "u:pcguest:r-x", "u:http:r-x" ],
+#             "default_acl" :   [ "u:martin:rwx", "u:pcguest:r-x", "u:http:r-x" ],
+#             "path":     [   "non-free/music", 
+#                             "non-free/games",
+#                             "non-free/software",
+#                             "non-free/videos/movies",
+#                             "non-free/videos/dokus",
+#                             "non-free/videos/serien",
+#                             "non-free/videos/music",
+#                             "non-free/ebookz",
+#                             "vm"  ]
+#         }
+#     ],
+# 
+#     "clean" : true
+# 
+# }
+
+
+
+
+
+
+
 import os.path
 import json
 import subprocess
