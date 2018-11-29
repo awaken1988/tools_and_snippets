@@ -1,8 +1,8 @@
 #!/bin/bash
 
 SUBVOL=$(realpath $1)
-BACKUP_BASE=$SUBVOL/../.snapshot_$(basename "$SUBVOL")
-BACKUP_SUBVOL=$BACKUP_BASE/$(date "+%Y_%m_%d__%H%M")
+SNAPSHOT_BASE=$SUBVOL/../.snapshot_$(basename "$SUBVOL")
+SNAPSHOT_SUBVOL=$SNAPSHOT_BASE/$(date "+%Y_%m_%d__%H%M")
 
 #check if SUBVOL is a btrfs subvol path
 btrfs subvol show "$SUBVOL" 1> /dev/null 2>/dev/null 
@@ -11,9 +11,9 @@ btrfs subvol show "$SUBVOL" 1> /dev/null 2>/dev/null
 #TODO: check if the parentdir lies on the same btrfs filesystem
 
 echo "SUBVOL = $SUBVOL"
-echo "BACKUP_BASE = $BACKUP_BASE" 
-echo "BACKUP_SUBVOL = $BACKUP_SUBVOL"
+echo "SNAPSHOT_BASE = $SNAPSHOT_BASE" 
+echo "SNAPSHOT_SUBVOL = $SNAPSHOT_SUBVOL"
 
-mkdir -p "$BACKUP_BASE"
+mkdir -p "$SNAPSHOT_BASE"
 
-btrfs subvolume snapshot -r "$SUBVOL" "$BACKUP_SUBVOL"
+btrfs subvolume snapshot -r "$SUBVOL" "$SNAPSHOT_SUBVOL"
