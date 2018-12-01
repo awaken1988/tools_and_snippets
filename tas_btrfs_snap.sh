@@ -10,9 +10,9 @@ btrfs subvol show "$SUBVOL" 1> /dev/null 2>/dev/null
 
 #TODO: check if the parentdir lies on the same btrfs filesystem
 
-echo "SUBVOL = $SUBVOL"
-echo "SNAPSHOT_BASE = $SNAPSHOT_BASE" 
-echo "SNAPSHOT_SUBVOL = $SNAPSHOT_SUBVOL"
+echo "[INFO] SUBVOL = $SUBVOL"
+echo "[INFO] SNAPSHOT_BASE = $SNAPSHOT_BASE" 
+echo "[INFO] SNAPSHOT_SUBVOL = $SNAPSHOT_SUBVOL"
 
 mkdir -p "$SNAPSHOT_BASE"
 
