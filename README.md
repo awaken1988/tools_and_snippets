@@ -1,7 +1,7 @@
-#Tools and Snippets
+# Tools and Snippets
 I place all the code here which are to small for an own repository. 
 
-#Scripts
+# Scripts
 
 ##tas_permset_json.py
 this let you define your ACL settings in a .json file. which must be located in the basedir of the folderstructure for which the ACL' set. 
