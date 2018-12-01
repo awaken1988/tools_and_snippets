@@ -1,5 +1,13 @@
 #!/bin/bash
 
+function ssh_execute() {
+    if [ -n "$1" ]; then
+        ssh "$1" "$2"
+    else
+        $2
+    fi
+}
+
 #TODO: split SRC and DEST in a loop
 #SRC PART
 SRC_HOST=
@@ -18,16 +26,15 @@ if [ -n "$(echo $2 | grep ":")" ]; then
     DEST_HOST=$(echo $2 | cut -d":" -f1)
     DEST_BASE=$(echo $2 | cut -d":" -f2)
 fi
+
+#adapat paths
+SRC_BASENAME=$(basename "$SRC_BASE")
+SRC_BASE=$SRC_BASE/../.snapshot_$SRC_BASENAME
+DEST_BASE=$DEST_BASE/$SRC_BASENAME
+ssh_execute "$DEST_HOST" "mkdir -p $DEST_BASE "
+
 echo "[INFO] DEST_HOST = $DEST_HOST (if empty, use local filesystem)"
 echo "[INFO] DEST_BASE = $DEST_BASE"
-
-function ssh_execute() {
-    if [ -n "$1" ]; then
-        ssh "$1" "$2"
-    else
-        $2
-    fi
-}
 
 SNAPS_CMD="ls -1d $SRC_BASE/*/"
 SNAPS=($(ssh_execute "$SRC_HOST" "$SNAPS_CMD"))

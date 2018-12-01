@@ -8,7 +8,7 @@ from tkinter import Tk, Canvas, Frame, BOTH, LEFT, Text, Label, Button, Y, X, BO
     Spinbox, SUNKEN, NW, Entry
 from tkinter import StringVar, OptionMenu
 import _thread
-from test.fork_wait import _thread
+#from test.fork_wait import _thread
 
 
 def generateRandom(aFileSize, aSpecificSettings): 
