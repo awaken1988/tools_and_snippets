@@ -16,7 +16,7 @@ if [ -n "$(echo $1 | grep ":")" ]; then
     SRC_HOST=$(echo $1 | cut -d":" -f1)
     SRC_BASE=$(echo $1 | cut -d":" -f2)
 fi
-echo "INFO] SRC_HOST = $SRC_HOST (if empty, use local filesystem)"
+echo "[INFO] SRC_HOST = $SRC_HOST (if empty, use local filesystem)"
 echo "[INFO] SRC_BASE = $SRC_BASE"
 
 #DST PART
