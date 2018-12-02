@@ -37,7 +37,7 @@ echo "[INFO] DEST_HOST = $DEST_HOST (if empty, use local filesystem)"
 echo "[INFO] DEST_BASE = $DEST_BASE"
 
 SNAPS_CMD="ls -1d $SRC_BASE/*/"
-SNAPS=($(ssh_execute "$SRC_HOST" "$SNAPS_CMD"))
+SNAPS=($(ssh_execute "$SRC_HOST" "$SNAPS_CMD" | sort))
 PREV_SNAP=${SNAPS[0]}
 
 for iSnap in ${SNAPS[@]}; do
