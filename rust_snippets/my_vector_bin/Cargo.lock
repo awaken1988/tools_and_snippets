@@ -1,0 +1,11 @@
+[[package]]
+name = "my_vector_bin"
+version = "0.1.0"
+dependencies = [
+ "my_vector_lib 0.1.0",
+]
+
+[[package]]
+name = "my_vector_lib"
+version = "0.1.0"
+

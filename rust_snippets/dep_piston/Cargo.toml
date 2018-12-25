@@ -1,0 +1,8 @@
+[package]
+name = "dep_piston"
+version = "0.1.0"
+authors = ["Martin K. <martin.awake1@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+piston_window = "0.81.0"

@@ -1,0 +1,7 @@
+[package]
+name = "my_vector_lib"
+version = "0.1.0"
+authors = ["Martin K. <martin.awake1@gmail.com>"]
+edition = "2018"
+
+[dependencies]
