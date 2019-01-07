@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 #example of a json configuration
 #   the script should located in the parent folder
 #
