@@ -3,3 +3,5 @@
 antlr-4.7-complete.jar
 *.o
 *.vscode
+
+rust_snippets/*/target

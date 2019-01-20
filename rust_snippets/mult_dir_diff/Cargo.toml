@@ -1,0 +1,7 @@
+[package]
+name = "mult_dir_diff"
+version = "0.1.0"
+authors = ["Martin <martin.awake1@gmail.com>"]
+edition = "2018"
+
+[dependencies]
