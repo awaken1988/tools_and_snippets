@@ -8,14 +8,49 @@ use std::fs::metadata;
    
 #[derive(Debug)]
 pub struct DiffItem {
-    pub parent: Option<usize>,
-    pub child: Vec<usize>,
-    pub path: Vec<Option<PathBuf>>,
+    parent: Option<usize>,
+    child: Vec<usize>,
+    path: Vec<Option<PathBuf>>,
 }
 
 #[derive(Debug)]
 pub struct DiffTree {
     pub entries: Vec<DiffItem>,
+}
+
+//---------------------------------------
+// iter 
+//---------------------------------------
+//TODO: IterState could be implemented with Vec<usize> Iterators -> would be cleaner
+struct IterState<'a> {
+    child: &'a Vec<usize>,
+    idx: usize,
+}
+
+pub struct DiffTreeIterator<'a> {
+    state: Vec<IterState<'a>>,
+    tree: &'a DiffTree,
+}
+
+impl<'a> Iterator for DiffTreeIterator<'a> {
+    type Item = &'a DiffItem;
+    fn next(&mut self) -> Option<&'a DiffItem> {
+        loop {
+            if self.state.is_empty() { return None; }
+            let curr_idx = self.state.len()-1;
+            let curr_state = &mut self.state[curr_idx];
+
+            if curr_state.idx >= curr_state.child.len() {
+                self.state.pop();
+                continue;
+            }
+
+            let idx = curr_state.idx;
+            curr_state.idx = idx + 1;
+
+            return Some(&self.tree.entries[curr_state.child[idx]]);
+        }
+    }
 }
 
 pub fn expand_dirs( dirs: &Vec<Option<PathBuf>>, 

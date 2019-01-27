@@ -17,6 +17,8 @@ fn main() {
     let mut tree = diff_tool::DiffTree{ entries: vec![]};
 
     diff_tool::expand_dirs( &dirs, &mut tree, None );
-    diff_tool::print_tree( &tree, 0, 0 );
-    diff_tool::print_tree_flat( &tree);
+    //diff_tool::print_tree( &tree, 0, 0 );
+    //diff_tool::print_tree_flat( &tree);
+
+    //println!("{:?}", tree.entries[0].child);
 }
