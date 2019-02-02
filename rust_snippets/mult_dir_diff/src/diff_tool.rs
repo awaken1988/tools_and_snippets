@@ -8,14 +8,28 @@ use std::fs::metadata;
    
 #[derive(Debug)]
 pub struct DiffItem {
-    parent: Option<usize>,
-    child: Vec<usize>,
-    path: Vec<Option<PathBuf>>,
+    pub parent: Option<usize>,
+    pub child: Vec<usize>,
+    pub path: Vec<Option<PathBuf>>,
 }
 
 #[derive(Debug)]
 pub struct DiffTree {
     pub entries: Vec<DiffItem>,
+}
+
+//impl DiffTree {
+//    fn get_iterator(&mut self ) -> DiffTreeIterator {
+//       
+//    }
+//}
+
+pub fn get_iterator(tree: &DiffTree) -> DiffTreeIterator {
+
+    let root_entry = vec!(IterState { child: &tree.entries[0].child, idx: 0 });
+
+    let a = DiffTreeIterator {state: root_entry, tree: tree };    
+    a
 }
 
 //---------------------------------------
@@ -35,20 +49,30 @@ pub struct DiffTreeIterator<'a> {
 impl<'a> Iterator for DiffTreeIterator<'a> {
     type Item = &'a DiffItem;
     fn next(&mut self) -> Option<&'a DiffItem> {
+
         loop {
+            let idx;
             if self.state.is_empty() { return None; }
             let curr_idx = self.state.len()-1;
-            let curr_state = &mut self.state[curr_idx];
+            {
+                
+              
+                let curr_state = &mut self.state[curr_idx];
 
-            if curr_state.idx >= curr_state.child.len() {
-                self.state.pop();
-                continue;
+                if curr_state.idx >= curr_state.child.len() {
+                    self.state.pop();
+                    continue;
+                }
+
+                 idx = curr_state.idx;
+                 curr_state.idx = idx + 1;
+            }
+           
+            if self.tree.entries[self.state[curr_idx].child[idx]].child.len() > 0 {
+                self.state.push( IterState { child: &self.tree.entries[self.state[curr_idx].child[idx]].child, idx: 0 } )
             }
 
-            let idx = curr_state.idx;
-            curr_state.idx = idx + 1;
-
-            return Some(&self.tree.entries[curr_state.child[idx]]);
+            return Some(&self.tree.entries[self.state[curr_idx].child[idx]]);
         }
     }
 }
@@ -110,6 +134,20 @@ pub fn expand_dirs( dirs: &Vec<Option<PathBuf>>,
         expand_dirs( &tree.entries[i_dir].path.clone(), tree, Some(i_dir) );
     } 
 }
+
+pub fn get_diff_depth<'a>(tree: &'a DiffTree, item: &'a DiffItem) -> i32 {
+    let mut depth = 0i32;
+    
+    let mut item = item;
+
+    while let Some(x) = item.parent {
+        depth+=1;
+        item = &tree.entries[x];
+    }
+    
+    return depth;
+}
+
 
 pub fn print_tree_flat(tree: &DiffTree) {
     for (i_idx, i) in tree.entries.iter().enumerate() {
