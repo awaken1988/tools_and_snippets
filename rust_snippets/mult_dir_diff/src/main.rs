@@ -14,9 +14,25 @@ fn main() {
         Some(PathBuf::from("testdata/3/")),
     ];
 
-    let mut tree = diff_tool::diff_dirs( &dirs);
+    let mut root = diff_tool::diff_dirs( &dirs);
 
-    diff_tool::print_tree_flat( &tree);
+    for i in root.test_get_iterator() {
+        let depth = i.depth();
+        let mut left_space = String::new();
+
+        for i in 0..depth {
+            left_space += "    ";
+        }
+
+
+        println!("{:?}{:?}: {:?}", left_space, i.idx.unwrap(), i.flat_data[i.idx.unwrap()]);
+    }
+
+    //for i in &tree.flat_data {
+    //    println!("{:?}", i);
+    //}
+
+   // diff_tool::print_tree_flat( &tree);
 
 //    diff_tool::print_tree( &tree, 0, 0 );
     
