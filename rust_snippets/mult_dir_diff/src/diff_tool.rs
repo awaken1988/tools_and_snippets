@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
 use std::fs::read_dir;
@@ -8,18 +9,24 @@ use std::fs::metadata;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::VecDeque;
+use std::fs;
+use std::cmp::min;
+use std::cmp::max;
+
 
 #[derive(Debug)]
-pub struct ImplDiffItem {
-    parent: Option<usize>,
-    child: Vec<usize>,
-    path: Vec<Option<PathBuf>>,
+pub struct DiffItemInfo {
+    pub parent: Option<usize>,
+    pub child: Vec<usize>,
+    pub path: Vec<Option<PathBuf>>,
 }
 
 #[derive(Debug)]
 pub struct DiffItem {
-    pub flat_data: Rc<Vec<ImplDiffItem>>,
+    pub flat_data: Rc<Vec<DiffItemInfo>>,
     pub idx: Option<usize>,
+
+    
 }
 
 impl DiffItem {
@@ -47,15 +54,91 @@ impl DiffItem {
             return ret;
         }
     }
+
+    pub fn info(&self) -> &DiffItemInfo {
+        return &self.flat_data[self.idx.unwrap()]
+    }
+
+    pub fn info_name(&self) -> Option<PathBuf> {
+        for i_path in &self.info().path {
+            if let Some(i_path) = i_path {
+                return Some(PathBuf::from( i_path.file_name().unwrap() ) );
+            }
+        }
+
+        return None;
+    }
+
+    pub fn siblings(&self) -> usize {
+        return self.info().path.len();
+    }
+
+    pub fn find_duplicates(&self) -> Vec<Option<usize>> {
+        let mut ret: Vec<Option<usize>> = Vec::new();
+        let mut next: usize = 0;
+
+        //assume all items are different
+        //TODO: use some fancy functional programming iterators
+        for i_ret in 0..self.siblings() {
+            if None == self.info().path[i_ret] { 
+                ret.push(None)
+            } else {
+                ret.push(Some(next));
+                next+=1;
+            } 
+        }
+
+        for (o_idx, o_val) in self.info().path.iter().enumerate() {
+            let o_val = if let Some(x) = o_val { x } else {continue};
+            for (i_idx, i_val) in self.info().path.iter().enumerate() {
+                if o_idx == i_idx { continue };
+                let i_val = if let Some(x) = i_val { x } else {continue};
+               
+                if o_val.is_dir() && i_val.is_dir() {  
+                    ret[ max(o_idx, i_idx) ] = ret [min(o_idx, i_idx)];
+                    ret[ min(o_idx, i_idx) ] = ret [min(o_idx, i_idx)];
+                    continue;
+                }
+                
+                if !o_val.is_file() && !i_val.is_file() {  
+                    //TODO: get a warning and handle these types
+                    continue;
+                }
+
+                //get metadata
+                let o_meta = if let Ok(x) = o_val.metadata() { x } else { continue; }; //TODO: when continue inform that we cannot get the info
+                let i_meta = if let Ok(x) = i_val.metadata() { x } else { continue; }; //TODO: when continue inform that we cannot get the info
+
+                if o_meta.len() != i_meta.len() {
+                    continue;
+                }
+
+                ret[ max(o_idx, i_idx) ] = ret [min(o_idx, i_idx)];
+                ret[ min(o_idx, i_idx) ] = ret [min(o_idx, i_idx)];
+            }
+        }
+
+        return ret;
+    }
+
+}
+
+impl IntoIterator for DiffItem {
+    type Item = DiffItem;
+    type IntoIter = DiffItemIterator;
+
+    fn into_iter(self) -> Self::IntoIter {
+        return self.test_get_iterator();
+    }
 }
 
 pub fn diff_dirs(dirs: &Vec<Option<PathBuf>>) -> DiffItem
 {
-    let mut flat_data: Vec<ImplDiffItem> = Vec::new();
+    let mut flat_data: Vec<DiffItemInfo> = Vec::new();
     let mut remain_dirs: VecDeque<usize> = VecDeque::new();
 
     //create the first entry
-    flat_data.push( ImplDiffItem { parent: None, child: Vec::new(), path: Vec::clone(dirs)});
+    flat_data.push( DiffItemInfo { parent: None, child: Vec::new(), path: Vec::clone(dirs)});
     remain_dirs.push_back(0);
 
     while !remain_dirs.is_empty() {
@@ -85,7 +168,7 @@ pub fn diff_dirs(dirs: &Vec<Option<PathBuf>>) -> DiffItem
 
 pub struct DiffItemIterator {
     state:  Vec<Vec<usize>>,
-    flat_data: Rc<Vec<ImplDiffItem>>,
+    flat_data: Rc<Vec<DiffItemInfo>>,
 }
 
 impl Iterator for DiffItemIterator {
@@ -112,9 +195,9 @@ impl Iterator for DiffItemIterator {
 }
 
 
-fn impl_list_subdir(dirs: &Vec<Option<PathBuf>>) -> (Vec<ImplDiffItem>, BTreeSet<usize>)
+fn impl_list_subdir(dirs: &Vec<Option<PathBuf>>) -> (Vec<DiffItemInfo>, BTreeSet<usize>)
 {
-    let mut ret: Vec<ImplDiffItem> = Vec::new();
+    let mut ret: Vec<DiffItemInfo> = Vec::new();
     let mut used = HashMap::new();
     let mut dirs_indices = BTreeSet::new();
 
@@ -125,7 +208,7 @@ fn impl_list_subdir(dirs: &Vec<Option<PathBuf>>) -> (Vec<ImplDiffItem>, BTreeSet
                 let curr_last_part = curr_path.file_name().unwrap().to_os_string();
 
                 if !used.contains_key(&curr_last_part) {
-                    ret.push( ImplDiffItem { parent: None, child: Vec::new(), path: vec![None; dirs.len()]});
+                    ret.push( DiffItemInfo { parent: None, child: Vec::new(), path: vec![None; dirs.len()]});
                     used.insert(curr_last_part.clone(), ret.len()-1);
                 }
 
@@ -143,121 +226,6 @@ fn impl_list_subdir(dirs: &Vec<Option<PathBuf>>) -> (Vec<ImplDiffItem>, BTreeSet
     return (ret, dirs_indices);
 }
 
-
-
-//fn impl_expand_dirs(dirs:   &Vec<Option<PathBuf>>, 
-//                    tree:   Rc<RefCell<flat_data_t>>,
-//                    parent: usize) 
-//{
-//    let real_parent = parent;
-//
-//    //iterate over all DirEntries and add it to tree
-//    let mut included = HashMap::new();  //each dir should only get one numer; 
-//                                        //TODO: is HashMap and colission?
-//    let mut sub_dirs = BTreeSet::new();
-//
-//    //list all files,dirs 
-//    let start_idx = tree.borrow().len();
-//    for (i_diff_idx, i_dir) in dirs.iter().enumerate() {
-//        let mut mut_tree = tree.borrow_mut();
-//
-//        if let Some(i_dir)  = i_dir {
-//              list_dir(&i_dir, 
-//                &mut |item,_isdir| { 
-//                    let curr_path = item.path().to_path_buf();
-//                    let curr_last_part = curr_path.file_name().unwrap().to_os_string();
-//
-//                    if !included.contains_key(&curr_last_part) {
-//                        included.insert(curr_last_part.clone(), mut_tree.len());
-//                        let mut diff_item = DiffItem {  parent: Some(real_parent), 
-//                                                        path: vec![None; dirs.len()], 
-//                                                        child: vec![],
-//                                                        flat_data: Rc::clone(&tree)  };
-//                        mut_tree.push(diff_item);
-//                        let curr_idx = mut_tree.len()-1;
-//                        mut_tree[real_parent].child.push(curr_idx); 
-//                    }
-//                    
-//                    let idx = match included.get(&curr_last_part) {
-//                        Some(x) => x,
-//                        None => panic!("diff_entry should already be included in the HashMap"),
-//                    };
-//
-//                    mut_tree[*idx].path[i_diff_idx] = Some(curr_path.clone()); 
-//
-//                    if curr_path.metadata().unwrap().is_dir() {
-//                        sub_dirs.insert(*idx);
-//                    }
-//                });
-//        }
-//    }
-//    //let end_idx = tree.borrow().len();
-//
-//    //add all subdirs
-//    for i_dir in sub_dirs {
-//        let mut dirs_next: Vec<Option<PathBuf>> = Vec::new();
-//
-//        for i_ss in &tree.borrow()[i_dir].path {
-//            if let Some(x) = i_ss { 
-//                dirs_next.push(Some(x.clone()));
-//            }
-//            else { 
-//                dirs_next.push(None);
-//            }
-//        }
-//
-//        impl_expand_dirs(&dirs_next, Rc::clone(&tree), i_dir );
-//    } 
-//}
-//
-////pub fn get_diff_depth<'a>(diff_item: &'a DiffItem) -> i32 {
-////    let mut depth = 0i32;
-////    
-////    let mut item = diff_item;
-////
-////    while let Some(x) = item.parent {
-////        depth+=1;
-////        item = &diff_item.flat_data[x];
-////    }
-////    
-////    return depth;
-////}
-////
-////
-//pub fn print_tree_flat(tree: &DiffTree) {
-//    for (i_idx, i) in tree.flat_data.borrow().iter().enumerate() {
-//        println!("{} {:?}",i_idx, i.path);
-//        println!("    parent={:?}", i.parent);
-//        println!("    childs={:?}", i.child);
-//    }
-//}
-////
-////pub fn print_tree(tree: &DiffTree, parent: usize, depth: usize) {
-////
-////    let mut dept_str = String::new();
-////    for i in 0..(depth*4) {
-////        dept_str += " ";
-////    }
-////
-////    for i_child in &tree.entries[parent].child {
-////        let curr_entry = &tree.entries[*i_child].path;
-////        
-////        println!("{}#------------------------------------", dept_str);
-////        for (j_num, j_path) in curr_entry.iter().enumerate() {
-////            if let Some(j_path) = j_path {
-////                println!("{}| {}: Result={:?}", dept_str, j_num, j_path.file_name());
-////            } 
-////            else {
-////                println!("{}| {}: ", dept_str, j_num);
-////            }
-////        }
-////        println!("");
-////
-////        print_tree(tree, *i_child, depth+1);
-////
-////    }
-////}
-////
 fn list_dir(dir: &Path, 
             fun: &mut dyn FnMut(DirEntry, bool) ) 
 {
@@ -275,13 +243,11 @@ fn list_dir(dir: &Path,
                 fun(i_entry, false);
             }
             else {
-                println!("[WRN] ignored: {:?}", i_entry);
+                //println!("[WRN] ignored: {:?}", i_entry);
             }
         }
     }
     else if let Err(e) = dir_iter {
-        println!("list_dir: {:?}", e);
+        //println!("list_dir: {:?}", e);
     }
-
-
 }

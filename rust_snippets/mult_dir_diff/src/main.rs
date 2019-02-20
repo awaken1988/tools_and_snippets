@@ -1,12 +1,13 @@
 use std::path::PathBuf;
 
 mod diff_tool;
+mod reporter;
 
 //TODO: what exactly is &mut dyn FnMut :-O ???
 //TODO: why  info: Vec<Option<Box<DirEntry>>> doesn't work
 
 fn main() {
-    println!("Hello, world!");
+    //println!("Hello, world!");
 
     let dirs = vec![
         Some(PathBuf::from("testdata/1_left/")),
@@ -14,46 +15,27 @@ fn main() {
         Some(PathBuf::from("testdata/3/")),
     ];
 
-    let mut root = diff_tool::diff_dirs( &dirs);
-
-    for i in root.test_get_iterator() {
-        let depth = i.depth();
-        let mut left_space = String::new();
-
-        for i in 0..depth {
-            left_space += "    ";
-        }
-
-
-        println!("{:?}{:?}: {:?}", left_space, i.idx.unwrap(), i.flat_data[i.idx.unwrap()]);
-    }
-
-    //for i in &tree.flat_data {
-    //    println!("{:?}", i);
-    //}
-
-   // diff_tool::print_tree_flat( &tree);
-
-//    diff_tool::print_tree( &tree, 0, 0 );
-    
-
-//    let my_iter = diff_tool::get_iterator( &tree );
-
-//    for i in my_iter {
-//        let depth = diff_tool::get_diff_depth(&tree, i);
+//    let dirs = vec![
+//        Some(PathBuf::from("/usr/bin")),
+//        Some(PathBuf::from("/bin/")),
+//    ];
 //
-//        let mut dept_str = String::new();
-//        for i in 0..(depth*4) {
-//            dept_str += " ";
+    let root = diff_tool::diff_dirs( &dirs);
+
+//    for i in root {
+//        let depth = i.depth();
+//        let mut left_space = String::new();
+//
+//        for i in 0..depth {
+//            left_space += "    ";
 //        }
 //
-//        for i_path in &i.path {
-//            println!("{}{:?}", dept_str, i_path);
-//        }
-//        println!("{}------------------", dept_str);
-//
-//        
+//        println!("{:?}{:?}: {:?}", left_space, i.idx.unwrap(), i.flat_data[i.idx.unwrap()]);
 //    }
 
-    //println!("{:?}", tree.entries[0].child);
+
+    let html_result = reporter::html(&root);
+
+    print!("{}", html_result);
+
 }
