@@ -1,7 +1,47 @@
 use std::fmt::Write;
-
 use crate::diff_tool;
 
+pub struct CustomWriter {
+    outfile: Option<std::fs::File>,
+}
+
+impl CustomWriter {
+    pub fn new() -> CustomWriter {
+        return CustomWriter{ outfile: None };
+    }
+
+    pub fn set_out_file(&mut self, mut outfile: std::fs::File) {
+        self.outfile = Some(outfile);
+    }
+}
+
+impl std::fmt::Write for CustomWriter {
+    
+    fn write_str(&mut self, s: &str) -> Result<(), std::fmt::Error> {
+        if let Some(outfile) = self.outfile.as_mut() {
+            std::io::Write::write_all(outfile, s.as_bytes());
+        } else {
+            print!("{}", s);
+        }
+        Ok(())
+    }
+
+    fn write_char(&mut self, c: char) -> Result<(), std::fmt::Error> {
+        if let Some(outfile) = &self.outfile {
+
+        } else {
+            print!("{}", c );
+        }
+       
+        Ok(())
+    }
+}
+
+
+
+//--------------------------------------------------
+// html output
+//--------------------------------------------------
 static HTML_COMP_COLORS: &'static [i32] = &[    
     0x9A6840,
     0xCD852D,
@@ -10,7 +50,7 @@ static HTML_COMP_COLORS: &'static [i32] = &[
     0xAED2DB,
 ];
 
-fn html_pre(out: &mut String) {
+fn html_pre(out: &mut CustomWriter) {
     writeln!(out, r###"<!doctype html>
 
 <head>
@@ -29,17 +69,15 @@ fn html_pre(out: &mut String) {
 "###);
 }
 
-fn html_post(out: &mut String) {
+fn html_post(out: &mut CustomWriter) {
     writeln!(out, r###"
 </body>
 </html>
 "###);
 }
 
-pub fn html(diff: &diff_tool::DiffItem) -> String {
-    let mut out: String = String::new();
-    
-    html_pre(&mut out);
+pub fn html(diff: &diff_tool::DiffItem, out: &mut CustomWriter) {
+    html_pre(out);
     
     writeln!(out, "<table>");
     
@@ -76,7 +114,5 @@ pub fn html(diff: &diff_tool::DiffItem) -> String {
     }
     writeln!(out, "</table>");
 
-    html_post(&mut out);
-
-    return out;
+    html_post(out);
 }

@@ -1,41 +1,65 @@
 use std::path::PathBuf;
+use clap;
+use std::str::FromStr;
 
 mod diff_tool;
 mod reporter;
 
 //TODO: what exactly is &mut dyn FnMut :-O ???
 //TODO: why  info: Vec<Option<Box<DirEntry>>> doesn't work
+//TODO: make a global static variable of argument names
+//TODO: replace unwrap with e.g error chains?
 
 fn main() {
-    //println!("Hello, world!");
+    
+    // Specifiy arguments
+    let app = clap::App::new("Multi Dir Diff")
+        .version("0.0.1")
+        .author("Martin K.")
+        .about("Compare multiple dirs to get an overview over the changes")
+        .arg( clap::Arg::with_name("format")
+                .short("f")
+                .long("format")
+                .value_name("FORMAT")
+                .help("sets the outputformat, available formats are \"html\" ")
+                .required(true) )
+        .arg( clap::Arg::with_name("outfile")
+                .short("o")
+                .long("outfile")
+                .value_name("OUTFILE")
+                .help("sets the output file") )
+        .arg( clap::Arg::with_name("directory")
+                .short("d")
+                .long("directory")
+                .value_name("DIRECTORY")
+                .help("specify the directories to diff")
+                .multiple(true) )
+        .get_matches();
 
-    let dirs = vec![
-        Some(PathBuf::from("testdata/1_left/")),
-        Some(PathBuf::from("testdata/2_right/")),
-        Some(PathBuf::from("testdata/3/")),
-    ];
+    // Check argument DIRECTORIES
+    let dirs_converted: Vec<Option<PathBuf>> = {
+        let dirs: Vec<&str> = app.values_of("directory").unwrap().collect();
+        let mut dirs_ret: Vec<Option<PathBuf>> = Vec::new();
+        for i_dir in dirs {
+            dirs_ret.push( Some( PathBuf::from_str(i_dir).unwrap() ) );
+        }
+        dirs_ret
+    };
 
-//    let dirs = vec![
-//        Some(PathBuf::from("/usr/bin")),
-//        Some(PathBuf::from("/bin/")),
-//    ];
-//
-    let root = diff_tool::diff_dirs( &dirs);
+    // Output to file (Default is to console)
+    let mut custom_writer = reporter::CustomWriter::new();
 
-//    for i in root {
-//        let depth = i.depth();
-//        let mut left_space = String::new();
-//
-//        for i in 0..depth {
-//            left_space += "    ";
-//        }
-//
-//        println!("{:?}{:?}: {:?}", left_space, i.idx.unwrap(), i.flat_data[i.idx.unwrap()]);
-//    }
+    if let Some(outfile) = app.value_of("outfile") {
+        custom_writer.set_out_file( std::fs::File::create(outfile).unwrap()  ) ;    
+    }
 
+    let root = diff_tool::diff_dirs( &dirs_converted);
 
-    let html_result = reporter::html(&root);
-
-    print!("{}", html_result);
-
+    match app.value_of("format").unwrap() {
+        "html" => reporter::html(&root, &mut custom_writer),
+        _ => panic!("FORMAT is invalid"),
+    }
 }
+
+
+
