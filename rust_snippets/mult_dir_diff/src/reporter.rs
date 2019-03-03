@@ -83,6 +83,7 @@ pub fn html(diff: &diff_tool::DiffItem, out: &mut CustomWriter) {
     
     //write header
     writeln!(out, "    <tr>");
+    //writeln!(out, "        <th></th>");
     writeln!(out, "        <th></th>");
     for i_root in &diff.info().path {
         if let Some(i_root) = i_root {
@@ -96,12 +97,12 @@ pub fn html(diff: &diff_tool::DiffItem, out: &mut CustomWriter) {
     //write directory structure
     
     for i_item in diff.test_get_iterator() {
-        
-
         writeln!(out, "    <tr>");
-        writeln!(out, "    <td style=\"text-indent: {}em;\">{}</td>", 
-            i_item.depth()*2,
-            i_item.info_name().unwrap().to_str().unwrap() );
+
+        writeln!(out, "    <td style=\"\">{}</td>", i_item.relative_path().to_str().unwrap());
+        //writeln!(out, "    <td style=\"text-indent: {}em;\">{}</td>", 
+        //    i_item.depth()*2,
+        //    i_item.name().unwrap().to_str().unwrap() );
 
         for i_dup in i_item.find_duplicates().iter() {
             if let Some(i_dup) = i_dup {

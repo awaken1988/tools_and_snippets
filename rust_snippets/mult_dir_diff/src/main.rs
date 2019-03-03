@@ -55,6 +55,13 @@ fn main() {
 
     let root = diff_tool::diff_dirs( &dirs_converted);
 
+    for i in root.test_get_iterator() {
+        println!("depth={}", i.depth());
+    }
+    for i in root.test_get_iterator() {
+        println!("depth={}", i.depth());
+    }
+
     match app.value_of("format").unwrap() {
         "html" => reporter::html(&root, &mut custom_writer),
         _ => panic!("FORMAT is invalid"),

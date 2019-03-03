@@ -19,6 +19,7 @@ pub struct DiffItemInfo {
     pub parent: Option<usize>,
     pub child: Vec<usize>,
     pub path: Vec<Option<PathBuf>>,
+    pub relative_path: Option<PathBuf>,
 }
 
 #[derive(Debug)]
@@ -59,7 +60,7 @@ impl DiffItem {
         return &self.flat_data[self.idx.unwrap()]
     }
 
-    pub fn info_name(&self) -> Option<PathBuf> {
+    pub fn name(&self) -> Option<PathBuf> {
         for i_path in &self.info().path {
             if let Some(i_path) = i_path {
                 return Some(PathBuf::from( i_path.file_name().unwrap() ) );
@@ -67,6 +68,10 @@ impl DiffItem {
         }
 
         return None;
+    }
+
+     pub fn relative_path(&self) -> PathBuf {
+        return self.info().relative_path.as_ref().unwrap().clone();
     }
 
     pub fn siblings(&self) -> usize {
@@ -138,7 +143,7 @@ pub fn diff_dirs(dirs: &Vec<Option<PathBuf>>) -> DiffItem
     let mut remain_dirs: VecDeque<usize> = VecDeque::new();
 
     //create the first entry
-    flat_data.push( DiffItemInfo { parent: None, child: Vec::new(), path: Vec::clone(dirs)});
+    flat_data.push( DiffItemInfo { parent: None, child: Vec::new(), path: Vec::clone(dirs), relative_path: None, });
     remain_dirs.push_back(0);
 
     while !remain_dirs.is_empty() {
@@ -163,7 +168,30 @@ pub fn diff_dirs(dirs: &Vec<Option<PathBuf>>) -> DiffItem
         }
     }
 
+    //update relative_path
+    impl_relative_path(&mut flat_data);
+
     return DiffItem { flat_data: Rc::new(flat_data), idx: Some(0) };
+}
+
+fn impl_relative_path(flat_data: &mut Vec<DiffItemInfo>)
+{
+    if flat_data.is_empty() { return; }
+
+    let prefix = flat_data[0].path.clone();
+
+    for i_node in flat_data.iter_mut() {
+        for (i_idx, i_path) in i_node.path.iter().enumerate() {
+            match i_path {
+                Some(x) =>  {
+                    let prefix: &PathBuf = prefix[i_idx].as_ref().unwrap();
+                    i_node.relative_path = Some(x.strip_prefix(prefix).unwrap().to_path_buf());
+                    break;
+                },            
+                None => { },     
+            };
+        }
+    }
 }
 
 pub struct DiffItemIterator {
@@ -208,7 +236,7 @@ fn impl_list_subdir(dirs: &Vec<Option<PathBuf>>) -> (Vec<DiffItemInfo>, BTreeSet
                 let curr_last_part = curr_path.file_name().unwrap().to_os_string();
 
                 if !used.contains_key(&curr_last_part) {
-                    ret.push( DiffItemInfo { parent: None, child: Vec::new(), path: vec![None; dirs.len()]});
+                    ret.push( DiffItemInfo { parent: None, child: Vec::new(), path: vec![None; dirs.len()], relative_path: None, });
                     used.insert(curr_last_part.clone(), ret.len()-1);
                 }
 
