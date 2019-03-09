@@ -1,9 +1,13 @@
+#[macro_use] extern crate bitflags;
+
+
 use std::path::PathBuf;
 use clap;
 use std::str::FromStr;
 
 mod diff_tool;
 mod reporter;
+use reporter::ToolFlags;
 
 //TODO: what exactly is &mut dyn FnMut :-O ???
 //TODO: why  info: Vec<Option<Box<DirEntry>>> doesn't work
@@ -28,6 +32,9 @@ fn main() {
                 .long("outfile")
                 .value_name("OUTFILE")
                 .help("sets the output file") )
+         .arg( clap::Arg::with_name("exclude_same")
+                .long("exclude_same")
+                .help("do not show same files/dirs in the output") )
         .arg( clap::Arg::with_name("directory")
                 .short("d")
                 .long("directory")
@@ -35,6 +42,8 @@ fn main() {
                 .help("specify the directories to diff")
                 .multiple(true) )
         .get_matches();
+
+    let mut toolflags = ToolFlags::NO_FLAG;
 
     // Check argument DIRECTORIES
     let dirs_converted: Vec<Option<PathBuf>> = {
@@ -46,6 +55,11 @@ fn main() {
         dirs_ret
     };
 
+    // Exclude same entries
+    if let Some(exclude_same) = app.index_of("exclude_same") {
+        toolflags |= ToolFlags::EXCLUDE_SAME;
+    }
+
     // Output to file (Default is to console)
     let mut custom_writer = reporter::CustomWriter::new();
 
@@ -55,15 +69,8 @@ fn main() {
 
     let root = diff_tool::diff_dirs( &dirs_converted);
 
-    for i in root.test_get_iterator() {
-        println!("depth={}", i.depth());
-    }
-    for i in root.test_get_iterator() {
-        println!("depth={}", i.depth());
-    }
-
     match app.value_of("format").unwrap() {
-        "html" => reporter::html(&root, &mut custom_writer),
+        "html" => reporter::html(&root, &mut custom_writer, &toolflags),
         _ => panic!("FORMAT is invalid"),
     }
 }
