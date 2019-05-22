@@ -99,7 +99,7 @@ pub fn html(diff: &diff_tool::DiffItem, out: &mut CustomWriter) {
     for i_item in diff.test_get_iterator() {
         writeln!(out, "    <tr>");
 
-        writeln!(out, "    <td style=\"\">{}</td>", i_item.relative_path().to_str().unwrap());
+        writeln!(out, "    <td style=\"\">{}</td>", i_item.relative_path().to_str().unwrap_or("???"));
         //writeln!(out, "    <td style=\"text-indent: {}em;\">{}</td>", 
         //    i_item.depth()*2,
         //    i_item.name().unwrap().to_str().unwrap() );
