@@ -17,7 +17,14 @@ lan_services = [
     {"http":    {"tcp_port": 80     }  },
     {"https":   {"tcp_port": 443    }  },
 ]
+#------------------------------------------
+# services to scan
+#------------------------------------------
 
+
+#------------------------------------------
+# network helper
+#------------------------------------------
 def get_neighbors():
     ret = []
 
@@ -42,6 +49,14 @@ def scan_a_port(aAddress, iPort):
     except:
         return False
     return True
+
+def get_hostname(aAddr):
+    try:
+        hostname_query = socket.gethostbyaddr(aAddr)
+        return hostname_query[0]
+    except:
+        pass
+    return ""
 
 WEBVIEW_CONTENT_SKELETON = """
 <!DOCTYPE html>
@@ -76,19 +91,12 @@ def fill_web_table():
     #initial
     host_list = get_neighbors()
     for iHost in host_list:
-        hostname = ""
-        try:
-            hostname_query = socket.gethostbyaddr(iHost["ip"])
-            hostname = hostname_query[0]
-        except:
-            pass
-
         query = "qt.jQuery('#content_table tr:last').after('"
         query += "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(
             iHost["dev"], 
             iHost["ip"], 
             iHost["mac"],
-            hostname)
+            get_hostname(iHost["ip"]))
         query += "');"
         web.page().runJavaScript(query)
 
