@@ -6,7 +6,6 @@
 #       https://code.woboq.org/qt5/qtwebchannel/examples/webchannel/shared/websocketclientwrapper.cpp.html https://doc.qt.io/qt-5/qtwebchannel-standalone-main-cpp.html
 
 
-import mod_net
 import subprocess
 import json 
 import socket
@@ -14,7 +13,7 @@ import sys
 import time
 from PySide2.QtWidgets          import (QLineEdit, QPushButton, QApplication, QVBoxLayout, QDialog, QTableView)
 from PySide2.QtCore             import (QObject, QAbstractTableModel, QModelIndex, Qt, __version_info__, Signal, Slot)
-from PySide2.QtWebEngineWidgets import (QWebEngineView, QWebEnginePage)
+from PySide2.QtWebEngineWidgets import (QWebEngineView)
 from PySide2.QtWebChannel       import (QWebChannel)
 from PySide2.QtWebSockets       import (QWebSocketServer)
 from PySide2.QtNetwork          import (QHostAddress)
@@ -37,7 +36,38 @@ lan_services = [
 #------------------------------------------
 # network helper
 #------------------------------------------
+def get_neighbors():
+    ret = []
 
+    cmd_result = subprocess.run("ip -j neigh", shell=True, capture_output=True)
+    cmd_result = json.loads(cmd_result.stdout.decode('utf-8'))
+    
+    for iEntry in cmd_result:
+        if "lladdr" not in iEntry: continue
+        if "dev"    not in iEntry: continue
+        if "dst"    not in iEntry: continue
+        ret.append( {
+            "dev": iEntry["dev"],
+            "ip": iEntry["dst"],
+            "mac": iEntry["lladdr"],
+        })        
+
+    return ret
+
+def scan_a_port(aAddress, iPort):
+    try:
+        s = socket.create_connection((aAddress, iPort), 1)
+    except:
+        return False
+    return True
+
+def get_hostname(aAddr):
+    try:
+        hostname_query = socket.gethostbyaddr(aAddr)
+        return hostname_query[0]
+    except:
+        pass
+    return ""
 
 WEBVIEW_CONTENT_SKELETON = """
 <!DOCTYPE html>
@@ -54,13 +84,12 @@ WEBVIEW_CONTENT_SKELETON = """
 
             __replace_this_with_all_javascript_library_stuff__
          
-            //QWebChannel doesnt work because transport send doesnt exist
-            //document.addEventListener("DOMContentLoaded", function (){
-            //    window.mywebchannel = new QWebChannel(qt.webChannelTransport, function (channel) {
-            //        //channel.objects.MyChannelHanlder.message_from_web()
-            //        console.log("bla")
-            //    });
-            //});
+            document.addEventListener("DOMContentLoaded", function (){
+                window.mywebchannel = new QWebChannel(qt.webChannelTransport, function (channel) {
+                    //channel.objects.MyChannelHanlder.message_from_web()
+                    console.log("bla")
+                });
+            });
 
         </script>
     </head>
@@ -74,26 +103,30 @@ WEBVIEW_CONTENT_SKELETON = """
             </tr>
         </table>
         <p>test</p>
-        <a href="http://www.google.de">blabla</a>
     </body>
 </html>
 """
 
+class MyChannelHandler(QObject):
+    sig_client_connected = Signal()
+    def __init__(self):
+        QObject.__init__(self)
+
+    def message_from_web(self):
+        print("I have got a message from webview")
+
+
 def fill_web_table():
     #initial
-    host_list = mod_net.get_neighbors()
+    host_list = get_neighbors()
     for iHost in host_list:
-        smb_shares = ""
-        for iSmbShares in mod_net.get_smb_shares(iHost["ip"]):
-            smb_shares += "\\\\\\\\"+iSmbShares[0]+"\\\\"+iSmbShares[1] + "<br>"
-
-        
-        query = "qt.jQuery('#content_table tr:last').after('<tr>"
-        query += "<td>{}</td>".format(iHost["dev"])
-        query += "<td>{}</td>".format(iHost["ip"])
-        query += "<td>{}</td>".format(iHost["mac"])
-        query += "<td>{}</td>".format(smb_shares)
-        query += "</tr>');"
+        query = "qt.jQuery('#content_table tr:last').after('"
+        query += "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(
+            iHost["dev"], 
+            iHost["ip"], 
+            iHost["mac"],
+            get_hostname(iHost["ip"]))
+        query += "');"
         web.page().runJavaScript(query)
 
 
@@ -104,8 +137,6 @@ def loadfinished(aIsOk):
 
 if __name__ == '__main__':
     print(__version_info__)
-
-    
 
 
     # Create the Qt Application
@@ -123,9 +154,17 @@ if __name__ == '__main__':
     #    raise Exception("uh cannot create socket server")
   
 
-   
+
     web = QWebEngineView()
+
+    #webchannel
+    channel_handler = MyChannelHandler()
+    web_channel = QWebChannel()
+    channel_handler.sig_client_connected.connect(web_channel.connectTo)
+
+    web.page().setWebChannel(web_channel)
     web.setHtml(WEBVIEW_CONTENT_SKELETON)
+    web_channel.registerObject("MyChannelHanlder", channel_handler)
     web.loadFinished.connect(loadfinished)
     
     # Run the main Qt loop

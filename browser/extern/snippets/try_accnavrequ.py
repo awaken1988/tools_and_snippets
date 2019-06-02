@@ -6,7 +6,6 @@
 #       https://code.woboq.org/qt5/qtwebchannel/examples/webchannel/shared/websocketclientwrapper.cpp.html https://doc.qt.io/qt-5/qtwebchannel-standalone-main-cpp.html
 
 
-import mod_net
 import subprocess
 import json 
 import socket
@@ -37,7 +36,38 @@ lan_services = [
 #------------------------------------------
 # network helper
 #------------------------------------------
+def get_neighbors():
+    ret = []
 
+    cmd_result = subprocess.run("ip -j neigh", shell=True, capture_output=True)
+    cmd_result = json.loads(cmd_result.stdout.decode('utf-8'))
+    
+    for iEntry in cmd_result:
+        if "lladdr" not in iEntry: continue
+        if "dev"    not in iEntry: continue
+        if "dst"    not in iEntry: continue
+        ret.append( {
+            "dev": iEntry["dev"],
+            "ip": iEntry["dst"],
+            "mac": iEntry["lladdr"],
+        })        
+
+    return ret
+
+def scan_a_port(aAddress, iPort):
+    try:
+        s = socket.create_connection((aAddress, iPort), 1)
+    except:
+        return False
+    return True
+
+def get_hostname(aAddr):
+    try:
+        hostname_query = socket.gethostbyaddr(aAddr)
+        return hostname_query[0]
+    except:
+        pass
+    return ""
 
 WEBVIEW_CONTENT_SKELETON = """
 <!DOCTYPE html>
@@ -79,21 +109,29 @@ WEBVIEW_CONTENT_SKELETON = """
 </html>
 """
 
+class MyWebPage(QWebEnginePage):
+    def __init__(self):
+        QWebEnginePage.__init__(self)
+
+    def acceptNavigationRequest(self, aUrl, aType, aIsMainFrame):
+        print("{} {}".format(aType, aUrl))
+        if aType == QWebEnginePage.NavigationTypeLinkClicked:
+            print(aUrl)
+            return False
+
+        return  QWebEnginePage.acceptNavigationRequest(self, aUrl, aType, aIsMainFrame)
+
 def fill_web_table():
     #initial
-    host_list = mod_net.get_neighbors()
+    host_list = get_neighbors()
     for iHost in host_list:
-        smb_shares = ""
-        for iSmbShares in mod_net.get_smb_shares(iHost["ip"]):
-            smb_shares += "\\\\\\\\"+iSmbShares[0]+"\\\\"+iSmbShares[1] + "<br>"
-
-        
-        query = "qt.jQuery('#content_table tr:last').after('<tr>"
-        query += "<td>{}</td>".format(iHost["dev"])
-        query += "<td>{}</td>".format(iHost["ip"])
-        query += "<td>{}</td>".format(iHost["mac"])
-        query += "<td>{}</td>".format(smb_shares)
-        query += "</tr>');"
+        query = "qt.jQuery('#content_table tr:last').after('"
+        query += "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(
+            iHost["dev"], 
+            iHost["ip"], 
+            iHost["mac"],
+            get_hostname(iHost["ip"]))
+        query += "');"
         web.page().runJavaScript(query)
 
 
@@ -104,8 +142,6 @@ def loadfinished(aIsOk):
 
 if __name__ == '__main__':
     print(__version_info__)
-
-    
 
 
     # Create the Qt Application
@@ -123,8 +159,10 @@ if __name__ == '__main__':
     #    raise Exception("uh cannot create socket server")
   
 
-   
+    web_page = MyWebPage()
     web = QWebEngineView()
+    web.setPage(web_page)
+
     web.setHtml(WEBVIEW_CONTENT_SKELETON)
     web.loadFinished.connect(loadfinished)
     
