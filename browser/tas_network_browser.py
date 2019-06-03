@@ -82,16 +82,21 @@ WEBVIEW_CONTENT_SKELETON = """
 def fill_web_table():
     #initial
     host_list = mod_net.get_neighbors()
+
+
+
     for iHost in host_list:
         smb_shares = ""
         for iSmbShares in mod_net.get_smb_shares(iHost["ip"]):
             smb_shares += "\\\\\\\\"+iSmbShares[0]+"\\\\"+iSmbShares[1] + "<br>"
 
+        hostname = mod_net.get_hostname(iHost["ip"])
         
         query = "qt.jQuery('#content_table tr:last').after('<tr>"
         query += "<td>{}</td>".format(iHost["dev"])
         query += "<td>{}</td>".format(iHost["ip"])
         query += "<td>{}</td>".format(iHost["mac"])
+        query += "<td>{}</td>".format(hostname)
         query += "<td>{}</td>".format(smb_shares)
         query += "</tr>');"
         web.page().runJavaScript(query)

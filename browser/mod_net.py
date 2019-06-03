@@ -4,6 +4,7 @@ import socket
 import sys
 import time
 import re
+import shutil
 
 def get_neighbors():
     ret = []
@@ -48,8 +49,24 @@ def get_smb_shares(aAddress):
         ret.append( [regex_result.group(1), regex_result.group(2)] )
     return ret
 
+#def get_first_executable(aExecutableList):
+#    for iExec in aExecutableList:
+#        if shutil.which(iExec):
+#            return iExec
+#    return None
+
+class ServiceHandlers:
+    @staticmethod
+    def ssh(aConnectInfo):
+        cmd = "konsole --hold -e ssh "+aConnectInfo["host"] + " -p "+aConnectInfo["port"]
+        subprocess.Popen(cmd, shell=True)
+    def http(aConnectInfo):
+        cmd = "python3 -m webbrowser -n http://"+aConnectInfo["host"]
+        subprocess.Popen(cmd, shell=True)
+    def https(aConnectInfo):
+        cmd = "python3 -m webbrowser -n https://"+aConnectInfo["host"]
+        subprocess.Popen(cmd, shell=True)
 
 
 if __name__ == "__main__":
-    result = get_smb_shares("10.222.201.1")
-    print(result)
+    ServiceHandlers.https({ "host":"saturn.mkhome", "port": "80"})
