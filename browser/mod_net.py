@@ -6,54 +6,42 @@ import time
 import re
 import shutil
 
-def get_neighbors():
-    ret = []
 
-    cmd_result = subprocess.run("ip -j neigh", shell=True, capture_output=True)
-    cmd_result = json.loads(cmd_result.stdout.decode('utf-8'))
-    
-    for iEntry in cmd_result:
-        if "lladdr" not in iEntry: continue
-        if "dev"    not in iEntry: continue
-        if "dst"    not in iEntry: continue
-        ret.append( {
-            "dev": iEntry["dev"],
-            "ip": iEntry["dst"],
-            "mac": iEntry["lladdr"],
-        })        
 
-    return ret
-
-def scan_a_port(aAddress, iPort):
-    try:
-        s = socket.create_connection((aAddress, iPort), 1)
-    except:
-        return False
-    return True
-
-def get_hostname(aAddr):
-    try:
-        hostname_query = socket.gethostbyaddr(aAddr)
-        return hostname_query[0]
-    except:
-        pass
-    return ""
-
-def get_smb_shares(aAddress):
-    ret = []
-    cmd_result = subprocess.run("smbtree -N {}".format(aAddress), shell=True, capture_output=True).stdout.decode('utf-8')
-    for iLine in cmd_result.split("\n"):
-        regex_result = re.search("^[ \t]+\\\\\\\\([a-z0-9_]+)\\\\([a-z0-9_$]+).*", iLine, flags=re.IGNORECASE)
-        if not regex_result:
-            continue
-        ret.append( [regex_result.group(1), regex_result.group(2)] )
-    return ret
+#def get_smb_shares(aAddress):
+#    ret = []
+#    cmd_result = subprocess.run("smbtree -N {}".format(aAddress), shell=True, capture_output=True).stdout.decode('utf-8')
+#    for iLine in cmd_result.split("\n"):
+#        regex_result = re.search("^[ \t]+\\\\\\\\([a-z0-9_]+)\\\\([a-z0-9_$]+).*", iLine, flags=re.IGNORECASE)
+#        if not regex_result:
+#            continue
+#        ret.append( [regex_result.group(1), regex_result.group(2)] )
+#    return ret
 
 #def get_first_executable(aExecutableList):
 #    for iExec in aExecutableList:
 #        if shutil.which(iExec):
 #            return iExec
 #    return None
+
+#       main = QWidget()
+#        lyt = QHBoxLayout(main)
+#        for iShare in self.shares:
+#            tool = QToolButton()
+#            tool.setToolButtonStyle(Qt.ToolButtonTextOnly)
+#            tool.setPopupMode(QToolButton.MenuButtonPopup)
+#            tool.setText(iShare[1])
+#            men = QMenu()
+#            curr_action0 = QAction("iShare[1] 0", main)
+#            curr_action1 = QAction("iShare[1] 1", main)
+#            curr_action2 = QAction("iShare[1] 2", main)
+#            men.addAction(curr_action0)
+#            men.addAction(curr_action1)
+#            men.addAction(curr_action2)
+#            tool.setMenu(men)
+#            lyt.addWidget(tool)
+#        return main
+
 
 class ServiceHandlers:
     @staticmethod
@@ -69,4 +57,4 @@ class ServiceHandlers:
 
 
 if __name__ == "__main__":
-    ServiceHandlers.https({ "host":"saturn.mkhome", "port": "80"})
+    print(get_smb_shares("saturn.mkhome"))

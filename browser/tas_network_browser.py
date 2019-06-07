@@ -5,135 +5,208 @@
 #       https://stackoverflow.com/questions/31928444/qt-qwebenginepagesetwebchannel-transport-object
 #       https://code.woboq.org/qt5/qtwebchannel/examples/webchannel/shared/websocketclientwrapper.cpp.html https://doc.qt.io/qt-5/qtwebchannel-standalone-main-cpp.html
 
-
-import mod_net
 import subprocess
 import json 
 import socket
 import sys
 import time
-from PySide2.QtWidgets          import (QLineEdit, QPushButton, QApplication, QVBoxLayout, QDialog, QTableView)
-from PySide2.QtCore             import (QObject, QAbstractTableModel, QModelIndex, Qt, __version_info__, Signal, Slot)
-from PySide2.QtWebEngineWidgets import (QWebEngineView, QWebEnginePage)
+import re
+from PySide2.QtWidgets          import (QLineEdit, QPushButton, QApplication, 
+                                        QVBoxLayout, QHBoxLayout, QDialog, QTableView, QGridLayout, 
+                                        QLabel, QWidget, QAction, QMenu, QToolButton,
+                                        QComboBox, QToolBar, QFrame)
+from PySide2.QtCore             import (QObject, QAbstractTableModel, QModelIndex, Qt, Signal, Slot)
+from PySide2.QtWebEngineWidgets import (QWebEngineView, QWebEnginePage, QWebEngineProfile, QWebEngineScript)
 from PySide2.QtWebChannel       import (QWebChannel)
 from PySide2.QtWebSockets       import (QWebSocketServer)
 from PySide2.QtNetwork          import (QHostAddress)
 
-#TODO name sheme for globals
-web = None
-host_list = None
-lan_services = [
-    {"ftp":     {"tcp_port": 21     }  },
-    {"ssh":     {"tcp_port": 22     }  },
-    {"dns":     {"tcp_port": 22     }  },
-    {"http":    {"tcp_port": 80     }  },
-    {"https":   {"tcp_port": 443    }  },
-]
-#------------------------------------------
-# services to scan
-#------------------------------------------
+#------------------------------------
+# net helper
+#------------------------------------
+def get_neighbors():
+    ret = []
 
-
-#------------------------------------------
-# network helper
-#------------------------------------------
-
-
-WEBVIEW_CONTENT_SKELETON = """
-<!DOCTYPE html>
-<html>
-    <head/>
-        <title>Browse net services</title>
-        <script type="text/javascript" src="qrc:///qtwebchannel/qwebchannel.js"></script>
-        <script type="text/javascript">
-            function hide_table() {
-                var link = document.getElementById('content_table');
-                link.style.display = 'none'; //or
-                link.style.visibility = 'hidden';
-            }
-
-            __replace_this_with_all_javascript_library_stuff__
-         
-            //QWebChannel doesnt work because transport send doesnt exist
-            //document.addEventListener("DOMContentLoaded", function (){
-            //    window.mywebchannel = new QWebChannel(qt.webChannelTransport, function (channel) {
-            //        //channel.objects.MyChannelHanlder.message_from_web()
-            //        console.log("bla")
-            //    });
-            //});
-
-        </script>
-    </head>
-    <body>
-        <table id="content_table">
-            <tr>
-                <th>Interface</th>
-                <th>Ip</th>
-                <th>Mac</th>
-                <th>Hostname</th>
-            </tr>
-        </table>
-        <p>test</p>
-        <a href="http://www.google.de">blabla</a>
-    </body>
-</html>
-"""
-
-def fill_web_table():
-    #initial
-    host_list = mod_net.get_neighbors()
-
-
-
-    for iHost in host_list:
-        smb_shares = ""
-        for iSmbShares in mod_net.get_smb_shares(iHost["ip"]):
-            smb_shares += "\\\\\\\\"+iSmbShares[0]+"\\\\"+iSmbShares[1] + "<br>"
-
-        hostname = mod_net.get_hostname(iHost["ip"])
-        
-        query = "qt.jQuery('#content_table tr:last').after('<tr>"
-        query += "<td>{}</td>".format(iHost["dev"])
-        query += "<td>{}</td>".format(iHost["ip"])
-        query += "<td>{}</td>".format(iHost["mac"])
-        query += "<td>{}</td>".format(hostname)
-        query += "<td>{}</td>".format(smb_shares)
-        query += "</tr>');"
-        web.page().runJavaScript(query)
-
-
-def loadfinished(aIsOk):
-    fill_web_table()
+    cmd_result = subprocess.run("ip -j neigh", shell=True, capture_output=True)
+    cmd_result = json.loads(cmd_result.stdout.decode('utf-8'))
     
-    web.page().runJavaScript("qt.jQuery('#content_table tr:last').after('<tr><td>bla2a</td></tr>');")
+    for iEntry in cmd_result:
+        if "lladdr" not in iEntry: continue
+        if "dev"    not in iEntry: continue
+        if "dst"    not in iEntry: continue
+        ret.append( {
+            "dev": iEntry["dev"],
+            "ip": iEntry["dst"],
+            "mac": iEntry["lladdr"],
+        })        
+
+    return ret
+
+def scan_a_port(aAddress, iPort):
+    try:
+        s = socket.create_connection((aAddress, iPort), 1)
+    except:
+        return False
+    return True
+
+def get_hostname(aAddr):
+    try:
+        hostname_query = socket.gethostbyaddr(aAddr)
+        return hostname_query[0]
+    except:
+        pass
+    return ""
+
+
+class QContextMenuLabel(QLabel):
+    def __init__(self, aServiceInfo):
+        QLabel.__init__(self)
+        self.service_info = aServiceInfo
+
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        for iActions in self.service_info["actions"]:
+            action = QAction(iActions["name"], self)
+            a = lambda func,data: lambda x: func(data) 
+
+            action.triggered.connect( a(iActions["exec"], self.service_info ) )
+
+            menu.addAction(action)
+
+            
+        
+        menu.exec_(event.globalPos())
+        print(str(event.globalPos()))
+
+#------------------------------------
+# services
+#------------------------------------
+class PortServie:
+    @staticmethod
+    def action_print1(aServiceInfo):
+        print("1_domain "+ str(aServiceInfo))
+
+    @staticmethod
+    def fetchinfo(aHostInfo):
+        ret = []
+
+        if not scan_a_port(aHostInfo["ip"], 53):
+           return ret
+
+        ret.append(  {  "host":         aHostInfo["ip"],
+                        "display_name": "domain",
+                        "actions":       [
+                            {"name": "print_v1", "exec":  DomainServie.action_print1},
+                        ],
+        })
+
+        return ret
+   
+
+class SmbService:
+    @staticmethod
+    def action_print1(aServiceInfo):
+        print("1_mount "+ str(aServiceInfo))
+    
+    @staticmethod
+    def action_print2(aServiceInfo):
+        print("2_mount "+ str(aServiceInfo))
+
+    @staticmethod
+    def fetchinfo(aHostInfo):
+        ret = []
+        cmd_result = subprocess.run("smbtree -N {}".format(aHostInfo["ip"]), shell=True, capture_output=True).stdout.decode('utf-8')
+        for iLine in cmd_result.split("\n"):
+            regex_result = re.search("^[ \t]+\\\\\\\\([a-z0-9_]+)\\\\([a-z0-9_$]+).*", iLine, flags=re.IGNORECASE)
+            if not regex_result:
+                continue
+            ret.append(  {  "host":         aHostInfo["ip"],
+                            "display_name": regex_result.group(2),
+                            "actions":       [
+                                {"name": "print_v1", "exec":  SmbService.action_print1},
+                                {"name": "print_v2", "exec":  SmbService.action_print2},
+                            ],
+                            "smb_path":     [regex_result.group(1), regex_result.group(2)]} )
+
+        return ret
+
+class ServiceHelper:
+    @staticmethod
+    def display(aServiceDefinition):
+        main = QWidget()
+        lyt = QGridLayout(main)
+        row = 0
+        col = 0
+        for iService in aServiceDefinition:
+            lbl = QContextMenuLabel(iService)
+            lbl.setText(iService["display_name"])
+            lbl.setFrameStyle( QFrame.StyledPanel | QFrame.Sunken )
+            lyt.addWidget(lbl, row, col)
+
+            col += 1
+            if col%4 == 0:
+                col = 0
+                row += 1
+        return main
+
+
+SERVICES = {
+    "smb":      {   "fetchinfo_func":    SmbService.fetchinfo,
+                    "display_func":      ServiceHelper.display, },
+    "smb":      {   "fetchinfo_func":    DomainServie.fetchinfo,
+                    "display_func":      ServiceHelper.display, },
+}
+
+def fill_web_table(aInfoTable: QGridLayout):
+    #initial
+    host_list = get_neighbors()
+
+    row = 0
+    col = 0
+    for iHeadline in ("Interface", "Mac", "Ip", "Hostname") :
+        aInfoTable.addWidget(QLabel("<b>"+iHeadline+"</b>"), row, col ); col += 1
+    for iServiceName, iService in SERVICES.items():
+         aInfoTable.addWidget(QLabel("<b>"+iServiceName+"</b>"), row, col ); col += 1
+
+    row += 1
+    for iHost in host_list:
+        #smb_shares = ""
+        #for iSmbShares in get_smb_shares(iHost["ip"]):
+        #    smb_shares += "\\\\\\\\"+iSmbShares[0]+"\\\\"+iSmbShares[1] + "<br>"
+
+        hostname = get_hostname(iHost["ip"])
+        
+        col = 0
+
+        aInfoTable.addWidget(QLabel(str(iHost["dev"])), row, col ); col += 1
+        aInfoTable.addWidget(QLabel(str(iHost["mac"])), row, col ); col += 1
+        aInfoTable.addWidget(QLabel(str(iHost["ip"])), row, col );  col += 1
+        aInfoTable.addWidget(QLabel(str(hostname)), row, col );   
+        
+        for iServiceName, iService in SERVICES.items():
+            col += 1
+            info = iService["fetchinfo_func"](iHost)
+            if len(info) < 1:
+                aInfoTable.addWidget(QWidget(), row, col )
+                continue
+            widget = iService["display_func"](info)
+            aInfoTable.addWidget(widget, row, col )
+            col += 1
+
+        row += 1
 
 if __name__ == '__main__':
-    print(__version_info__)
-
-    
-
-
+   
     # Create the Qt Application
     app = QApplication(sys.argv)
 
-    #load all javascript libraries
-    with open("extern/jquery-min.js", "r") as jqFile, open("extern/qwebchannel.js") as qwFile:
-        content =  "\n" + jqFile.read()
-        #content += "\n" + qwFile.read()
-        content += "\n" + "var qt = { 'jQuery': jQuery.noConflict(true) };"
-        WEBVIEW_CONTENT_SKELETON = WEBVIEW_CONTENT_SKELETON.replace(" __replace_this_with_all_javascript_library_stuff__", content)
+    info_table = QWidget()
+    lyt = QGridLayout(info_table)
+    info_table.setLayout(lyt)
 
-    #socket_server = QWebSocketServer("QWebSocketServer workaround server", QWebSocketServer.NonSecureMode)##
-    #if not socket_server.listen(QHostAddress.LocalHost, 12345):
-    #    raise Exception("uh cannot create socket server")
-  
 
-   
-    web = QWebEngineView()
-    web.setHtml(WEBVIEW_CONTENT_SKELETON)
-    web.loadFinished.connect(loadfinished)
-    
-    # Run the main Qt loop
-    web.show()
+    fill_web_table(lyt)
+    info_table.show()
+
     sys.exit(app.exec_())
 
