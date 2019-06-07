@@ -21,6 +21,8 @@ from PySide2.QtWebChannel       import (QWebChannel)
 from PySide2.QtWebSockets       import (QWebSocketServer)
 from PySide2.QtNetwork          import (QHostAddress)
 
+SERVICES = {}
+
 #------------------------------------
 # net helper
 #------------------------------------
@@ -82,22 +84,18 @@ class QContextMenuLabel(QLabel):
 # services
 #------------------------------------
 class PortServie:
-    @staticmethod
-    def action_print1(aServiceInfo):
-        print("1_domain "+ str(aServiceInfo))
+    def __init__(self, aPortInfo):
+        self.port_info = aPortInfo
 
-    @staticmethod
-    def fetchinfo(aHostInfo):
+    def fetchinfo(self, aHostInfo):
         ret = []
 
-        if not scan_a_port(aHostInfo["ip"], 53):
+        if not scan_a_port(aHostInfo["ip"], self.port_info["port"]):
            return ret
 
         ret.append(  {  "host":         aHostInfo["ip"],
-                        "display_name": "domain",
-                        "actions":       [
-                            {"name": "print_v1", "exec":  DomainServie.action_print1},
-                        ],
+                        "display_name": self.port_info["name"],
+                        "actions":      self.port_info["actions"],
         })
 
         return ret
@@ -149,14 +147,6 @@ class ServiceHelper:
                 row += 1
         return main
 
-
-SERVICES = {
-    "smb":      {   "fetchinfo_func":    SmbService.fetchinfo,
-                    "display_func":      ServiceHelper.display, },
-    "smb":      {   "fetchinfo_func":    DomainServie.fetchinfo,
-                    "display_func":      ServiceHelper.display, },
-}
-
 def fill_web_table(aInfoTable: QGridLayout):
     #initial
     host_list = get_neighbors()
@@ -185,18 +175,24 @@ def fill_web_table(aInfoTable: QGridLayout):
         
         for iServiceName, iService in SERVICES.items():
             col += 1
-            info = iService["fetchinfo_func"](iHost)
+            info = iService["data"].fetchinfo(iHost)
             if len(info) < 1:
-                aInfoTable.addWidget(QWidget(), row, col )
+                aInfoTable.addWidget(QLabel("x"), row, col )
                 continue
-            widget = iService["display_func"](info)
+            widget = iService["display"].display(info)
             aInfoTable.addWidget(widget, row, col )
-            col += 1
 
         row += 1
 
 if __name__ == '__main__':
-   
+    #service definitions
+    SERVICES["smb"] =       {"data": SmbService, "display":ServiceHelper}
+    SERVICES["domain"] =    {"data": PortServie({"name": "domain",  "port": "53", "actions": []  }), "display":ServiceHelper}
+    SERVICES["http"] =      {"data": PortServie({"name": "http",  "port": "80", "actions": []  }), "display":ServiceHelper}
+    SERVICES["ssh"] =       {"data": PortServie({"name": "ssh",  "port": "22", "actions": []  }), "display":ServiceHelper}
+    SERVICES["ftp"] =       {"data": PortServie({"name": "ftp",  "port": "21", "actions": []  }), "display":ServiceHelper}
+
+
     # Create the Qt Application
     app = QApplication(sys.argv)
 
