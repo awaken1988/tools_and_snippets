@@ -14,8 +14,8 @@ import re
 from PySide2.QtWidgets          import (QLineEdit, QPushButton, QApplication, 
                                         QVBoxLayout, QHBoxLayout, QDialog, QTableView, QGridLayout, 
                                         QLabel, QWidget, QAction, QMenu, QToolButton,
-                                        QComboBox, QToolBar, QFrame)
-from PySide2.QtCore             import (QObject, QAbstractTableModel, QModelIndex, Qt, Signal, Slot)
+                                        QComboBox, QToolBar, QFrame, QSystemTrayIcon, QStyle)
+from PySide2.QtCore             import (QObject, QAbstractTableModel, QModelIndex, Qt, Signal, Slot, SIGNAL)
 from PySide2.QtWebEngineWidgets import (QWebEngineView, QWebEnginePage, QWebEngineProfile, QWebEngineScript)
 from PySide2.QtWebChannel       import (QWebChannel)
 from PySide2.QtWebSockets       import (QWebSocketServer)
@@ -42,7 +42,19 @@ def get_neighbors():
             "mac": iEntry["lladdr"],
         })        
 
+    #append localhost
+    ret.append( {   "dev":      "lo", 
+                    "ip":       "127.0.0.1",
+                    "mac":   "00:00:00:00:00:00"} )
+
     return ret
+
+#get hostname, ip
+def get_any_host_id(aHostInfo):
+    if "hostname" in aHostInfo: 
+        return aHostInfo["hostname"]
+    return aHostInfo["ip"]
+
 
 def scan_a_port(aAddress, iPort):
     try:
@@ -58,6 +70,20 @@ def get_hostname(aAddr):
     except:
         pass
     return ""
+
+def add_net_info():
+    host_list = get_neighbors()
+
+    for iHost in host_list:
+        hostname = get_hostname(iHost["ip"])
+        if hostname:
+            iHost["hostname"] = hostname 
+        iHost["services"] = {}
+
+        for iServiceName, iService in SERVICES.items():
+            iHost["services"][iServiceName] = iService["data"].fetchinfo(iHost)
+    
+    return host_list
 
 
 class QContextMenuLabel(QLabel):
@@ -99,8 +125,18 @@ class PortServie:
         })
 
         return ret
-   
 
+class SmbHostService:
+    @staticmethod
+    def fetchinfo(aHostInfo):
+        if scan_a_port( get_any_host_id(aHostInfo), 445 ):
+            return [{"host":         get_any_host_id(aHostInfo), 
+                    "display_name": "smbserver",
+                    "actions": [
+                        {"name": "open in dolphin", "exec": lambda aHostInfo: subprocess.Popen("dolphin smb://"+aHostInfo["host"], shell=True)  }
+                    ]}]
+        return []
+   
 class SmbService:
     @staticmethod
     def action_print1(aServiceInfo):
@@ -147,62 +183,97 @@ class ServiceHelper:
                 row += 1
         return main
 
-def fill_web_table(aInfoTable: QGridLayout):
-    #initial
-    host_list = get_neighbors()
 
-    row = 0
-    col = 0
-    for iHeadline in ("Interface", "Mac", "Ip", "Hostname") :
-        aInfoTable.addWidget(QLabel("<b>"+iHeadline+"</b>"), row, col ); col += 1
-    for iServiceName, iService in SERVICES.items():
-         aInfoTable.addWidget(QLabel("<b>"+iServiceName+"</b>"), row, col ); col += 1
 
-    row += 1
-    for iHost in host_list:
-        #smb_shares = ""
-        #for iSmbShares in get_smb_shares(iHost["ip"]):
-        #    smb_shares += "\\\\\\\\"+iSmbShares[0]+"\\\\"+iSmbShares[1] + "<br>"
-
-        hostname = get_hostname(iHost["ip"])
+class MainWidget(QWidget):
+    def __init__(self):
+        QWidget.__init__(self)
+        self.lyt = QVBoxLayout()
+        self.setLayout(self.lyt)
         
+        #list of host & services
+        self.table_main = QWidget()
+        self.table_main_lyt = QVBoxLayout(self.table_main)
+        self.info_table = QWidget()
+        self.table_main_lyt.addWidget(self.info_table)
+        self.lyt.addWidget(self.table_main)
+        
+        self.init_refresh()
+
+        self.refresh()
+
+    def init_refresh(self):
+        self.refrsh_opt = QWidget()
+        self.refrsh_opt_lyt = QHBoxLayout()
+        self.refrsh_opt.setLayout(self.refrsh_opt_lyt)
+        
+        self.refrsh_btn = QPushButton()
+        self.refrsh_btn.setIcon( self.style().standardIcon(QStyle.SP_BrowserReload)  )
+        QObject.connect(self.refrsh_btn, SIGNAL('clicked()'), lambda: self.refresh)
+        
+        self.refrsh_btn.clicked.connect(self.refresh)
+        self.refrsh_opt_lyt.addWidget(self.refrsh_btn)
+        
+        self.lyt.addWidget(self.refrsh_opt)
+
+    def refresh(self):
+        print("Signal: refresh")
+        self.netinfo = add_net_info()
+
+        self.table_main_lyt.removeWidget( self.info_table )
+        self.info_table = QWidget()
+        self.info_table_lyt = QGridLayout(self.info_table)
+        self.table_main_lyt.addWidget(self.info_table)
+
+        row = 0
         col = 0
-
-        aInfoTable.addWidget(QLabel(str(iHost["dev"])), row, col ); col += 1
-        aInfoTable.addWidget(QLabel(str(iHost["mac"])), row, col ); col += 1
-        aInfoTable.addWidget(QLabel(str(iHost["ip"])), row, col );  col += 1
-        aInfoTable.addWidget(QLabel(str(hostname)), row, col );   
-        
+        for iHeadline in ("Interface", "Mac", "Ip", "Hostname") :
+            self.info_table_lyt.addWidget(QLabel("<b>"+iHeadline+"</b>"), row, col ); col += 1
         for iServiceName, iService in SERVICES.items():
-            col += 1
-            info = iService["data"].fetchinfo(iHost)
-            if len(info) < 1:
-                aInfoTable.addWidget(QLabel("x"), row, col )
-                continue
-            widget = iService["display"].display(info)
-            aInfoTable.addWidget(widget, row, col )
+            self.info_table_lyt.addWidget(QLabel("<b>"+iServiceName+"</b>"), row, col ); col += 1
 
         row += 1
+        col = 0
+        for iHost in self.netinfo:
+            self.info_table_lyt.addWidget(QLabel(str(iHost["dev"])), row, col ); col += 1
+            self.info_table_lyt.addWidget(QLabel(str(iHost["mac"])), row, col ); col += 1
+            self.info_table_lyt.addWidget(QLabel(str(iHost["ip"])), row, col );  col += 1
+            
+            if "hostname" in iHost:
+                self.info_table_lyt.addWidget(QLabel(str(iHost["hostname"])), row, col );   
+            else:
+                self.info_table_lyt.addWidget(QLabel(""), row, col );   
+            
+            for iServiceName, iService in SERVICES.items():
+                col += 1
+                service_info = iHost["services"][iServiceName]
+                if len(service_info) < 1:
+                    self.info_table_lyt.addWidget(QLabel("x"), row, col )
+                    continue
+                widget = iService["display"].display(service_info)
+                self.info_table_lyt.addWidget(widget, row, col )
+
+            row += 1
+            col = 0
 
 if __name__ == '__main__':
     #service definitions
+
+
+    SERVICES["smbserver"] = {"data": SmbHostService, "display":ServiceHelper}
     SERVICES["smb"] =       {"data": SmbService, "display":ServiceHelper}
     SERVICES["domain"] =    {"data": PortServie({"name": "domain",  "port": "53", "actions": []  }), "display":ServiceHelper}
     SERVICES["http"] =      {"data": PortServie({"name": "http",  "port": "80", "actions": []  }), "display":ServiceHelper}
     SERVICES["ssh"] =       {"data": PortServie({"name": "ssh",  "port": "22", "actions": []  }), "display":ServiceHelper}
     SERVICES["ftp"] =       {"data": PortServie({"name": "ftp",  "port": "21", "actions": []  }), "display":ServiceHelper}
 
-
     # Create the Qt Application
     app = QApplication(sys.argv)
+   
+    #maingui
+    main = MainWidget()
+    main.show()
 
-    info_table = QWidget()
-    lyt = QGridLayout(info_table)
-    info_table.setLayout(lyt)
-
-
-    fill_web_table(lyt)
-    info_table.show()
 
     sys.exit(app.exec_())
 
