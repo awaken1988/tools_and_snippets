@@ -4,13 +4,14 @@
 #       https://doc.qt.io/qt-5/qtwebchannel-javascript.html
 #       https://stackoverflow.com/questions/31928444/qt-qwebenginepagesetwebchannel-transport-object
 #       https://code.woboq.org/qt5/qtwebchannel/examples/webchannel/shared/websocketclientwrapper.cpp.html https://doc.qt.io/qt-5/qtwebchannel-standalone-main-cpp.html
-
+import enum
 import subprocess
 import json 
 import socket
 import sys
 import time
 import re
+import shutil
 from PySide2.QtWidgets          import (QLineEdit, QPushButton, QApplication, 
                                         QVBoxLayout, QHBoxLayout, QDialog, QTableView, QGridLayout, 
                                         QLabel, QWidget, QAction, QMenu, QToolButton,
@@ -21,15 +22,53 @@ from PySide2.QtWebChannel       import (QWebChannel)
 from PySide2.QtWebSockets       import (QWebSocketServer)
 from PySide2.QtNetwork          import (QHostAddress)
 
+class ExecutableFlags(enum.Flag):
+    NONE = 0
+    REQUIRED = 1
+
 SERVICES = {}
+EXECUTABLES = {}
+EXECUTABLES["ip"] =         {"cmd": "ip",       "flags": ExecutableFlags.REQUIRED}
+EXECUTABLES["dolphin"] =    {"cmd": "dolphin",  "flags": ExecutableFlags.NONE}
+EXECUTABLES["bla"] =        {"cmd": "bla",      "flags": ExecutableFlags.NONE}
+
+def add_fetchinfo(aFetchInfo, aExecutableName, aCommand):
+    if aExecutableName not in EXECUTABLES:
+        return
+
+    ret  = {
+        "name": EXECUTABLES[aExecutableName]["cmd"],
+        "exec": lambda aServiceInfo:  subprocess.Popen(aCommand(aExecutableName, aServiceInfo), shell=True)
+    }
+    aFetchInfo["actions"].append( ret )
+   
+
+#the last step: throw away commands that not avail
+def cleanup_executables(aExecutable):
+    for iKey in [x for x in aExecutable]:
+        if not shutil.which(aExecutable[iKey]["cmd"]):
+            print("-Command={}".format(aExecutable[iKey]["cmd"]))
+            if aExecutable[iKey]["flags"] & ExecutableFlags.REQUIRED:
+                raise Exception("Error: Command={} are required but missing on your system".format(aExecutable[iKey]["cmd"]))
+            del aExecutable[iKey]
+        else:
+            print("+Command={}".format(aExecutable[iKey]["cmd"]))
+
+cleanup_executables(EXECUTABLES)
+
+#------------------------------------
+# sys helper
+#------------------------------------
+
+
 
 #------------------------------------
 # net helper
 #------------------------------------
-def get_neighbors():
+def get_hosts():
     ret = []
 
-    cmd_result = subprocess.run("ip -j neigh", shell=True, capture_output=True)
+    cmd_result = subprocess.run(EXECUTABLES["ip"]["cmd"]+" -j neigh", shell=True, capture_output=True)
     cmd_result = json.loads(cmd_result.stdout.decode('utf-8'))
     
     for iEntry in cmd_result:
@@ -46,6 +85,18 @@ def get_neighbors():
     ret.append( {   "dev":      "lo", 
                     "ip":       "127.0.0.1",
                     "mac":   "00:00:00:00:00:00"} )
+
+    for iHost in ret:
+        #set hostname
+        hostname = get_hostname(iHost["ip"])
+        if hostname:
+            iHost["hostname"] = hostname 
+        iHost["services"] = {}
+
+        #set avail services
+        for iServiceName, iService in SERVICES.items():
+            iHost["services"][iServiceName] = iService["data"].fetchinfo(iHost)
+    
 
     return ret
 
@@ -70,21 +121,6 @@ def get_hostname(aAddr):
     except:
         pass
     return ""
-
-def add_net_info():
-    host_list = get_neighbors()
-
-    for iHost in host_list:
-        hostname = get_hostname(iHost["ip"])
-        if hostname:
-            iHost["hostname"] = hostname 
-        iHost["services"] = {}
-
-        for iServiceName, iService in SERVICES.items():
-            iHost["services"][iServiceName] = iService["data"].fetchinfo(iHost)
-    
-    return host_list
-
 
 class QContextMenuLabel(QLabel):
     def __init__(self, aServiceInfo):
@@ -130,11 +166,12 @@ class SmbHostService:
     @staticmethod
     def fetchinfo(aHostInfo):
         if scan_a_port( get_any_host_id(aHostInfo), 445 ):
-            return [{"host":         get_any_host_id(aHostInfo), 
+            ret = {"host":         get_any_host_id(aHostInfo), 
                     "display_name": "smbserver",
-                    "actions": [
-                        {"name": "open in dolphin", "exec": lambda aHostInfo: subprocess.Popen("dolphin smb://"+aHostInfo["host"], shell=True)  }
-                    ]}]
+                    "actions": []}
+
+            add_fetchinfo(ret, "dolphin", lambda aCmd,aInfo: "{} smb://{}".format(aCmd, aInfo["host"])   )
+            return [ret]
         return []
    
 class SmbService:
@@ -183,8 +220,9 @@ class ServiceHelper:
                 row += 1
         return main
 
-
-
+#------------------------------------
+# gui
+#------------------------------------
 class MainWidget(QWidget):
     def __init__(self):
         QWidget.__init__(self)
@@ -218,7 +256,7 @@ class MainWidget(QWidget):
 
     def refresh(self):
         print("Signal: refresh")
-        self.netinfo = add_net_info()
+        self.netinfo = get_hosts()
 
         self.table_main_lyt.removeWidget( self.info_table )
         self.info_table = QWidget()
@@ -258,7 +296,6 @@ class MainWidget(QWidget):
 
 if __name__ == '__main__':
     #service definitions
-
 
     SERVICES["smbserver"] = {"data": SmbHostService, "display":ServiceHelper}
     SERVICES["smb"] =       {"data": SmbService, "display":ServiceHelper}
