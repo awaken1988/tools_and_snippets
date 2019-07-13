@@ -10,6 +10,7 @@ import json
 import socket
 import sys
 import time
+import platform
 import re
 import shutil
 from PySide2.QtWidgets          import (QLineEdit, QPushButton, QApplication, 
@@ -21,6 +22,14 @@ from PySide2.QtWebEngineWidgets import (QWebEngineView, QWebEnginePage, QWebEngi
 from PySide2.QtWebChannel       import (QWebChannel)
 from PySide2.QtWebSockets       import (QWebSocketServer)
 from PySide2.QtNetwork          import (QHostAddress)
+
+#include platform specific stuff
+if platform.system() == "Linux":
+    from platform_linux import *
+elif platform.system() == "Windows":
+    from platform_windows import *
+else:
+    raise Exception("Your Platform not yet supported")
 
 class ExecutableFlags(enum.Flag):
     NONE = 0
@@ -65,7 +74,7 @@ cleanup_executables(EXECUTABLES)
 #------------------------------------
 # net helper
 #------------------------------------
-def get_hosts():
+def get_host_summary():
     ret = []
 
     cmd_result = subprocess.run(EXECUTABLES["ip"]["cmd"]+" -j neigh", shell=True, capture_output=True)
@@ -256,7 +265,7 @@ class MainWidget(QWidget):
 
     def refresh(self):
         print("Signal: refresh")
-        self.netinfo = get_hosts()
+        self.netinfo = get_host_summary()
 
         self.table_main_lyt.removeWidget( self.info_table )
         self.info_table = QWidget()
