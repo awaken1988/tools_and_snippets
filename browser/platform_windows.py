@@ -1,6 +1,20 @@
 import subprocess
 import json
 
+def getPlatformExecutables():
+    EXECUTABLES = {}
+    EXECUTABLES["Get-NetNeighbor"] =    {"cmd": "Get-NetNeighbor",       "required": True}
+    return EXECUTABLES
+
+def which_command(aCommand):
+    cmd_result = subprocess.run("powershell.exe \"Get-Command {} | Select-Object Name | ConvertTo-Json\"".format(aCommand), 
+        shell=True, capture_output=True)
+    cmd_result = json.loads(cmd_result.stdout.decode('utf-8'))
+
+    if "Name" in cmd_result:
+        return True
+    return False    
+
 def get_hosts():
     ret = []
 
@@ -15,8 +29,12 @@ def get_hosts():
         ipaddr = str(iEntry["IPAddress"])
         macaddr = str(iEntry["LinkLayerAddress"]).replace("-", ":")
 
-        if( ipaddr.startswith("ff")  ):
-            continue
+        #TODO: move this to tas_network_browser.py
+        if ipaddr.startswith("ff"):         continue
+        if ipaddr == "255.255.255.255":     continue
+        for iMult4 in range(224, 239+1):
+            if ipaddr.startswith("{}.".format(iMult4)):
+                continue
 
         ret.append( {
             "dev": str(iEntry["ifIndex"]),
@@ -24,19 +42,6 @@ def get_hosts():
             "mac": macaddr,
         })        
 
-#    for iHost in ret:
-#        #set hostname
-#        hostname = get_hostname(iHost["ip"])
-#        if hostname:
-#            iHost["hostname"] = hostname 
-#        iHost["services"] = {}
-#
-#        #set avail services
-#        for iServiceName, iService in SERVICES.items():
-#            iHost["services"][iServiceName] = iService["data"].fetchinfo(iHost)
-    
-
-    print(ret)
     return ret
 
 

@@ -24,22 +24,15 @@ from PySide2.QtWebSockets       import (QWebSocketServer)
 from PySide2.QtNetwork          import (QHostAddress)
 
 #include platform specific stuff
-if platform.system() == "Linux":
+if platform.system() == "Linux":    
     from platform_linux import *
 elif platform.system() == "Windows":
     from platform_windows import *
 else:
     raise Exception("Your Platform not yet supported")
 
-class ExecutableFlags(enum.Flag):
-    NONE = 0
-    REQUIRED = 1
-
 SERVICES = {}
-EXECUTABLES = {}
-EXECUTABLES["ip"] =         {"cmd": "ip",       "flags": ExecutableFlags.REQUIRED}
-EXECUTABLES["dolphin"] =    {"cmd": "dolphin",  "flags": ExecutableFlags.NONE}
-EXECUTABLES["bla"] =        {"cmd": "bla",      "flags": ExecutableFlags.NONE}
+EXECUTABLES = getPlatformExecutables()
 
 def add_fetchinfo(aFetchInfo, aExecutableName, aCommand):
     if aExecutableName not in EXECUTABLES:
@@ -55,13 +48,13 @@ def add_fetchinfo(aFetchInfo, aExecutableName, aCommand):
 #the last step: throw away commands that not avail
 def cleanup_executables(aExecutable):
     for iKey in [x for x in aExecutable]:
-        if not shutil.which(aExecutable[iKey]["cmd"]):
+        if which_command(aExecutable[iKey]["cmd"]):
+            print("+Command={}".format(aExecutable[iKey]["cmd"]))
+        else:
             print("-Command={}".format(aExecutable[iKey]["cmd"]))
-            if aExecutable[iKey]["flags"] & ExecutableFlags.REQUIRED:
+            if aExecutable[iKey]["required"]:
                 raise Exception("Error: Command={} are required but missing on your system".format(aExecutable[iKey]["cmd"]))
             del aExecutable[iKey]
-        else:
-            print("+Command={}".format(aExecutable[iKey]["cmd"]))
 
 cleanup_executables(EXECUTABLES)
 
@@ -77,18 +70,7 @@ cleanup_executables(EXECUTABLES)
 def get_host_summary():
     ret = []
 
-    cmd_result = subprocess.run(EXECUTABLES["ip"]["cmd"]+" -j neigh", shell=True, capture_output=True)
-    cmd_result = json.loads(cmd_result.stdout.decode('utf-8'))
-    
-    for iEntry in cmd_result:
-        if "lladdr" not in iEntry: continue
-        if "dev"    not in iEntry: continue
-        if "dst"    not in iEntry: continue
-        ret.append( {
-            "dev": iEntry["dev"],
-            "ip": iEntry["dst"],
-            "mac": iEntry["lladdr"],
-        })        
+    ret = get_hosts()
 
     #append localhost
     ret.append( {   "dev":      "lo", 
@@ -124,6 +106,7 @@ def scan_a_port(aAddress, iPort):
     return True
 
 def get_hostname(aAddr):
+    return ""
     try:
         hostname_query = socket.gethostbyaddr(aAddr)
         return hostname_query[0]

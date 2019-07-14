@@ -1,5 +1,19 @@
 import subprocess
 import json
+import shutil
+
+def getPlatformExecutables():
+    EXECUTABLES = {}
+    EXECUTABLES["ip"] =         {"cmd": "ip",       "required": True}
+    EXECUTABLES["dolphin"] =    {"cmd": "dolphin",  "required": False}
+    EXECUTABLES["bla"] =        {"cmd": "bla",      "required": False}
+    return EXECUTABLES
+
+
+def which_command(aCommand):
+    if not shutil.which(aCommand):
+        return False
+    return True
 
 def get_hosts():
     ret = []
