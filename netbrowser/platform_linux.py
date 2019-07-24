@@ -49,3 +49,22 @@ def get_hosts():
     
 
     return ret
+
+
+#    @staticmethod
+#    def fetchinfo(aHostInfo):
+#        ret = []
+#        cmd_result = subprocess.run("smbtree -N {}".format(aHostInfo["ip"]), shell=True, capture_output=True).stdout.decode('utf-8')
+#        for iLine in cmd_result.split("\n"):
+#            regex_result = re.search("^[ \t]+\\\\\\\\([a-z0-9_]+)\\\\([a-z0-9_$]+).*", iLine, flags=re.IGNORECASE)
+#            if not regex_result:
+#                continue
+#            ret.append(  {  "host":         aHostInfo["ip"],
+#                            "display_name": regex_result.group(2),
+#                            "actions":       [
+#                                {"name": "print_v1", "exec":  SmbService.action_print1},
+#                                {"name": "print_v2", "exec":  SmbService.action_print2},
+#                            ],
+#                            "smb_path":     [regex_result.group(1), regex_result.group(2)]} )
+#
+#        return ret

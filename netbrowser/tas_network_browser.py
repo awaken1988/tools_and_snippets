@@ -17,22 +17,23 @@ from PySide2.QtWidgets          import (QLineEdit, QPushButton, QApplication,
                                         QVBoxLayout, QHBoxLayout, QDialog, QTableView, QGridLayout, 
                                         QLabel, QWidget, QAction, QMenu, QToolButton,
                                         QComboBox, QToolBar, QFrame, QSystemTrayIcon, QStyle)
-from PySide2.QtCore             import (QObject, QAbstractTableModel, QModelIndex, Qt, Signal, Slot, SIGNAL)
+from PySide2.QtCore             import (QObject, QAbstractTableModel, QModelIndex, QUrl, Qt, Signal, Slot, SIGNAL)
 from PySide2.QtWebEngineWidgets import (QWebEngineView, QWebEnginePage, QWebEngineProfile, QWebEngineScript)
 from PySide2.QtWebChannel       import (QWebChannel)
 from PySide2.QtWebSockets       import (QWebSocketServer)
 from PySide2.QtNetwork          import (QHostAddress)
+from PySide2.QtGui              import (QDesktopServices)
 
 #include platform specific stuff
 if platform.system() == "Linux":    
-    from platform_linux import *
+    from platform_linux import Platform
 elif platform.system() == "Windows":
-    from platform_windows import *
+    from platform_windows import Platform
 else:
     raise Exception("Your Platform not yet supported")
 
 SERVICES = {}
-EXECUTABLES = getPlatformExecutables()
+EXECUTABLES = Platform.getPlatformExecutables()
 
 def add_fetchinfo(aFetchInfo, aExecutableName, aCommand):
     if aExecutableName not in EXECUTABLES:
@@ -48,7 +49,7 @@ def add_fetchinfo(aFetchInfo, aExecutableName, aCommand):
 #the last step: throw away commands that not avail
 def cleanup_executables(aExecutable):
     for iKey in [x for x in aExecutable]:
-        if which_command(aExecutable[iKey]["cmd"]):
+        if Platform.which_command(aExecutable[iKey]["cmd"]):
             print("+Command={}".format(aExecutable[iKey]["cmd"]))
         else:
             print("-Command={}".format(aExecutable[iKey]["cmd"]))
@@ -70,12 +71,22 @@ cleanup_executables(EXECUTABLES)
 def get_host_summary():
     ret = []
 
-    ret = get_hosts()
+    ret = Platform.get_hosts()
+
+    #TODO: move this to tas_network_browser.py
+    ret = list(filter(lambda x: not x["ip"].startswith("255.255.255.255"), ret))
+    ret = list(filter(lambda x: not x["ip"].startswith("ff"), ret))
+    ret = list(filter(lambda x: not x["mac"].startswith("00:00:00:00:00"), ret))
+    for iMult4 in range(224, 239+1):
+        ret = list(filter(lambda x: not x["ip"].startswith(str(iMult4)), ret))
 
     #append localhost
     ret.append( {   "dev":      "lo", 
                     "ip":       "127.0.0.1",
                     "mac":   "00:00:00:00:00:00"} )
+
+    for i in ret:
+        print(i)
 
     for iHost in ret:
         #set hostname
@@ -87,7 +98,6 @@ def get_host_summary():
         #set avail services
         for iServiceName, iService in SERVICES.items():
             iHost["services"][iServiceName] = iService["data"].fetchinfo(iHost)
-    
 
     return ret
 
@@ -154,6 +164,9 @@ class PortServie:
 
         return ret
 
+    def add_action(self, aName, aAction):
+        self.port_info["actions"].append( {"name": aName, "exec": aAction} )
+
 class SmbHostService:
     @staticmethod
     def fetchinfo(aHostInfo):
@@ -178,18 +191,15 @@ class SmbService:
     @staticmethod
     def fetchinfo(aHostInfo):
         ret = []
-        cmd_result = subprocess.run("smbtree -N {}".format(aHostInfo["ip"]), shell=True, capture_output=True).stdout.decode('utf-8')
-        for iLine in cmd_result.split("\n"):
-            regex_result = re.search("^[ \t]+\\\\\\\\([a-z0-9_]+)\\\\([a-z0-9_$]+).*", iLine, flags=re.IGNORECASE)
-            if not regex_result:
-                continue
+
+        for iSmbShare in Platform.smbservice_fetchinfo(aHostInfo):
             ret.append(  {  "host":         aHostInfo["ip"],
-                            "display_name": regex_result.group(2),
-                            "actions":       [
-                                {"name": "print_v1", "exec":  SmbService.action_print1},
-                                {"name": "print_v2", "exec":  SmbService.action_print2},
-                            ],
-                            "smb_path":     [regex_result.group(1), regex_result.group(2)]} )
+                "display_name": iSmbShare,
+                "actions":       [
+                    {"name": "print_v1", "exec":  SmbService.action_print1},
+                    {"name": "print_v2", "exec":  SmbService.action_print2},
+                ],
+                "smb_path":     [aHostInfo["ip"], iSmbShare]} )
 
         return ret
 
@@ -211,6 +221,10 @@ class ServiceHelper:
                 col = 0
                 row += 1
         return main
+
+    @staticmethod
+    def open_default_browser(aUrl):
+        QDesktopServices.openUrl(QUrl(aUrl, QUrl.TolerantMode))
 
 #------------------------------------
 # gui
@@ -288,13 +302,26 @@ class MainWidget(QWidget):
 
 if __name__ == '__main__':
     #service definitions
-
     SERVICES["smbserver"] = {"data": SmbHostService, "display":ServiceHelper}
     SERVICES["smb"] =       {"data": SmbService, "display":ServiceHelper}
     SERVICES["domain"] =    {"data": PortServie({"name": "domain",  "port": "53", "actions": []  }), "display":ServiceHelper}
     SERVICES["http"] =      {"data": PortServie({"name": "http",  "port": "80", "actions": []  }), "display":ServiceHelper}
+    SERVICES["https"] =     {"data": PortServie({"name": "https",  "port": "443", "actions": []  }), "display":ServiceHelper}
     SERVICES["ssh"] =       {"data": PortServie({"name": "ssh",  "port": "22", "actions": []  }), "display":ServiceHelper}
     SERVICES["ftp"] =       {"data": PortServie({"name": "ftp",  "port": "21", "actions": []  }), "display":ServiceHelper}
+
+    #platform independent actions
+    default_actions = [
+        {"service": "http",        "name": "open default browser",      "action":  lambda aInfo: ServiceHelper.open_default_browser("http://"+aInfo["host"])},
+        {"service": "https",       "name": "open default browser",      "action":  lambda aInfo: ServiceHelper.open_default_browser("https://"+aInfo["host"])},
+    ]
+    for iAction in default_actions:
+        if iAction["service"] not in SERVICES:
+            continue
+        SERVICES[iAction["service"]]["data"].add_action(iAction["name"], iAction["action"])
+
+    #platform dependet actions
+    Platform.add_platform_actions(SERVICES)
 
     # Create the Qt Application
     app = QApplication(sys.argv)
