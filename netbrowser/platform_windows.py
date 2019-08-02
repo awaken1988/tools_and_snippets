@@ -50,7 +50,7 @@ class Platform:
         return ret
 
     @staticmethod
-    def add_platform_actions(aSERVICES):
+    def add_actions(aSERVICES):
         default_actions = []
         executables = Platform.getPlatformExecutables()
 

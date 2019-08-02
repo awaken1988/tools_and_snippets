@@ -10,10 +10,10 @@ class Platform:
         EXECUTABLES = {}
         EXECUTABLES["ip"] =         {"cmd": "ip",       "required": True}
         EXECUTABLES["dolphin"] =    {"cmd": "dolphin",  "required": False}
-        EXECUTABLES["smbtree"] =    {"cmd": "smbtree", "required": False}
+        EXECUTABLES["smbtree"] =    {"cmd": "smbtree",  "required": False}
         EXECUTABLES["nslookup"] =   {"cmd": "nslookup", "required": False}
         EXECUTABLES["dig"] =        {"cmd": "nslookup", "required": False}
-        EXECUTABLES["ping"] =        {"cmd": "nslookup", "required": False}
+        EXECUTABLES["ping"] =       {"cmd": "ping",     "required": False}
 
 
         return EXECUTABLES
@@ -43,9 +43,10 @@ class Platform:
             })
 
         return ret
+    
 
     @staticmethod
-    def add_platform_actions(aSERVICES):
+    def add_actions(aSERVICES):
         default_actions = []
         executables = Platform.getPlatformExecutables()
         exeterm = Platform.execute_terminal
@@ -60,10 +61,18 @@ class Platform:
             default_actions.append({"service": "domain", "name": "dig",
                                     "action": lambda aInfo: exeterm(executables["dig"]["cmd"] + " " + aInfo["host"])} )
 
+        #ping
+        if Platform.which_command(executables["ping"]["cmd"]):
+            default_actions.append({"service": "ip", "name": "ping",
+                                    "action": lambda aInfo: exeterm(executables["ping"]["cmd"] + " " + aInfo["ip"])} )
+
+
         for iAction in default_actions:
             if iAction["service"] not in aSERVICES:
                 continue
             aSERVICES[iAction["service"]]["data"].add_action(iAction["name"], iAction["action"])
+
+
 
     @staticmethod
     def execute_terminal(aCommandLine):

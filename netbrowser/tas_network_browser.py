@@ -129,7 +129,7 @@ def get_hostname(aAddr):
 def is_ipv6(aAddress):
     try:
         socket.inet_pton(socket.AF_INET6, aAddress)
-    except e:
+    except:
         print("geht nicht")
         return False
     return True
@@ -163,6 +163,22 @@ class QContextMenuLabel(QLabel):
 #------------------------------------
 # services
 #------------------------------------
+class HostService:
+    def __init__(self, aField):
+        self.field = aField
+        self.info = {"actions": []}
+
+    def fetchinfo(self, aHostInfo):
+        ret = [aHostInfo.copy()]
+
+        ret[0]["display_name"] = aHostInfo[self.field]
+        ret[0]["actions"] = self.info["actions"]
+        
+        return ret
+
+    def add_action(self, aName, aAction):
+        self.info["actions"].append( {"name": aName, "exec": aAction} )
+
 class PortServie:
     def __init__(self, aPortInfo):
         self.port_info = aPortInfo
@@ -308,7 +324,7 @@ class MainWidget(QWidget):
             self.info_table_lyt.addWidget(QLabel(str(iHost["dev"])), row, col ); col += 1
             self.info_table_lyt.addWidget(QLabel(str(iHost["mac"])), row, col ); col += 1
             self.info_table_lyt.addWidget(QLabel(str(iHost["ip"])), row, col );  col += 1
-            
+
             if "hostname" in iHost:
                 self.info_table_lyt.addWidget(QLabel(str(iHost["hostname"])), row, col );   
             else:
@@ -327,8 +343,11 @@ class MainWidget(QWidget):
             col = 0
 
 if __name__ == '__main__':
-    #service definitions
 
+    #common informatin for host like ping, nmap, speedtests
+    SERVICES["ip"] =    {"data": HostService("ip"), "display":ServiceHelper}
+
+    #service definitions
     if SmbHostService.available(EXECUTABLES):
         SERVICES["smbserver"] = {"data": SmbHostService, "display":ServiceHelper}
     if SmbService.available(EXECUTABLES):
@@ -338,7 +357,7 @@ if __name__ == '__main__':
     SERVICES["https"] =     {"data": PortServie({"name": "https",  "port": "443", "actions": []  }), "display":ServiceHelper}
     SERVICES["ssh"] =       {"data": PortServie({"name": "ssh",  "port": "22", "actions": []  }), "display":ServiceHelper}
     SERVICES["ftp"] =       {"data": PortServie({"name": "ftp",  "port": "21", "actions": []  }), "display":ServiceHelper}
-
+    
     #platform independent actions
     default_actions = [
         {"service": "http",        "name": "open default browser",      
@@ -352,7 +371,7 @@ if __name__ == '__main__':
         SERVICES[iAction["service"]]["data"].add_action(iAction["name"], iAction["action"])
 
     #platform dependet actions
-    Platform.add_platform_actions(SERVICES)
+    Platform.add_actions(SERVICES)
 
     # Create the Qt Application
     app = QApplication(sys.argv)
