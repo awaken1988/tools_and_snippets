@@ -1,9 +1,11 @@
-#References
-#   Qt:
-#       https://stackoverflow.com/questions/28565254/how-to-use-qt-webengine-and-qwebchannel
-#       https://doc.qt.io/qt-5/qtwebchannel-javascript.html
-#       https://stackoverflow.com/questions/31928444/qt-qwebenginepagesetwebchannel-transport-object
-#       https://code.woboq.org/qt5/qtwebchannel/examples/webchannel/shared/websocketclientwrapper.cpp.html https://doc.qt.io/qt-5/qtwebchannel-standalone-main-cpp.html
+#TODO:
+#   - add host specific services: e.g ping, nmap, speedtests
+#
+#
+#
+#
+#
+
 import enum
 import subprocess
 import json 
@@ -124,6 +126,20 @@ def get_hostname(aAddr):
         pass
     return ""
 
+def is_ipv6(aAddress):
+    try:
+        socket.inet_pton(socket.AF_INET6, aAddress)
+    except e:
+        print("geht nicht")
+        return False
+    return True
+
+def addr_to_url(aAddress):
+    if is_ipv6(aAddress):
+        aAddress = "[" + aAddress + "]"
+    return aAddress
+
+
 class QContextMenuLabel(QLabel):
     def __init__(self, aServiceInfo):
         QLabel.__init__(self)
@@ -169,6 +185,10 @@ class PortServie:
 
 class SmbHostService:
     @staticmethod
+    def available(aExecutable):
+        return True
+
+    @staticmethod
     def fetchinfo(aHostInfo):
         if scan_a_port( get_any_host_id(aHostInfo), 445 ):
             ret = {"host":         get_any_host_id(aHostInfo), 
@@ -181,6 +201,10 @@ class SmbHostService:
    
 class SmbService:
     @staticmethod
+    def available(aExecutable):
+        return Platform.SmbService.available(aExecutable)
+
+    @staticmethod
     def action_print1(aServiceInfo):
         print("1_mount "+ str(aServiceInfo))
     
@@ -192,7 +216,7 @@ class SmbService:
     def fetchinfo(aHostInfo):
         ret = []
 
-        for iSmbShare in Platform.smbservice_fetchinfo(aHostInfo):
+        for iSmbShare in Platform.SmbService.fetchinfo(aHostInfo):
             ret.append(  {  "host":         aHostInfo["ip"],
                 "display_name": iSmbShare,
                 "actions":       [
@@ -224,6 +248,8 @@ class ServiceHelper:
 
     @staticmethod
     def open_default_browser(aUrl):
+
+
         QDesktopServices.openUrl(QUrl(aUrl, QUrl.TolerantMode))
 
 #------------------------------------
@@ -302,8 +328,11 @@ class MainWidget(QWidget):
 
 if __name__ == '__main__':
     #service definitions
-    SERVICES["smbserver"] = {"data": SmbHostService, "display":ServiceHelper}
-    SERVICES["smb"] =       {"data": SmbService, "display":ServiceHelper}
+
+    if SmbHostService.available(EXECUTABLES):
+        SERVICES["smbserver"] = {"data": SmbHostService, "display":ServiceHelper}
+    if SmbService.available(EXECUTABLES):
+        SERVICES["smb"] =       {"data": SmbService, "display":ServiceHelper}
     SERVICES["domain"] =    {"data": PortServie({"name": "domain",  "port": "53", "actions": []  }), "display":ServiceHelper}
     SERVICES["http"] =      {"data": PortServie({"name": "http",  "port": "80", "actions": []  }), "display":ServiceHelper}
     SERVICES["https"] =     {"data": PortServie({"name": "https",  "port": "443", "actions": []  }), "display":ServiceHelper}
@@ -312,8 +341,10 @@ if __name__ == '__main__':
 
     #platform independent actions
     default_actions = [
-        {"service": "http",        "name": "open default browser",      "action":  lambda aInfo: ServiceHelper.open_default_browser("http://"+aInfo["host"])},
-        {"service": "https",       "name": "open default browser",      "action":  lambda aInfo: ServiceHelper.open_default_browser("https://"+aInfo["host"])},
+        {"service": "http",        "name": "open default browser",      
+        "action":  lambda aInfo: ServiceHelper.open_default_browser("http://"+addr_to_url(aInfo["host"]))},
+        {"service": "https",       "name": "open default browser",      
+        "action":  lambda aInfo: ServiceHelper.open_default_browser("https://"+addr_to_url(aInfo["host"]))},
     ]
     for iAction in default_actions:
         if iAction["service"] not in SERVICES:
