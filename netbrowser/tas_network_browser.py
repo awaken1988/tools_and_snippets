@@ -25,6 +25,7 @@ from PySide2.QtWebChannel       import (QWebChannel)
 from PySide2.QtWebSockets       import (QWebSocketServer)
 from PySide2.QtNetwork          import (QHostAddress)
 from PySide2.QtGui              import (QDesktopServices)
+from helper import *
 
 #include platform specific stuff
 if platform.system() == "Linux":    
@@ -36,6 +37,8 @@ else:
 
 SERVICES = {}
 EXECUTABLES = Platform.getPlatformExecutables()
+
+
 
 def add_fetchinfo(aFetchInfo, aExecutableName, aCommand):
     if aExecutableName not in EXECUTABLES:
@@ -166,18 +169,14 @@ class QContextMenuLabel(QLabel):
 class HostService:
     def __init__(self, aField):
         self.field = aField
-        self.info = {"actions": []}
 
     def fetchinfo(self, aHostInfo):
         ret = [aHostInfo.copy()]
 
-        ret[0]["display_name"] = aHostInfo[self.field]
-        ret[0]["actions"] = self.info["actions"]
+        ret[0]["display_name"] = aHostInfo[self.field["name"]]
+        ret[0]["actions"] = get_dict_or_empty(self.field["actions"], self.field["name"])
         
         return ret
-
-    def add_action(self, aName, aAction):
-        self.info["actions"].append( {"name": aName, "exec": aAction} )
 
 class PortServie:
     def __init__(self, aPortInfo):
@@ -191,13 +190,10 @@ class PortServie:
 
         ret.append(  {  "host":         aHostInfo["ip"],
                         "display_name": self.port_info["name"],
-                        "actions":      self.port_info["actions"],
+                        "actions":      get_dict_or_empty(self.port_info["actions"], self.port_info["name"]),
         })
 
         return ret
-
-    def add_action(self, aName, aAction):
-        self.port_info["actions"].append( {"name": aName, "exec": aAction} )
 
 class SmbHostService:
     @staticmethod
@@ -344,35 +340,32 @@ class MainWidget(QWidget):
 
 if __name__ == '__main__':
 
+    #actions
+    actions = Platform.getActions()
+    print(actions)
+    add_list(actions, "http", {
+        "name": "open in default browser",
+        "exec": lambda aInfo: ServiceHelper.open_default_browser("http://"+addr_to_url(aInfo["host"]))
+    })
+    add_list(actions, "https", {
+        "name": "open in default browser",
+        "exec": lambda aInfo: ServiceHelper.open_default_browser("https://"+addr_to_url(aInfo["host"]))
+    })
+
     #common informatin for host like ping, nmap, speedtests
-    SERVICES["ip"] =    {"data": HostService("ip"), "display":ServiceHelper}
+    SERVICES["ip"] =    {"data": HostService({"name": "ip", "actions": actions}), "display":ServiceHelper}
 
     #service definitions
     if SmbHostService.available(EXECUTABLES):
         SERVICES["smbserver"] = {"data": SmbHostService, "display":ServiceHelper}
     if SmbService.available(EXECUTABLES):
         SERVICES["smb"] =       {"data": SmbService, "display":ServiceHelper}
-    SERVICES["domain"] =    {"data": PortServie({"name": "domain",  "port": "53", "actions": []  }), "display":ServiceHelper}
-    SERVICES["http"] =      {"data": PortServie({"name": "http",  "port": "80", "actions": []  }), "display":ServiceHelper}
-    SERVICES["https"] =     {"data": PortServie({"name": "https",  "port": "443", "actions": []  }), "display":ServiceHelper}
-    SERVICES["ssh"] =       {"data": PortServie({"name": "ssh",  "port": "22", "actions": []  }), "display":ServiceHelper}
-    SERVICES["ftp"] =       {"data": PortServie({"name": "ftp",  "port": "21", "actions": []  }), "display":ServiceHelper}
+    SERVICES["domain"] =    {"data": PortServie({"name": "domain",  "port": "53", "actions": actions  }), "display":ServiceHelper}
+    SERVICES["http"] =      {"data": PortServie({"name": "http",  "port": "80", "actions": actions  }), "display":ServiceHelper}
+    SERVICES["https"] =     {"data": PortServie({"name": "https",  "port": "443", "actions": actions  }), "display":ServiceHelper}
+    SERVICES["ssh"] =       {"data": PortServie({"name": "ssh",  "port": "22", "actions": actions  }), "display":ServiceHelper}
+    SERVICES["ftp"] =       {"data": PortServie({"name": "ftp",  "port": "21", "actions": actions  }), "display":ServiceHelper}
     
-    #platform independent actions
-    default_actions = [
-        {"service": "http",        "name": "open default browser",      
-        "action":  lambda aInfo: ServiceHelper.open_default_browser("http://"+addr_to_url(aInfo["host"]))},
-        {"service": "https",       "name": "open default browser",      
-        "action":  lambda aInfo: ServiceHelper.open_default_browser("https://"+addr_to_url(aInfo["host"]))},
-    ]
-    for iAction in default_actions:
-        if iAction["service"] not in SERVICES:
-            continue
-        SERVICES[iAction["service"]]["data"].add_action(iAction["name"], iAction["action"])
-
-    #platform dependet actions
-    Platform.add_actions(SERVICES)
-
     # Create the Qt Application
     app = QApplication(sys.argv)
    

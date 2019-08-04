@@ -2,22 +2,55 @@ import subprocess
 import json
 import shutil
 import re
+from helper import *
 
 class Platform:
 
+    #TODO: rename
     @staticmethod
     def getPlatformExecutables():
-        EXECUTABLES = {}
-        EXECUTABLES["ip"] =         {"cmd": "ip",       "required": True}
-        EXECUTABLES["dolphin"] =    {"cmd": "dolphin",  "required": False}
-        EXECUTABLES["smbtree"] =    {"cmd": "smbtree",  "required": False}
-        EXECUTABLES["nslookup"] =   {"cmd": "nslookup", "required": False}
-        EXECUTABLES["dig"] =        {"cmd": "nslookup", "required": False}
-        EXECUTABLES["ping"] =       {"cmd": "ping",     "required": False}
+        executables = {}
+        executables["ip"] =         {"cmd": "ip",       "required": True}
+        executables["dolphin"] =    {"cmd": "dolphin",  "required": False}
+        executables["smbtree"] =    {"cmd": "smbtree",  "required": False}
+        executables["nslookup"] =   {"cmd": "nslookup", "required": False}
+        executables["dig"] =        {"cmd": "nslookup", "required": False}
+        executables["ping"] =       {"cmd": "ping",     "required": False}
+        executables["mount"] =      {"cmd": "mount",    "required": False}
+        return executables
 
+    @staticmethod
+    def getActions():
+        action = {}
+        executables = Platform.getPlatformExecutables()
+        exeterm = Platform.execute_terminal
 
-        return EXECUTABLES
+        if Platform.which_command(executables["nslookup"]["cmd"]):
+            add_list(action, "domain", {
+                "name": "nslookup",
+                "exec":  lambda aInfo: exeterm(executables["nslookup"]["cmd"] + " - " + aInfo["host"])
+            })
 
+        if Platform.which_command(executables["dig"]["cmd"]):
+            add_list(action, "domain", {
+                "name": "dig",
+                "exec":  lambda aInfo: exeterm(executables["dig"]["cmd"] + " " + aInfo["host"])
+            })
+
+        if Platform.which_command(executables["ping"]["cmd"]):
+            add_list(action, "ip", {
+                "name": "ping",
+                "exec":  lambda aInfo: exeterm(executables["ping"]["cmd"] + " " + aInfo["ip"])
+            })
+
+        if Platform.which_command(executables["mount"]["cmd"]):
+            add_list(action, "smb", {
+                "name": "mount",
+                "action": lambda a: print(a)
+            })
+
+        return action
+   
     @staticmethod
     def which_command(aCommand):
         if not shutil.which(aCommand):
@@ -66,6 +99,12 @@ class Platform:
             default_actions.append({"service": "ip", "name": "ping",
                                     "action": lambda aInfo: exeterm(executables["ping"]["cmd"] + " " + aInfo["ip"])} )
 
+        default_actions.append({
+            "service": "smb", 
+            "name": "mount", 
+            "action": lambda a: print("bla"),
+        })
+
 
         for iAction in default_actions:
             if iAction["service"] not in aSERVICES:
@@ -82,6 +121,11 @@ class Platform:
 
     class SmbService:
         @staticmethod
+        def mount_action(aHostInfo):
+            print("mount")
+            pass
+
+        @staticmethod
         def available(aExecutables):
             if "smbtree" in aExecutables:
                 return True
@@ -97,3 +141,8 @@ class Platform:
                     continue
                 ret.append( regex_result.group(2) )
             return ret
+
+
+
+
+

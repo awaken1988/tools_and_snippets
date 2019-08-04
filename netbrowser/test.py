@@ -18,7 +18,8 @@ from PySide2.QtWebSockets       import (QWebSocketServer)
 from PySide2.QtNetwork          import (QHostAddress)
 from PySide2.QtGui              import (QDesktopServices)
 
+import test2
 
 
-app = QApplication(sys.argv)
-QDesktopServices.openUrl(QUrl("http://www.google.de", QUrl.TolerantMode))
+def print_my_stuff(aBla):
+    print(aBla)
