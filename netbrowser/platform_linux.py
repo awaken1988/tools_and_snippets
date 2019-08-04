@@ -46,7 +46,7 @@ class Platform:
         if Platform.which_command(executables["mount"]["cmd"]):
             add_list(action, "smb", {
                 "name": "mount",
-                "action": lambda a: print(a)
+                "exec": lambda a: print(a)
             })
 
         return action

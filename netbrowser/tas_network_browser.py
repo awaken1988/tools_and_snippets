@@ -16,9 +16,8 @@ import platform
 import re
 import shutil
 from PySide2.QtWidgets          import (QLineEdit, QPushButton, QApplication, 
-                                        QVBoxLayout, QHBoxLayout, QDialog, QTableView, QGridLayout, 
-                                        QLabel, QWidget, QAction, QMenu, QToolButton,
-                                        QComboBox, QToolBar, QFrame, QSystemTrayIcon, QStyle)
+                                        QVBoxLayout, QHBoxLayout, QDialog, QTableView, QGridLayout, QFormLayout,
+                                        QLabel, QWidget, QAction, QMenu, QToolButton, QComboBox, QToolBar, QFrame, QSystemTrayIcon, QStyle)
 from PySide2.QtCore             import (QObject, QAbstractTableModel, QModelIndex, QUrl, Qt, Signal, Slot, SIGNAL)
 from PySide2.QtWebEngineWidgets import (QWebEngineView, QWebEnginePage, QWebEngineProfile, QWebEngineScript)
 from PySide2.QtWebChannel       import (QWebChannel)
@@ -212,6 +211,8 @@ class SmbHostService:
         return []
    
 class SmbService:
+    actions = []
+
     @staticmethod
     def available(aExecutable):
         return Platform.SmbService.available(aExecutable)
@@ -231,11 +232,9 @@ class SmbService:
         for iSmbShare in Platform.SmbService.fetchinfo(aHostInfo):
             ret.append(  {  "host":         aHostInfo["ip"],
                 "display_name": iSmbShare,
-                "actions":       [
-                    {"name": "print_v1", "exec":  SmbService.action_print1},
-                    {"name": "print_v2", "exec":  SmbService.action_print2},
-                ],
+                "actions": SmbService.actions,
                 "smb_path":     [aHostInfo["ip"], iSmbShare]} )
+            
 
         return ret
 
@@ -338,11 +337,43 @@ class MainWidget(QWidget):
             row += 1
             col = 0
 
+class NamePasswordWidget(QDialog):
+
+    def __init__(self, aFieldDefiniton):
+        QDialog.__init__(self)
+
+        self.field_defintion = aFieldDefiniton
+
+        self.main_lyt = QVBoxLayout()
+        self.setLayout(self.main_lyt)
+
+        self.form_lyt = QFormLayout()
+        self.input = {}
+        for iField in self.field_defintion:
+            curr_widget = QLineEdit()
+            if "type" in iField and  "password" == iField["type"]:
+                curr_widget.setEchoMode(QLineEdit.Password)
+            self.form_lyt.addRow(iField["name"], curr_widget)
+            self.input[iField["name"]] = curr_widget
+        self.main_lyt.addLayout(self.form_lyt)
+
+        self.btn_ok = QPushButton("Ok")
+        self.btn_cancel = QPushButton("Cancel")
+        self.btn_lyt = QHBoxLayout()
+        self.btn_lyt.addWidget(self.btn_ok)
+        self.btn_lyt.addWidget(self.btn_cancel)
+        self.main_lyt.addLayout(self.btn_lyt)
+
+
 if __name__ == '__main__':
 
     #actions
     actions = Platform.getActions()
     print(actions)
+
+    SmbService.actions = get_dict_or_empty(actions, "smb")
+    print(SmbService.actions)
+
     add_list(actions, "http", {
         "name": "open in default browser",
         "exec": lambda aInfo: ServiceHelper.open_default_browser("http://"+addr_to_url(aInfo["host"]))
@@ -373,6 +404,8 @@ if __name__ == '__main__':
     main = MainWidget()
     main.show()
 
+    test = NamePasswordWidget([{"name": "username"}, {"name": "password", "type": "password"}])
+    test.show()
 
     sys.exit(app.exec_())
 
