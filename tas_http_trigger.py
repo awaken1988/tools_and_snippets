@@ -5,6 +5,7 @@ import urllib
 import ipaddress
 import subprocess
 import sys
+import socket
 
 def trigger(aIpAddress):
   addr = ipaddress.ip_address(aIpAddress)
@@ -17,7 +18,7 @@ def trigger(aIpAddress):
     pass
 
 # HTTPRequestHandler class
-class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
+class RequestHandler(BaseHTTPRequestHandler):
  
   # GET
   def do_GET(self):
@@ -41,19 +42,30 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
  
         self.wfile.write(bytes(message, "utf8"))
         return
- 
+
+class HTTPServer6(HTTPServer):
+  address_family = socket.AF_INET6
+
 def run():
   global PORT
   global SECRET
-  PORT = sys.argv[1]
-  SECRET = sys.argv[2]   
+  global IPV 
 
+  IPV = sys.argv[1]
+  PORT = sys.argv[2]
+  SECRET = sys.argv[3]   
+
+  print("IPV={}".format(IPV))
   print("PORT={}".format(PORT))
   print("SECRET={}".format(SECRET))
+    
+  if "ip4" == IPV:
+    server_address = ('', int(PORT) )
+    httpd = HTTPServer(server_address, RequestHandler )
+    httpd.serve_forever()
+  elif "ip6" == IPV:
+    server_address = ('::', int(PORT) )
+    httpd = HTTPServer6(server_address, RequestHandler )
+    httpd.serve_forever()
 
-  server_address = ('', int(PORT) )
-  httpd = HTTPServer(server_address, testHTTPServer_RequestHandler)
-  httpd.serve_forever()
- 
- 
 run()
