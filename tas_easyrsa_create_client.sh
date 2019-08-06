@@ -1,5 +1,11 @@
 #!/bin/bash
 
+#
+# Arguments
+#   1. config name
+#   2. ip or hostname
+#   3. port
+
 CA_NAME="myca"
 SRV_NAME="myserver"
 
@@ -14,7 +20,7 @@ CLI_CFG_NAME="$CLI_NAME"
 
 echo "set_var EASYRSA_REQ_CN         \"$CLI_NAME\" " > vars
 echo "set_var EASYRSA_BATCH          \"yes\" "      >> vars
-easyrsa gen-req $CLI_NAME
+easyrsa gen-req $CLI_NAME nopass
 easyrsa sign-req client $CLI_NAME
 
 echo "[GENERATE_CLIENT_CONFIG]"           

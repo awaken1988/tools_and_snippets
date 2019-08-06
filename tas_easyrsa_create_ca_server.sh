@@ -1,6 +1,12 @@
 #!/bin/bash
+#
+# Arguments
+#   1. config name
+#
+#
 
-SRV_CFG_NAME="gaming"
+
+SRV_CFG_NAME=$1
 CLI_CFG_NAME="gamingclient"
 
 CA_NAME="myca"
