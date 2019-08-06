@@ -4,17 +4,24 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import urllib
 import ipaddress
 import subprocess
-
-SECRET = 'asdf1234'
+import sys
 
 def trigger(aIpAddress):
-    subprocess.Popen("echo "+aIpAddress+" ", shell=True)
+  addr = ipaddress.ip_address(aIpAddress)
+  try:
+    if 4 == addr.version:
+        subprocess.Popen("nft add element inet filter knocked {{ {}  }}".format(aIpAddress), shell=True)
+    elif 6 == addr.version:
+        subprocess.Popen("nft add element inet filter knocked6 {{ {}  }}".format(aIpAddress), shell=True)
+  except:
+    pass
 
 # HTTPRequestHandler class
 class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
  
   # GET
   def do_GET(self):
+        message = 'trigger failed'
         get_dict = urllib.parse.parse_qs(self.path[2:])
         print(get_dict)
         if "secret" in get_dict and SECRET == get_dict["secret"][0]:
@@ -23,32 +30,28 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
             if "ip" in get_dict:
                 client = get_dict["ip"][0]
 
-            try:
-                ipaddress.ip_address(client)
-                print("trigger")
-                trigger(aIpAddress)    
-            except:
-                pass
+            ipaddress.ip_address(client)
+            trigger(client)    
+            message = 'trigger ok'
             
-            
-
-            
-
-        # Send response status code
         self.send_response(200)
  
-        # Send headers
         self.send_header('Content-type','text/html')
         self.end_headers()
  
-        # Send message back to client
-        message = "Hello world!"
-        # Write content as utf-8 data
         self.wfile.write(bytes(message, "utf8"))
         return
  
 def run():
-  server_address = ('127.0.0.1', 8081)
+  global PORT
+  global SECRET
+  PORT = sys.argv[1]
+  SECRET = sys.argv[2]   
+
+  print("PORT={}".format(PORT))
+  print("SECRET={}".format(SECRET))
+
+  server_address = ('', int(PORT) )
   httpd = HTTPServer(server_address, testHTTPServer_RequestHandler)
   httpd.serve_forever()
  
