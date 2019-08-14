@@ -2,6 +2,7 @@ import subprocess
 import json
 import shutil
 import re
+import os
 from helper import *
 
 class Platform:
@@ -18,38 +19,6 @@ class Platform:
         executables["ping"] =       {"cmd": "ping",     "required": False}
         executables["mount"] =      {"cmd": "mount",    "required": False}
         return executables
-
-    @staticmethod
-    def getActions():
-        action = {}
-        executables = Platform.getPlatformExecutables()
-        exeterm = Platform.execute_terminal
-
-        if Platform.which_command(executables["nslookup"]["cmd"]):
-            add_list(action, "domain", {
-                "name": "nslookup",
-                "exec":  lambda aInfo: exeterm(executables["nslookup"]["cmd"] + " - " + aInfo["host"])
-            })
-
-        if Platform.which_command(executables["dig"]["cmd"]):
-            add_list(action, "domain", {
-                "name": "dig",
-                "exec":  lambda aInfo: exeterm(executables["dig"]["cmd"] + " " + aInfo["host"])
-            })
-
-        if Platform.which_command(executables["ping"]["cmd"]):
-            add_list(action, "ip", {
-                "name": "ping",
-                "exec":  lambda aInfo: exeterm(executables["ping"]["cmd"] + " " + aInfo["ip"])
-            })
-
-        if Platform.which_command(executables["mount"]["cmd"]):
-            add_list(action, "smb", {
-                "name": "mount",
-                "exec": lambda a: print(a)
-            })
-
-        return action
    
     @staticmethod
     def which_command(aCommand):
@@ -60,7 +29,7 @@ class Platform:
     @staticmethod
     def get_hosts():
         ret = []
-
+        
         executables = Platform.getPlatformExecutables()
         cmd_result = subprocess.run(executables["ip"]["cmd"]+" -j neigh", shell=True, capture_output=True)
         cmd_result = json.loads(cmd_result.stdout.decode('utf-8'))
@@ -102,7 +71,7 @@ class Platform:
         default_actions.append({
             "service": "smb", 
             "name": "mount", 
-            "action": lambda a: print("bla"),
+            "action": lambda aHostInfo: SmbService.mount_action(aHostInfo),
         })
 
 
@@ -122,8 +91,13 @@ class Platform:
     class SmbService:
         @staticmethod
         def mount_action(aHostInfo):
-            print("mount")
-            pass
+            passwd = NamePasswordWidget([{"name": "username"}, {"name": "password", "type": "password"}])
+            if 1 == passwd.exec():
+                create_dir = os.getenv("HOME")+"/netbrowser/"+aHostInfo["host"]+"/"+aHostInfo["smb_path"]
+                print(create_dir) 
+                os.makedirs(create_dir)
+
+                #TODO: mount
 
         @staticmethod
         def available(aExecutables):
@@ -134,14 +108,45 @@ class Platform:
         @staticmethod
         def fetchinfo(aHostInfo):
             ret = []
-            cmd_result = subprocess.run("smbtree -N {}".format(aHostInfo["ip"]), shell=True, capture_output=True).stdout.decode('utf-8')
-            for iLine in cmd_result.split("\n"):
-                regex_result = re.search("^[ \t]+\\\\\\\\([a-z0-9_]+)\\\\([a-z0-9_$]+).*", iLine, flags=re.IGNORECASE)
-                if not regex_result:
+            cmd_result = subprocess.run("smbclient -N -g -L //{}".format(aHostInfo["ip"]), shell=True, capture_output=True).stdout.decode('utf-8')
+            for i in cmd_result.split():
+                if not i.startswith("Disk|"):
                     continue
-                ret.append( regex_result.group(2) )
+                ret.append( i.split("|")[1] )
+           
             return ret
 
+    @staticmethod
+    def getActions():
+        action = {}
+        executables = Platform.getPlatformExecutables()
+        exeterm = Platform.execute_terminal
+
+        if Platform.which_command(executables["nslookup"]["cmd"]):
+            add_list(action, "domain", {
+                "name": "nslookup",
+                "exec":  lambda aInfo: exeterm(executables["nslookup"]["cmd"] + " - " + aInfo["host"])
+            })
+
+        if Platform.which_command(executables["dig"]["cmd"]):
+            add_list(action, "domain", {
+                "name": "dig",
+                "exec":  lambda aInfo: exeterm(executables["dig"]["cmd"] + " " + aInfo["host"])
+            })
+
+        if Platform.which_command(executables["ping"]["cmd"]):
+            add_list(action, "ip", {
+                "name": "ping",
+                "exec":  lambda aInfo: exeterm(executables["ping"]["cmd"] + " " + aInfo["ip"])
+            })
+
+        if Platform.which_command(executables["mount"]["cmd"]):
+            add_list(action, "smb", {
+                "name": "mount",
+                "exec": lambda aHostInfo: Platform.SmbService.mount_action(aHostInfo)
+            })
+
+        return action
 
 
 

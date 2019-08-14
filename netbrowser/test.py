@@ -18,8 +18,5 @@ from PySide2.QtWebSockets       import (QWebSocketServer)
 from PySide2.QtNetwork          import (QHostAddress)
 from PySide2.QtGui              import (QDesktopServices)
 
-import test2
 
 
-def print_my_stuff(aBla):
-    print(aBla)

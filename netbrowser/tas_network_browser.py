@@ -15,6 +15,7 @@ import time
 import platform
 import re
 import shutil
+import pprint
 from PySide2.QtWidgets          import (QLineEdit, QPushButton, QApplication, 
                                         QVBoxLayout, QHBoxLayout, QDialog, QTableView, QGridLayout, QFormLayout,
                                         QLabel, QWidget, QAction, QMenu, QToolButton, QComboBox, QToolBar, QFrame, QSystemTrayIcon, QStyle)
@@ -90,18 +91,21 @@ def get_host_summary():
                     "mac":   "00:00:00:00:00:00"} )
 
     for i in ret:
-        print(i)
+        print("Hostinfo: " + str(i))
 
     for iHost in ret:
         #set hostname
         hostname = get_hostname(iHost["ip"])
         if hostname:
             iHost["hostname"] = hostname 
+        
         iHost["services"] = {}
 
         #set avail services
         for iServiceName, iService in SERVICES.items():
             iHost["services"][iServiceName] = iService["data"].fetchinfo(iHost)
+        
+        print("Hostinfo Full: "+pprint.pformat(iHost))
 
     return ret
 
@@ -230,11 +234,11 @@ class SmbService:
         ret = []
 
         for iSmbShare in Platform.SmbService.fetchinfo(aHostInfo):
-            ret.append(  {  "host":         aHostInfo["ip"],
+            ret.append(  {  
+                "host":         aHostInfo["ip"],
                 "display_name": iSmbShare,
-                "actions": SmbService.actions,
-                "smb_path":     [aHostInfo["ip"], iSmbShare]} )
-            
+                "actions":      SmbService.actions,
+                "smb_path":     iSmbShare} )
 
         return ret
 
@@ -290,12 +294,19 @@ class MainWidget(QWidget):
         
         self.refrsh_btn = QPushButton()
         self.refrsh_btn.setIcon( self.style().standardIcon(QStyle.SP_BrowserReload)  )
-        QObject.connect(self.refrsh_btn, SIGNAL('clicked()'), lambda: self.refresh)
-        
         self.refrsh_btn.clicked.connect(self.refresh)
+
+        self.test1_btn = QPushButton()
+        self.test1_btn.setIcon( self.style().standardIcon(QStyle.SP_BrowserReload)  )
+        self.test1_btn.clicked.connect(self.test1)
+      
         self.refrsh_opt_lyt.addWidget(self.refrsh_btn)
+        self.refrsh_opt_lyt.addWidget(self.test1_btn)
         
         self.lyt.addWidget(self.refrsh_opt)
+
+    def test1(self):
+        print("test")
 
     def refresh(self):
         print("Signal: refresh")
@@ -337,34 +348,6 @@ class MainWidget(QWidget):
             row += 1
             col = 0
 
-class NamePasswordWidget(QDialog):
-
-    def __init__(self, aFieldDefiniton):
-        QDialog.__init__(self)
-
-        self.field_defintion = aFieldDefiniton
-
-        self.main_lyt = QVBoxLayout()
-        self.setLayout(self.main_lyt)
-
-        self.form_lyt = QFormLayout()
-        self.input = {}
-        for iField in self.field_defintion:
-            curr_widget = QLineEdit()
-            if "type" in iField and  "password" == iField["type"]:
-                curr_widget.setEchoMode(QLineEdit.Password)
-            self.form_lyt.addRow(iField["name"], curr_widget)
-            self.input[iField["name"]] = curr_widget
-        self.main_lyt.addLayout(self.form_lyt)
-
-        self.btn_ok = QPushButton("Ok")
-        self.btn_cancel = QPushButton("Cancel")
-        self.btn_lyt = QHBoxLayout()
-        self.btn_lyt.addWidget(self.btn_ok)
-        self.btn_lyt.addWidget(self.btn_cancel)
-        self.main_lyt.addLayout(self.btn_lyt)
-
-
 if __name__ == '__main__':
 
     #actions
@@ -403,9 +386,6 @@ if __name__ == '__main__':
     #maingui
     main = MainWidget()
     main.show()
-
-    test = NamePasswordWidget([{"name": "username"}, {"name": "password", "type": "password"}])
-    test.show()
 
     sys.exit(app.exec_())
 
