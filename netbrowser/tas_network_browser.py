@@ -1,36 +1,44 @@
-#References
-#   Qt:
-#       https://stackoverflow.com/questions/28565254/how-to-use-qt-webengine-and-qwebchannel
-#       https://doc.qt.io/qt-5/qtwebchannel-javascript.html
-#       https://stackoverflow.com/questions/31928444/qt-qwebenginepagesetwebchannel-transport-object
-#       https://code.woboq.org/qt5/qtwebchannel/examples/webchannel/shared/websocketclientwrapper.cpp.html https://doc.qt.io/qt-5/qtwebchannel-standalone-main-cpp.html
+#TODO:
+#   - add host specific services: e.g ping, nmap, speedtests
+#
+#
+#
+#
+#
+
 import enum
 import subprocess
 import json 
 import socket
 import sys
 import time
+import platform
 import re
 import shutil
+import pprint
 from PySide2.QtWidgets          import (QLineEdit, QPushButton, QApplication, 
-                                        QVBoxLayout, QHBoxLayout, QDialog, QTableView, QGridLayout, 
-                                        QLabel, QWidget, QAction, QMenu, QToolButton,
-                                        QComboBox, QToolBar, QFrame, QSystemTrayIcon, QStyle)
-from PySide2.QtCore             import (QObject, QAbstractTableModel, QModelIndex, Qt, Signal, Slot, SIGNAL)
+                                        QVBoxLayout, QHBoxLayout, QDialog, QTableView, QGridLayout, QFormLayout,
+                                        QLabel, QWidget, QAction, QMenu, QToolButton, QComboBox, QToolBar, QFrame, QSystemTrayIcon, QStyle)
+from PySide2.QtCore             import (QObject, QAbstractTableModel, QModelIndex, QUrl, Qt, Signal, Slot, SIGNAL)
 from PySide2.QtWebEngineWidgets import (QWebEngineView, QWebEnginePage, QWebEngineProfile, QWebEngineScript)
 from PySide2.QtWebChannel       import (QWebChannel)
 from PySide2.QtWebSockets       import (QWebSocketServer)
 from PySide2.QtNetwork          import (QHostAddress)
+from PySide2.QtGui              import (QDesktopServices)
+from helper import *
 
-class ExecutableFlags(enum.Flag):
-    NONE = 0
-    REQUIRED = 1
+#include platform specific stuff
+if platform.system() == "Linux":    
+    from platform_linux import Platform
+elif platform.system() == "Windows":
+    from platform_windows import Platform
+else:
+    raise Exception("Your Platform not yet supported")
 
 SERVICES = {}
-EXECUTABLES = {}
-EXECUTABLES["ip"] =         {"cmd": "ip",       "flags": ExecutableFlags.REQUIRED}
-EXECUTABLES["dolphin"] =    {"cmd": "dolphin",  "flags": ExecutableFlags.NONE}
-EXECUTABLES["bla"] =        {"cmd": "bla",      "flags": ExecutableFlags.NONE}
+EXECUTABLES = Platform.getPlatformExecutables()
+
+
 
 def add_fetchinfo(aFetchInfo, aExecutableName, aCommand):
     if aExecutableName not in EXECUTABLES:
@@ -46,13 +54,13 @@ def add_fetchinfo(aFetchInfo, aExecutableName, aCommand):
 #the last step: throw away commands that not avail
 def cleanup_executables(aExecutable):
     for iKey in [x for x in aExecutable]:
-        if not shutil.which(aExecutable[iKey]["cmd"]):
+        if Platform.which_command(aExecutable[iKey]["cmd"]):
+            print("+Command={}".format(aExecutable[iKey]["cmd"]))
+        else:
             print("-Command={}".format(aExecutable[iKey]["cmd"]))
-            if aExecutable[iKey]["flags"] & ExecutableFlags.REQUIRED:
+            if aExecutable[iKey]["required"]:
                 raise Exception("Error: Command={} are required but missing on your system".format(aExecutable[iKey]["cmd"]))
             del aExecutable[iKey]
-        else:
-            print("+Command={}".format(aExecutable[iKey]["cmd"]))
 
 cleanup_executables(EXECUTABLES)
 
@@ -65,38 +73,39 @@ cleanup_executables(EXECUTABLES)
 #------------------------------------
 # net helper
 #------------------------------------
-def get_hosts():
+def get_host_summary():
     ret = []
 
-    cmd_result = subprocess.run(EXECUTABLES["ip"]["cmd"]+" -j neigh", shell=True, capture_output=True)
-    cmd_result = json.loads(cmd_result.stdout.decode('utf-8'))
-    
-    for iEntry in cmd_result:
-        if "lladdr" not in iEntry: continue
-        if "dev"    not in iEntry: continue
-        if "dst"    not in iEntry: continue
-        ret.append( {
-            "dev": iEntry["dev"],
-            "ip": iEntry["dst"],
-            "mac": iEntry["lladdr"],
-        })        
+    ret = Platform.get_hosts()
+
+    #TODO: move this to tas_network_browser.py
+    ret = list(filter(lambda x: not x["ip"].startswith("255.255.255.255"), ret))
+    ret = list(filter(lambda x: not x["ip"].startswith("ff"), ret))
+    ret = list(filter(lambda x: not x["mac"].startswith("00:00:00:00:00"), ret))
+    for iMult4 in range(224, 239+1):
+        ret = list(filter(lambda x: not x["ip"].startswith(str(iMult4)), ret))
 
     #append localhost
     ret.append( {   "dev":      "lo", 
                     "ip":       "127.0.0.1",
                     "mac":   "00:00:00:00:00:00"} )
 
+    for i in ret:
+        print("Hostinfo: " + str(i))
+
     for iHost in ret:
         #set hostname
         hostname = get_hostname(iHost["ip"])
         if hostname:
             iHost["hostname"] = hostname 
+        
         iHost["services"] = {}
 
         #set avail services
         for iServiceName, iService in SERVICES.items():
             iHost["services"][iServiceName] = iService["data"].fetchinfo(iHost)
-    
+        
+        print("Hostinfo Full: "+pprint.pformat(iHost))
 
     return ret
 
@@ -115,12 +124,27 @@ def scan_a_port(aAddress, iPort):
     return True
 
 def get_hostname(aAddr):
+    return ""
     try:
         hostname_query = socket.gethostbyaddr(aAddr)
         return hostname_query[0]
     except:
         pass
     return ""
+
+def is_ipv6(aAddress):
+    try:
+        socket.inet_pton(socket.AF_INET6, aAddress)
+    except:
+        print("geht nicht")
+        return False
+    return True
+
+def addr_to_url(aAddress):
+    if is_ipv6(aAddress):
+        aAddress = "[" + aAddress + "]"
+    return aAddress
+
 
 class QContextMenuLabel(QLabel):
     def __init__(self, aServiceInfo):
@@ -145,6 +169,18 @@ class QContextMenuLabel(QLabel):
 #------------------------------------
 # services
 #------------------------------------
+class HostService:
+    def __init__(self, aField):
+        self.field = aField
+
+    def fetchinfo(self, aHostInfo):
+        ret = [aHostInfo.copy()]
+
+        ret[0]["display_name"] = aHostInfo[self.field["name"]]
+        ret[0]["actions"] = get_dict_or_empty(self.field["actions"], self.field["name"])
+        
+        return ret
+
 class PortServie:
     def __init__(self, aPortInfo):
         self.port_info = aPortInfo
@@ -157,12 +193,16 @@ class PortServie:
 
         ret.append(  {  "host":         aHostInfo["ip"],
                         "display_name": self.port_info["name"],
-                        "actions":      self.port_info["actions"],
+                        "actions":      get_dict_or_empty(self.port_info["actions"], self.port_info["name"]),
         })
 
         return ret
 
 class SmbHostService:
+    @staticmethod
+    def available(aExecutable):
+        return True
+
     @staticmethod
     def fetchinfo(aHostInfo):
         if scan_a_port( get_any_host_id(aHostInfo), 445 ):
@@ -175,6 +215,12 @@ class SmbHostService:
         return []
    
 class SmbService:
+    actions = []
+
+    @staticmethod
+    def available(aExecutable):
+        return Platform.SmbService.available(aExecutable)
+
     @staticmethod
     def action_print1(aServiceInfo):
         print("1_mount "+ str(aServiceInfo))
@@ -186,18 +232,13 @@ class SmbService:
     @staticmethod
     def fetchinfo(aHostInfo):
         ret = []
-        cmd_result = subprocess.run("smbtree -N {}".format(aHostInfo["ip"]), shell=True, capture_output=True).stdout.decode('utf-8')
-        for iLine in cmd_result.split("\n"):
-            regex_result = re.search("^[ \t]+\\\\\\\\([a-z0-9_]+)\\\\([a-z0-9_$]+).*", iLine, flags=re.IGNORECASE)
-            if not regex_result:
-                continue
-            ret.append(  {  "host":         aHostInfo["ip"],
-                            "display_name": regex_result.group(2),
-                            "actions":       [
-                                {"name": "print_v1", "exec":  SmbService.action_print1},
-                                {"name": "print_v2", "exec":  SmbService.action_print2},
-                            ],
-                            "smb_path":     [regex_result.group(1), regex_result.group(2)]} )
+
+        for iSmbShare in Platform.SmbService.fetchinfo(aHostInfo):
+            ret.append(  {  
+                "host":         aHostInfo["ip"],
+                "display_name": iSmbShare,
+                "actions":      SmbService.actions,
+                "smb_path":     iSmbShare} )
 
         return ret
 
@@ -219,6 +260,12 @@ class ServiceHelper:
                 col = 0
                 row += 1
         return main
+
+    @staticmethod
+    def open_default_browser(aUrl):
+
+
+        QDesktopServices.openUrl(QUrl(aUrl, QUrl.TolerantMode))
 
 #------------------------------------
 # gui
@@ -247,16 +294,23 @@ class MainWidget(QWidget):
         
         self.refrsh_btn = QPushButton()
         self.refrsh_btn.setIcon( self.style().standardIcon(QStyle.SP_BrowserReload)  )
-        QObject.connect(self.refrsh_btn, SIGNAL('clicked()'), lambda: self.refresh)
-        
         self.refrsh_btn.clicked.connect(self.refresh)
+
+        self.test1_btn = QPushButton()
+        self.test1_btn.setIcon( self.style().standardIcon(QStyle.SP_BrowserReload)  )
+        self.test1_btn.clicked.connect(self.test1)
+      
         self.refrsh_opt_lyt.addWidget(self.refrsh_btn)
+        self.refrsh_opt_lyt.addWidget(self.test1_btn)
         
         self.lyt.addWidget(self.refrsh_opt)
 
+    def test1(self):
+        print("test")
+
     def refresh(self):
         print("Signal: refresh")
-        self.netinfo = get_hosts()
+        self.netinfo = get_host_summary()
 
         self.table_main_lyt.removeWidget( self.info_table )
         self.info_table = QWidget()
@@ -276,7 +330,7 @@ class MainWidget(QWidget):
             self.info_table_lyt.addWidget(QLabel(str(iHost["dev"])), row, col ); col += 1
             self.info_table_lyt.addWidget(QLabel(str(iHost["mac"])), row, col ); col += 1
             self.info_table_lyt.addWidget(QLabel(str(iHost["ip"])), row, col );  col += 1
-            
+
             if "hostname" in iHost:
                 self.info_table_lyt.addWidget(QLabel(str(iHost["hostname"])), row, col );   
             else:
@@ -295,22 +349,43 @@ class MainWidget(QWidget):
             col = 0
 
 if __name__ == '__main__':
+
+    #actions
+    actions = Platform.getActions()
+    print(actions)
+
+    SmbService.actions = get_dict_or_empty(actions, "smb")
+    print(SmbService.actions)
+
+    add_list(actions, "http", {
+        "name": "open in default browser",
+        "exec": lambda aInfo: ServiceHelper.open_default_browser("http://"+addr_to_url(aInfo["host"]))
+    })
+    add_list(actions, "https", {
+        "name": "open in default browser",
+        "exec": lambda aInfo: ServiceHelper.open_default_browser("https://"+addr_to_url(aInfo["host"]))
+    })
+
+    #common informatin for host like ping, nmap, speedtests
+    SERVICES["ip"] =    {"data": HostService({"name": "ip", "actions": actions}), "display":ServiceHelper}
+
     #service definitions
-
-    SERVICES["smbserver"] = {"data": SmbHostService, "display":ServiceHelper}
-    SERVICES["smb"] =       {"data": SmbService, "display":ServiceHelper}
-    SERVICES["domain"] =    {"data": PortServie({"name": "domain",  "port": "53", "actions": []  }), "display":ServiceHelper}
-    SERVICES["http"] =      {"data": PortServie({"name": "http",  "port": "80", "actions": []  }), "display":ServiceHelper}
-    SERVICES["ssh"] =       {"data": PortServie({"name": "ssh",  "port": "22", "actions": []  }), "display":ServiceHelper}
-    SERVICES["ftp"] =       {"data": PortServie({"name": "ftp",  "port": "21", "actions": []  }), "display":ServiceHelper}
-
+    if SmbHostService.available(EXECUTABLES):
+        SERVICES["smbserver"] = {"data": SmbHostService, "display":ServiceHelper}
+    if SmbService.available(EXECUTABLES):
+        SERVICES["smb"] =       {"data": SmbService, "display":ServiceHelper}
+    SERVICES["domain"] =    {"data": PortServie({"name": "domain",  "port": "53", "actions": actions  }), "display":ServiceHelper}
+    SERVICES["http"] =      {"data": PortServie({"name": "http",  "port": "80", "actions": actions  }), "display":ServiceHelper}
+    SERVICES["https"] =     {"data": PortServie({"name": "https",  "port": "443", "actions": actions  }), "display":ServiceHelper}
+    SERVICES["ssh"] =       {"data": PortServie({"name": "ssh",  "port": "22", "actions": actions  }), "display":ServiceHelper}
+    SERVICES["ftp"] =       {"data": PortServie({"name": "ftp",  "port": "21", "actions": actions  }), "display":ServiceHelper}
+    
     # Create the Qt Application
     app = QApplication(sys.argv)
    
     #maingui
     main = MainWidget()
     main.show()
-
 
     sys.exit(app.exec_())
 
