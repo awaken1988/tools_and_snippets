@@ -10,10 +10,17 @@ CA_NAME="myca"
 SRV_NAME="myserver"
 
 #DO NOT EDIT
-TARGET=$(pwd)/gen
+TARGET=$(pwd)/
 CA_DIR=$TARGET/$CA_NAME
 
 cd $CA_DIR/
+
+export EASYRSA_CA_EXPIRE=2920
+export EASYRSA_CERT_EXPIRE=2920
+export EASYRSA_CRL_EXPIRE=2920
+export EASYRSA_SSL_CONF=$CA_DIR/openssl-easyrsa.cnf
+export EASYRSA_ALGO=rsa
+export EASYRSA_KEY_SIZE=2048
 
 CLI_NAME="client_$1"
 CLI_CFG_NAME="$CLI_NAME"

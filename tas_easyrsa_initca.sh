@@ -6,6 +6,7 @@
 #
 
 
+
 SRV_CFG_NAME=$1
 CLI_CFG_NAME="gamingclient"
 
@@ -13,7 +14,7 @@ CA_NAME="myca"
 SRV_NAME="myserver"
 
 #DO NOT EDIT
-TARGET=$(pwd)/gen
+TARGET=$(pwd)/
 CA_DIR=$TARGET/$CA_NAME
 
 
@@ -22,6 +23,14 @@ mkdir -p $CA_DIR/
 cd $CA_DIR/
 cp /etc/easy-rsa/openssl-easyrsa.cnf $CA_DIR/
 cp -R /etc/easy-rsa/x509-types $CA_DIR/
+
+export EASYRSA_CA_EXPIRE=2920
+export EASYRSA_CERT_EXPIRE=2920
+export EASYRSA_CRL_EXPIRE=2920
+export EASYRSA_SSL_CONF=$CA_DIR/openssl-easyrsa.cnf 
+export EASYRSA_ALGO=rsa
+export EASYRSA_KEY_SIZE=2048
+
 
 echo "[CA]"
 cd $CA_DIR
