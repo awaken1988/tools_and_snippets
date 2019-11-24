@@ -21,8 +21,11 @@ IS_WINDOWS = platform.system() == "Windows"
 if IS_LINUX:    
     pass
 elif IS_WINDOWS:
-    def execute_terminal(aCmd, aForeground):
-        cmd = ['start', '/wait', 'powershell.exe']
+    def execute_terminal(aCmd, aForeground, aBlock=True):
+        cmd = ['start', ]
+        if aBlock:
+            cmd.append("/wait")
+        cmd.append('powershell.exe')
         if aForeground:
             cmd.append('-NoExit')
         cmd.append("-Command")
@@ -80,7 +83,7 @@ class ServiceSsh:
     @staticmethod
     def win_connect(aData):
         cmd = ["powershell.exe", "ssh", "{}@{}".format(aData["user"], aData["address"])]
-        execute_terminal(cmd, True)
+        execute_terminal(cmd, False, False)
         
 def loadcfg(aCfg):
     f = open(aCfg, "r")
