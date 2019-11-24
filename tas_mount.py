@@ -1,5 +1,6 @@
 #Reference:
 #   - https://ss64.com/nt/
+#   - https://docs.microsoft.com/de-de/powershell/module/Microsoft.PowerShell.Core/About/about_PowerShell_exe?view=powershell-5.1
 
 #TODO: umount before mount
 #TODO: create symblink on Windows to Desktop
@@ -21,18 +22,17 @@ if IS_LINUX:
     pass
 elif IS_WINDOWS:
     def execute_terminal(aCmd, aForeground):
-        cmd = ["start"]
+        cmd = ['start', '/wait', 'powershell.exe']
         if aForeground:
-            cmd = ['start', '/wait', 'cmd', '/k']
+            cmd.append('-NoExit')
+        cmd.append("-Command")
         cmd = cmd + aCmd[:]
         print("execute_terminal: "+str(cmd))
-        os.system(" ".join(cmd))
+        subprocess.call(cmd, shell=True)
 
 class ServiceMount:
     @staticmethod
     def getActions(aEntry):
-        ret = {"labels": ("share")}
-
         if IS_WINDOWS:
             return (
                 {"name": "mount",   "action": ServiceMount.win_mount_share},
@@ -44,7 +44,6 @@ class ServiceMount:
     @staticmethod
     def getDisplay(aEntry):
         return ("{} {}").format(aEntry["name"], aEntry["share"])
-
 
     @staticmethod
     def win_mount_share(aData):
@@ -64,11 +63,28 @@ class ServiceMount:
     def win_unmount_share(aData):
         fixed_path = aData["share"].replace('/', "\\")
         cmd = ["net", "use", fixed_path, "/delete"]
-        execute_terminal(cmd, False)
+        execute_terminal(cmd, True)
 
+class ServiceSsh:
+    @staticmethod
+    def getActions(aEntry):
+        if IS_WINDOWS:
+            return ({"name": "connect",   "action": ServiceSsh.win_connect},)
+        return None
+
+    @staticmethod
+    def getDisplay(aEntry):
+        return ("{} {}").format(aEntry["name"], aEntry["address"])
+
+
+    @staticmethod
+    def win_connect(aData):
+        cmd = ["powershell.exe", "ssh", "{}@{}".format(aData["user"], aData["address"])]
+        execute_terminal(cmd, True)
+        
 def loadcfg(aCfg):
-    f = open(aCfg, "r");
-    c = f.read();
+    f = open(aCfg, "r")
+    c = f.read()
     return json.loads(c)
 
 def useraction(aType, aData):
@@ -83,6 +99,7 @@ def useraction(aType, aData):
 
 services = {
     "smb": ServiceMount,
+    "ssh": ServiceSsh,
 }
 
 
@@ -91,7 +108,7 @@ window = tk.Tk()
 window.title("mount drives")
 
 #generate mount list
-data = loadcfg("mount.json")
+data = loadcfg(sys.argv[1])
 print(data)
 
 iRow = 1
@@ -106,7 +123,11 @@ for iEntry in data["mount"]:
 
     iCol = 0
 
-    #text
+    #type Label
+    tk.Label(window, text=iEntry["type"]).grid(row=iRow, column=iCol)
+    iCol += 1
+
+    #service specific text
     tk.Label(window, text=iService.getDisplay(iEntry)).grid(row=iRow, column=iCol)
     iCol += 1
 
