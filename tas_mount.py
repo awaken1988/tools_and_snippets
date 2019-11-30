@@ -83,6 +83,7 @@ class ServiceSsh:
     @staticmethod
     def win_connect(aData):
         cmd = ["powershell.exe", "ssh", "{}@{}".format(aData["user"], aData["address"])]
+        if "port" in aData: cmd += ["-p", str(aData["port"])]
         execute_terminal(cmd, False, False)
         
 def loadcfg(aCfg):
