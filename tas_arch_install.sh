@@ -1,10 +1,15 @@
 #!/bin/bash
 set -e
 
-read -p "Enter EFI  Partition device, e.g /dev/loop0p1: " EFI_PARTITION
-read -p "Enter ROOT Partition device, e.g /dev/loop0p2: " ROOT_PARTITION
-read -p "host/install name: " INSTALL_NAME
-read -p "luks password for ROOT_PARTITION (entire root): " -s LUKS_PASSWORD
+EFI_PARTITION=/dev/sda1
+ROOT_PARTITION=/dev/sda2
+INSTALL_NAME=myarch
+LUKS_PASSWORD=bla
+
+#read -p "Enter EFI  Partition device, e.g /dev/loop0p1: " EFI_PARTITION
+#read -p "Enter ROOT Partition device, e.g /dev/loop0p2: " ROOT_PARTITION
+#read -p "host/install name: " INSTALL_NAME
+#read -p "luks password for ROOT_PARTITION (entire root): " -s LUKS_PASSWORD
 #TODO: read -p "root user password: " -s LUKS_PASSWORD
 
 #do net change the following of the file
@@ -23,22 +28,22 @@ echo "HOME_DIR=$HOME_DIR"
 echo "BTRFS_PART=$BTRFS_PART"
 
 #prepare disk
-echo $LUKS_PASSWORD | cryptsetup luksFormat --type luks1 ${ROOT_PARTITION} -d -
+#echo $LUKS_PASSWORD | cryptsetup luksFormat --type luks1 ${ROOT_PARTITION} -d -
 echo $LUKS_PASSWORD | cryptsetup open ${ROOT_PARTITION} ${INSTALL_NAME} -d -
-mkfs.btrfs -f /dev/mapper/${INSTALL_NAME}
-mkdir -p ${BTRFS_ROOT}
-mount ${BTRFS_PART} ${BTRFS_ROOT}
-btrfs subvolume create ${INSTALL_ROOT}
-btrfs subvolume create ${HOME_DIR}
+#mkfs.btrfs -f /dev/mapper/${INSTALL_NAME}
+#mkdir -p ${BTRFS_ROOT}
+#mount ${BTRFS_PART} ${BTRFS_ROOT}
+#btrfs subvolume create ${INSTALL_ROOT}
+#btrfs subvolume create ${HOME_DIR}
 
 #install base system
 echo "* pacstrap"
-pacstrap ${INSTALL_ROOT} base linux linux-firmware vim btrfs-progs grub 
+#pacstrap ${INSTALL_ROOT} base linux linux-firmware vim btrfs-progs grub 
 
 #mount additional stuff: efi,home
 mkdir -p $INSTALL_ROOT/efi
 mount $EFI_PARTITION $INSTALL_ROOT/efi
-mount  $INSTALL_ROOT/home ${BTRFS_PART} -o subvol=home
+mount ${BTRFS_PART} $INSTALL_ROOT/home -o subvol=home
 
 #configure system
 genfstab -U $INSTALL_ROOT >> $INSTALL_ROOT/etc/fstab
