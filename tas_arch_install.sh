@@ -60,8 +60,8 @@ echo "BTRFS_PART=$BTRFS_PART"
 ##arch-chroot $INSTALL_ROOT   passwd
 
 #get UUID
-UUID_ROOT=$(blkid ${ROOT_PARTITION} -s UUID --o value)
-UUID_BTRFS=$(blkid ${BTRFS_PART} -s UUID --o value)
+UUID_ROOT=$(blkid ${ROOT_PARTITION} -s UUID -o value)
+UUID_BTRFS=$(blkid ${BTRFS_PART} -s UUID -o value)
 
 #prepare grub
 arch-chroot $INSTALL_ROOT   echo "GRUB_ENABLE_CRYPTODISK=y" >> /etc/default/grub 
