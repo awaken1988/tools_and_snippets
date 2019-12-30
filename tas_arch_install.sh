@@ -14,8 +14,7 @@ LUKS_PASSWORD=bla
 
 #do net change the following of the file
 BTRFS_ROOT=/mnt/${INSTALL_NAME}
-INSTALL_ROOT=/mnt/${INSTALL_NAME}/root
-HOME_DIR=/mnt/${INSTALL_NAME}/home
+INSTALL_ROOT=/mnt/${INSTALL_NAME}_root
 BTRFS_PART=/dev/mapper/${INSTALL_NAME}
 
 #dummp all variables
@@ -28,17 +27,19 @@ echo "HOME_DIR=$HOME_DIR"
 echo "BTRFS_PART=$BTRFS_PART"
 
 #prepare disk
-#echo $LUKS_PASSWORD | cryptsetup luksFormat --type luks1 ${ROOT_PARTITION} -d -
+echo $LUKS_PASSWORD | cryptsetup luksFormat --type luks1 ${ROOT_PARTITION} -d -
 echo $LUKS_PASSWORD | cryptsetup open ${ROOT_PARTITION} ${INSTALL_NAME} -d -
-#mkfs.btrfs -f /dev/mapper/${INSTALL_NAME}
-#mkdir -p ${BTRFS_ROOT}
-#mount ${BTRFS_PART} ${BTRFS_ROOT}
-#btrfs subvolume create ${INSTALL_ROOT}
-#btrfs subvolume create ${HOME_DIR}
+mkfs.btrfs -f /dev/mapper/${INSTALL_NAME}
+mkdir -p ${BTRFS_ROOT}
+mkdir -p ${INSTALL_ROOT}
+mount ${BTRFS_PART} ${BTRFS_ROOT}
+btrfs subvolume create ${BTRFS_ROOT}/root
+btrfs subvolume create ${BTRFS_ROOT}/home
+mount ${BTRFS_PART} ${INSTALL_ROOT}      -o subvol=root
 
 #install base system
 echo "* pacstrap"
-#pacstrap ${INSTALL_ROOT} base linux linux-firmware vim btrfs-progs grub 
+pacstrap ${INSTALL_ROOT} base linux linux-firmware btrfs-progs grub nano
 
 #mount additional stuff: efi,home
 mkdir -p $INSTALL_ROOT/efi
@@ -50,11 +51,14 @@ genfstab -U $INSTALL_ROOT >> $INSTALL_ROOT/etc/fstab
 arch-chroot $INSTALL_ROOT   ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime 
 arch-chroot $INSTALL_ROOT   hwclock --systohc
 arch-chroot $INSTALL_ROOT   echo "LANG=en_US.UTF-8" > /etc/locale.conf
+arch-chroot $INSTALL_ROOT   locale-gen
 arch-chroot $INSTALL_ROOT   echo "KEYMAP=de-latin1" > /etc/vconsole.conf
 arch-chroot $INSTALL_ROOT   echo $INSTALL_NAME > /etc/hostname
+arch-chroot $INSTALL_ROOT   echo "127.0.0.1 localhost" > /etc/hosts
+arch-chroot $INSTALL_ROOT   echo "::1		localhost" > /etc/hosts
 
-echo "root user password"
-arch-chroot $INSTALL_ROOT   passwd
+#echo "root user password"
+#arch-chroot $INSTALL_ROOT   passwd
 
 #should be run at the end
 arch-chroot $INSTALL_ROOT   mkinitcpio -P
