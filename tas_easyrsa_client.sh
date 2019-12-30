@@ -21,14 +21,15 @@ export EASYRSA_CRL_EXPIRE=2920
 export EASYRSA_SSL_CONF=$CA_DIR/openssl-easyrsa.cnf
 export EASYRSA_ALGO=rsa
 export EASYRSA_KEY_SIZE=2048
+export EASYRSA_REQ_CN=$1
 
-CLI_NAME="client_$1"
+CLI_NAME="$1"
 CLI_CFG_NAME="$CLI_NAME"
 
-echo "set_var EASYRSA_REQ_CN         \"$CLI_NAME\" " > vars
-echo "set_var EASYRSA_BATCH          \"yes\" "      >> vars
-easyrsa gen-req $CLI_NAME nopass
-easyrsa sign-req client $CLI_NAME
+#echo "set_var EASYRSA_REQ_CN         \"$CLI_NAME\" " > vars
+#echo "set_var EASYRSA_BATCH          \"yes\" "      >> vars
+easyrsa --batch gen-req $CLI_NAME nopass
+easyrsa --batch sign-req client $CLI_NAME
 
 echo "[GENERATE_CLIENT_CONFIG]"           
 
