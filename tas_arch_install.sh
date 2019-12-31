@@ -64,7 +64,7 @@ UUID_ROOT=$(blkid ${ROOT_PARTITION} -s UUID -o value)
 UUID_BTRFS=$(blkid ${BTRFS_PART} -s UUID -o value)
 
 #prepare grub
-arch-chroot $INSTALL_ROOT   echo "GRUB_ENABLE_CRYPTODISK=y" >> /etc/default/grub 
+arch-chroot $INSTALL_ROOT   sed -i 's|#GRUB_ENABLE_CRYPTODISK=y.*|GRUB_ENABLE_CRYPTODISK=y|g' /etc/default/grub 
 arch-chroot $INSTALL_ROOT   grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=GRUB --recheck
 arch-chroot $INSTALL_ROOT   grub-mkconfig -o /boot/grub/grub.cfg
 
@@ -76,6 +76,8 @@ arch-chroot $INSTALL_ROOT   sed -i 's|FILES=.*|FILES=(/root/cryptlvm.keyfile)|g'
 
 GRUB_CMDLINE_LINUX="GRUB_CMDLINE_LINUX=(cryptdevice=${UUID_ROOT}:${INSTALL_NAME} cryptkey=rootfs:/root/cryptlvm.keyfile )"
 arch-chroot $INSTALL_ROOT   sed -i 's|GRUB_CMDLINE_LINUX=|$GRUB_CMDLINE_LINUX|g' /etc/default/grub
+
+arch-chroot $INSTALL_ROOT   sed 's|HOOKS=.*|HOOKS=(base udev autodetect keyboard keymap consolefont modconf block encrypt filesystems fsck)|g' /etc/mkinitcpio.conf
 
 #should be run at the end
 arch-chroot $INSTALL_ROOT   mkinitcpio -P
