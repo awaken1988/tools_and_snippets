@@ -26,38 +26,38 @@ echo "INSTALL_ROOT=$INSTALL_ROOT"
 echo "HOME_DIR=$HOME_DIR"
 echo "BTRFS_PART=$BTRFS_PART"
 
-##prepare disk
-#echo $LUKS_PASSWORD | cryptsetup luksFormat --type luks1 ${ROOT_PARTITION} -d -
-#echo $LUKS_PASSWORD | cryptsetup open ${ROOT_PARTITION} ${INSTALL_NAME} -d -
-#mkfs.btrfs -f /dev/mapper/${INSTALL_NAME}
-#mkdir -p ${BTRFS_ROOT}
-#mkdir -p ${INSTALL_ROOT}
-#mount ${BTRFS_PART} ${BTRFS_ROOT}
-#btrfs subvolume create ${BTRFS_ROOT}/root
-#btrfs subvolume create ${BTRFS_ROOT}/home
-#mount ${BTRFS_PART} ${INSTALL_ROOT}      -o subvol=root
-#
-##install base system
-#echo "* pacstrap"
-#pacstrap ${INSTALL_ROOT} base linux linux-firmware btrfs-progs grub nano
-#
-##mount additional stuff: efi,home
-#mkdir -p $INSTALL_ROOT/efi
-#mount $EFI_PARTITION $INSTALL_ROOT/efi
-#mount ${BTRFS_PART} $INSTALL_ROOT/home -o subvol=home
-#
-##configure system
-#genfstab -U $INSTALL_ROOT >> $INSTALL_ROOT/etc/fstab
-#arch-chroot $INSTALL_ROOT   ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime 
-#arch-chroot $INSTALL_ROOT   hwclock --systohc
-#arch-chroot $INSTALL_ROOT   echo "LANG=en_US.UTF-8" > /etc/locale.conf
-#arch-chroot $INSTALL_ROOT   locale-gen
-#arch-chroot $INSTALL_ROOT   echo "KEYMAP=de-latin1" > /etc/vconsole.conf
-#arch-chroot $INSTALL_ROOT   echo $INSTALL_NAME > /etc/hostname
-#arch-chroot $INSTALL_ROOT   echo "127.0.0.1 localhost" > /etc/hosts
-#arch-chroot $INSTALL_ROOT   echo "::1		localhost" > /etc/hosts
-##echo "root user password"
-##arch-chroot $INSTALL_ROOT   passwd
+#prepare disk
+echo $LUKS_PASSWORD | cryptsetup luksFormat --type luks1 ${ROOT_PARTITION} -d -
+echo $LUKS_PASSWORD | cryptsetup open ${ROOT_PARTITION} ${INSTALL_NAME} -d -
+mkfs.btrfs -f /dev/mapper/${INSTALL_NAME}
+mkdir -p ${BTRFS_ROOT}
+mkdir -p ${INSTALL_ROOT}
+mount ${BTRFS_PART} ${BTRFS_ROOT}
+btrfs subvolume create ${BTRFS_ROOT}/root
+btrfs subvolume create ${BTRFS_ROOT}/home
+mount ${BTRFS_PART} ${INSTALL_ROOT}      -o subvol=root
+
+#install base system
+echo "* pacstrap"
+pacstrap ${INSTALL_ROOT} base linux linux-firmware btrfs-progs grub efibootmgr nano
+
+#mount additional stuff: efi,home
+mkdir -p $INSTALL_ROOT/efi
+mount $EFI_PARTITION $INSTALL_ROOT/efi
+mount ${BTRFS_PART} $INSTALL_ROOT/home -o subvol=home
+
+#configure system
+genfstab -U $INSTALL_ROOT >> $INSTALL_ROOT/etc/fstab
+arch-chroot $INSTALL_ROOT   ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime 
+arch-chroot $INSTALL_ROOT   hwclock --systohc
+arch-chroot $INSTALL_ROOT   echo "LANG=en_US.UTF-8" > /etc/locale.conf
+arch-chroot $INSTALL_ROOT   locale-gen
+arch-chroot $INSTALL_ROOT   echo "KEYMAP=de-latin1" > /etc/vconsole.conf
+arch-chroot $INSTALL_ROOT   echo $INSTALL_NAME > /etc/hostname
+arch-chroot $INSTALL_ROOT   echo "127.0.0.1 localhost" > /etc/hosts
+arch-chroot $INSTALL_ROOT   echo "::1		localhost" > /etc/hosts
+#echo "root user password"
+#arch-chroot $INSTALL_ROOT   passwd
 
 #get UUID
 UUID_ROOT=$(blkid ${ROOT_PARTITION} -s UUID -o value)
@@ -70,7 +70,6 @@ arch-chroot $INSTALL_ROOT   grub-mkconfig -o /boot/grub/grub.cfg
 
 arch-chroot $INSTALL_ROOT   dd bs=512 count=4 if=/dev/random of=/root/cryptlvm.keyfile iflag=fullblock
 arch-chroot $INSTALL_ROOT   chmod 000 /root/cryptlvm.keyfile
-arch-chroot $INSTALL_ROOT   chmod 600 /boot/initramfs-linux*
 arch-chroot $INSTALL_ROOT   cryptsetup -v luksAddKey /dev/sda3 /root/cryptlvm.keyfile
 arch-chroot $INSTALL_ROOT   sed -i 's|FILES=.*|FILES=(/root/cryptlvm.keyfile)|g' /etc/mkinitcpio.conf
 
@@ -81,6 +80,6 @@ arch-chroot $INSTALL_ROOT   sed -i 's|HOOKS=.*|HOOKS=(base udev autodetect keybo
 
 #should be run at the end
 arch-chroot $INSTALL_ROOT   mkinitcpio -p linux
-
+arch-chroot $INSTALL_ROOT   chmod 600 /boot/initramfs-linux*
 
 
