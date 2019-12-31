@@ -27,24 +27,24 @@ echo "HOME_DIR=$HOME_DIR"
 echo "BTRFS_PART=$BTRFS_PART"
 
 #prepare disk
-echo $LUKS_PASSWORD | cryptsetup luksFormat --type luks1 ${ROOT_PARTITION} -d -
-echo $LUKS_PASSWORD | cryptsetup open ${ROOT_PARTITION} ${INSTALL_NAME} -d -
-mkfs.btrfs -f /dev/mapper/${INSTALL_NAME}
-mkdir -p ${BTRFS_ROOT}
-mkdir -p ${INSTALL_ROOT}
-mount ${BTRFS_PART} ${BTRFS_ROOT}
-btrfs subvolume create ${BTRFS_ROOT}/root
-btrfs subvolume create ${BTRFS_ROOT}/home
-mount ${BTRFS_PART} ${INSTALL_ROOT}      -o subvol=root
-
-#install base system
-echo "* pacstrap"
-pacstrap ${INSTALL_ROOT} base linux linux-firmware btrfs-progs grub efibootmgr nano
-
-#mount additional stuff: efi,home
-mkdir -p $INSTALL_ROOT/efi
-mount $EFI_PARTITION $INSTALL_ROOT/efi
-mount ${BTRFS_PART} $INSTALL_ROOT/home -o subvol=home
+#echo $LUKS_PASSWORD | cryptsetup luksFormat --type luks1 ${ROOT_PARTITION} -d -
+#echo $LUKS_PASSWORD | cryptsetup open ${ROOT_PARTITION} ${INSTALL_NAME} -d -
+#mkfs.btrfs -f /dev/mapper/${INSTALL_NAME}
+#mkdir -p ${BTRFS_ROOT}
+#mkdir -p ${INSTALL_ROOT}
+#mount ${BTRFS_PART} ${BTRFS_ROOT}
+#btrfs subvolume create ${BTRFS_ROOT}/root
+#btrfs subvolume create ${BTRFS_ROOT}/home
+#mount ${BTRFS_PART} ${INSTALL_ROOT}      -o subvol=root
+#
+##install base system
+#echo "* pacstrap"
+#pacstrap ${INSTALL_ROOT} base linux linux-firmware btrfs-progs grub efibootmgr nano
+#
+##mount additional stuff: efi,home
+#mkdir -p $INSTALL_ROOT/efi
+#mount $EFI_PARTITION $INSTALL_ROOT/efi
+#mount ${BTRFS_PART} $INSTALL_ROOT/home -o subvol=home
 
 #configure system
 genfstab -U $INSTALL_ROOT >> $INSTALL_ROOT/etc/fstab
@@ -70,7 +70,7 @@ arch-chroot $INSTALL_ROOT   grub-mkconfig -o /boot/grub/grub.cfg
 
 arch-chroot $INSTALL_ROOT   dd bs=512 count=4 if=/dev/random of=/root/cryptlvm.keyfile iflag=fullblock
 arch-chroot $INSTALL_ROOT   chmod 000 /root/cryptlvm.keyfile
-arch-chroot $INSTALL_ROOT   cryptsetup -v luksAddKey /dev/sda3 /root/cryptlvm.keyfile
+arch-chroot $INSTALL_ROOT   cryptsetup -v luksAddKey ${ROOT_PARTITION} /root/cryptlvm.keyfile
 arch-chroot $INSTALL_ROOT   sed -i 's|FILES=.*|FILES=(/root/cryptlvm.keyfile)|g' /etc/mkinitcpio.conf
 
 GRUB_CMDLINE_LINUX="GRUB_CMDLINE_LINUX=(cryptdevice=${UUID_ROOT}:${INSTALL_NAME} cryptkey=rootfs:/root/cryptlvm.keyfile )"
