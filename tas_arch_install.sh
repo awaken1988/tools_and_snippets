@@ -77,10 +77,10 @@ arch-chroot $INSTALL_ROOT   sed -i 's|FILES=.*|FILES=(/root/cryptlvm.keyfile)|g'
 GRUB_CMDLINE_LINUX="GRUB_CMDLINE_LINUX=(cryptdevice=${UUID_ROOT}:${INSTALL_NAME} cryptkey=rootfs:/root/cryptlvm.keyfile )"
 arch-chroot $INSTALL_ROOT   sed -i 's|GRUB_CMDLINE_LINUX=|$GRUB_CMDLINE_LINUX|g' /etc/default/grub
 
-arch-chroot $INSTALL_ROOT   sed 's|HOOKS=.*|HOOKS=(base udev autodetect keyboard keymap consolefont modconf block encrypt filesystems fsck)|g' /etc/mkinitcpio.conf
+arch-chroot $INSTALL_ROOT   sed -i 's|HOOKS=.*|HOOKS=(base udev autodetect keyboard keymap consolefont modconf block encrypt filesystems fsck)|g' /etc/mkinitcpio.conf
 
 #should be run at the end
-arch-chroot $INSTALL_ROOT   mkinitcpio -P
+arch-chroot $INSTALL_ROOT   mkinitcpio -p linux
 
 
 
