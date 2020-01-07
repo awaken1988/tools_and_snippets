@@ -48,23 +48,25 @@ mkfs.btrfs -f /dev/mapper/${INSTALL_NAME}
 mkdir -p ${BTRFS_ROOT}
 mkdir -p ${INSTALL_ROOT}
 mount ${BTRFS_PART} ${BTRFS_ROOT}
-btrfs subvolume create ${BTRFS_ROOT}/root
-btrfs subvolume create ${BTRFS_ROOT}/home
-btrfs subvolume create ${BTRFS_ROOT}/pacman_cache
-mount ${BTRFS_PART} ${INSTALL_ROOT}      -o subvol=root
+btrfs subvolume create ${BTRFS_ROOT}/ROOT
+btrfs subvolume create ${BTRFS_ROOT}/HOME
+btrfs subvolume create ${BTRFS_ROOT}/PKGCACHE
+mount ${BTRFS_PART} ${INSTALL_ROOT}      -o subvol=ROOT
+mkdir -p ${INSTALL_ROOT}/btrfs_root
+mount ${BTRFS_PART} ${INSTALL_ROOT}/btrfs_root
 
 #install base system
 echo "*** pacstrap ***"
-pacstrap ${INSTALL_ROOT} base linux linux-firmware btrfs-progs grub efibootmgr nano vim cpio dhcpcd
-#cp -Ra /mnt/template/* ${INSTALL_ROOT}/
+#pacstrap ${INSTALL_ROOT} base linux linux-firmware btrfs-progs grub grub-btrfs efibootmgr nano vim cpio dhcpcd
+cp -Ra /mnt/template/* ${INSTALL_ROOT}/
 
 echo "*** mount additional stuff: efi,home ***"
 mkdir -p $INSTALL_ROOT/efi
 mount $EFI_PARTITION $INSTALL_ROOT/efi
-mount ${BTRFS_PART} ${INSTALL_ROOT}/home                     -o subvol=home
+mount ${BTRFS_PART} ${INSTALL_ROOT}/home                     -o subvol=HOME
 
-mv -fv ${BTRFS_ROOT}/root/var/cache/pacman/pkg/*  ${BTRFS_ROOT}/pacman_cache
-mount ${BTRFS_PART} ${INSTALL_ROOT}/var/cache/pacman/pkg     -o subvol=pacman_cache
+mv -f ${BTRFS_ROOT}/ROOT/var/cache/pacman/pkg/*  ${BTRFS_ROOT}/PKGCACHE
+mount ${BTRFS_PART} ${INSTALL_ROOT}/var/cache/pacman/pkg     -o subvol=PKGCACHE
 
 echo "*** configure system ***"
 genfstab -U ${INSTALL_ROOT} >> $INSTALL_ROOT/etc/fstab
@@ -102,14 +104,26 @@ sed -i "s|GRUB_CMDLINE_LINUX_DEFAULT=.*|$GRUB_CMDLINE_LINUX_DEFAULT|g" ${INSTALL
 sed -i 's|HOOKS=.*|HOOKS=(base systemd autodetect keyboard sd-vconsole modconf block sd-encrypt filesystems fsck)|g' ${INSTALL_ROOT}/etc/mkinitcpio.conf
 echo "${INSTALL_NAME}   /dev/disk/by-uuid/${UUID_ROOT}    /root/${INSTALL_NAME}.keyfile   luks,timeout=30" > ${INSTALL_ROOT}/etc/crypttab.initramfs
 
-arch-chroot $INSTALL_ROOT   grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=GRUB --recheck
-arch-chroot $INSTALL_ROOT   grub-mkconfig -o /boot/grub/grub.cfg
-arch-chroot $INSTALL_ROOT   mkinitcpio -p linux
+arch-chroot ${INSTALL_ROOT}   grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=GRUB --recheck
+arch-chroot ${INSTALL_ROOT}   grub-mkconfig -o /boot/grub/grub.cfg
+arch-chroot ${INSTALL_ROOT}   mkinitcpio -p linux
 
-echo "*** snapshot original installation"
+
 mkdir -p ${BTRFS_ROOT}/snapshots
-btrfs subvolume snapshot -r ${BTRFS_ROOT}/root/         ${BTRFS_ROOT}/snapshots/$(date "+%Y_%m_%d__%H_%M__root")
-btrfs subvolume snapshot -r ${BTRFS_ROOT}/home/         ${BTRFS_ROOT}/snapshots/$(date "+%Y_%m_%d__%H_%M__home")
-btrfs subvolume snapshot -r ${BTRFS_ROOT}/pacman_cache/ ${BTRFS_ROOT}/snapshots/$(date "+%Y_%m_%d__%H_%M__pacman_cache")
+echo "SNAPSHOT_TIME=\$(date \"+%Y_%m_%d__%H_%M__ROOT\")"                                                       >  ${INSTALL_ROOT}/root/snapshot_root_home_pkgcache.sh
+echo "btrfs subvolume snapshot -r /btrfs_root/ROOT         /btrfs_root/snapshots/\${SNAPSHOT_TIME}__ROOT"     >>  ${INSTALL_ROOT}/root/snapshot_root_home_pkgcache.sh
+echo "btrfs subvolume snapshot -r /btrfs_root/HOME         /btrfs_root/snapshots/\${SNAPSHOT_TIME}__HOME"     >> ${INSTALL_ROOT}/root/snapshot_root_home_pkgcache.sh
+echo "btrfs subvolume snapshot -r /btrfs_root/PKGCACHE     /btrfs_root/snapshots/\${SNAPSHOT_TIME}__PKGCACHE" >> ${INSTALL_ROOT}/root/snapshot_root_home_pkgcache.sh
+chmod 700 ${INSTALL_ROOT}/root/snapshot_root_home_pkgcache.sh
 
+echo "*** snapshot original installation ***"
+arch-chroot ${INSTALL_ROOT}    root/snapshot_root_home_pkgcache.sh
 
+echo "*** umount all filesystems ***"
+sync
+umount $INSTALL_ROOT/efi
+umount ${INSTALL_ROOT}/home
+umount ${INSTALL_ROOT}/var/cache/pacman/pkg
+umount ${INSTALL_ROOT}/btrfs_root
+umount ${INSTALL_ROOT}
+umount ${BTRFS_ROOT}
