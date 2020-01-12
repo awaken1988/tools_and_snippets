@@ -79,6 +79,7 @@ printf "${ROOT_PASSWORD}\n${ROOT_PASSWORD}\n" | passwd -R ${INSTALL_ROOT} root
 arch-chroot ${INSTALL_ROOT}   ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime 
 arch-chroot ${INSTALL_ROOT}   hwclock --systohc
 arch-chroot ${INSTALL_ROOT}   locale-gen
+arch-chroot ${INSTALL_ROOT}   timedatectl set-local-rtc 1
 
 #get UUID
 UUID_ROOT=$(blkid ${ROOT_PARTITION} -s UUID -o value)
