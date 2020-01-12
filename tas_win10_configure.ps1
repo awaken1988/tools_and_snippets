@@ -48,7 +48,6 @@ if( "y" -eq $IS_ADVANCED) {
     $PKG += "windirstat"
     $PKG += "openvpn"
     $PKG += "virtualbox"
-    $PKG += "veracrypt"
 }
 
 if( "y" -eq $IS_GAMING) {
@@ -67,6 +66,9 @@ if( "y" -eq $IS_DEVELOPER ) {
 
 #Develper
 #   Visual Studio
+
+#System encrpytion
+#   $PKG += "veracrypt"
 
 #misc
 #   Blender
