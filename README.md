@@ -1,7 +1,6 @@
-# Tools and Snippets
-I place all the code here which are to small for an own repository. 
+A collection of several helper scripts, code snippets ... .  
 
-# Scripts
+# Install scripts
 
 ## tas_arch_install.sh
 This script can be run from a archlinux install live cd. It creates a fully encrypted linux installation on UEFI Systems. All the files in /boot are also encrypted
@@ -21,6 +20,19 @@ Notes:
 
 TODO:
 * EFI bootentry???
+
+## tas_arch_configure.sh
+* Install a list of packages with pacman
+* write some config: e.g /etc/screenrc
+
+## tas_win10_configure.sh
+Install a list of packages with chocolatey on Windows 10 (Runs in Powershell)
+
+Prerequisite: 
+* Chocolatey installed. 
+* Skript allowed in Powershell
+
+# Other Scripts
 
 ## tas_mount.py
 A small tkinter GUI for:
@@ -44,6 +56,9 @@ create ovpn client configs
 ```
 tas_easyrsa.py add --name mars --config <writen to .ovpn> --config <writen to .ovpn>
 ```
+
+## tas_http_trigger.py
+Standalone http python server which run script on the local host if the secret is correct
 
 ## tas_btrfs_*
 These tools help you to create snapshots and sync them with another btrfs partition
@@ -74,3 +89,26 @@ Currently there are 2 generators:
 this let you define your ACL settings in a .json file. which must be located in the basedir of the folderstructure for which the ACL' is set. 
 
 Every ACL is applied recursive to all subfolder. You find an example of the .json file in the script
+
+# Projects
+
+## cpp_snipptes
+Some cpp snippets. Mosly belongs new C++ features.
+
+## python_atlr_test
+Test Python with ANTRL to create a toy langueage
+
+*Not actively developed anymore*
+
+## python_standalone_serverinfo
+A small standalone http server which lists information about the linux host. 
+
+*Not actively developed anymore*
+ 
+## netbrowser
+Scan LAN by looking in the Neighbor-cache of the host or with nmap to find host. Each host is the scanned for Samba-Shares and well known port. Finally the results are listed in a Gui
+
+*Not actively developed anymore*
+
+
+
