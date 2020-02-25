@@ -57,8 +57,8 @@ mount ${BTRFS_PART} ${INSTALL_ROOT}/btrfs_root
 
 #install base system
 echo "*** pacstrap ***"
-#pacstrap ${INSTALL_ROOT} base linux linux-firmware btrfs-progs grub grub-btrfs efibootmgr nano vim cpio dhcpcd
-cp -Ra /mnt/template/* ${INSTALL_ROOT}/
+pacstrap ${INSTALL_ROOT} base linux linux-firmware btrfs-progs grub grub-btrfs efibootmgr nano vim cpio dhcpcd
+#cp -Ra /mnt/template/* ${INSTALL_ROOT}/
 
 echo "*** mount additional stuff: efi,home ***"
 mkdir -p $INSTALL_ROOT/efi
