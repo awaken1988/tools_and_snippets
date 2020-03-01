@@ -75,7 +75,7 @@ exec_archroot   "echo \"KEYMAP=de-latin1\" > /etc/vconsole.conf"
 exec_archroot   "echo \"$INSTALL_NAME\" > /etc/hostname"
 exec_archroot   "echo \"127.0.0.1 localhost\" > /etc/hosts"
 exec_archroot   "echo \"::1		localhost\" > /etc/hosts"
-printf "${ROOT_PASSWORD}\n${ROOT_PASSWORD}\n" | passwd -R ${INSTALL_ROOT} root
+exec_archroot   "printf \"${ROOT_PASSWORD}\\n${ROOT_PASSWORD}\\n\" | passwd root"
 arch-chroot ${INSTALL_ROOT}   ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime 
 arch-chroot ${INSTALL_ROOT}   hwclock --systohc
 arch-chroot ${INSTALL_ROOT}   locale-gen
