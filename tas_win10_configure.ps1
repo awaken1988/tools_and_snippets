@@ -52,6 +52,8 @@ if( "y" -eq $IS_ADVANCED) {
 
 if( "y" -eq $IS_GAMING) {
     $PKG += "dolphin"
+    $PKG += "teamspeak"
+    $PKG += "discord"
     #Steam
     #Origin
     #Battlenet
@@ -82,6 +84,8 @@ if( "y" -eq $IS_DEVELOPER ) {
 #   Link Shell Extension		
 #   Powershell ISE	                    use vscode instead	
 #   mRemoteNG	mremoteng	Base        really slow
+
+#TODO: install chocolatey automatically if it is not avail
 
 Write-Host "Install: " $PKG
 
