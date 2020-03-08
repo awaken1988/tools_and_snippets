@@ -54,6 +54,8 @@ if( "y" -eq $IS_GAMING) {
     $PKG += "dolphin"
     $PKG += "teamspeak"
     $PKG += "discord"
+    $PKG += "visualboyadvance"
+    $PKG += "snes9x"
     #Steam
     #Origin
     #Battlenet
