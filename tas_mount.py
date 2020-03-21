@@ -46,7 +46,7 @@ class ServiceMount:
 
     @staticmethod
     def getDisplay(aEntry):
-        return ("{} {}").format(aEntry["name"], aEntry["share"])
+        return ("{}").format(aEntry["share"])
 
     @staticmethod
     def win_mount_share(aData):
@@ -128,11 +128,15 @@ for iEntry in data["mount"]:
     iCol = 0
 
     #type Label
-    tk.Label(window, text=iEntry["type"]).grid(row=iRow, column=iCol)
+    tk.Label(window, text=iEntry["type"]+": ").grid(row=iRow, column=iCol, sticky=tk.E)
+    iCol += 1
+    
+    #name Label
+    tk.Label(window, text=iEntry["name"]).grid(row=iRow, column=iCol, sticky=tk.W)
     iCol += 1
 
     #service specific text
-    tk.Label(window, text=iService.getDisplay(iEntry)).grid(row=iRow, column=iCol)
+    tk.Label(window, text=iService.getDisplay(iEntry)).grid(row=iRow, column=iCol, sticky=tk.W)
     iCol += 1
 
     #buttons
