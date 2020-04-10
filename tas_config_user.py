@@ -2,6 +2,7 @@ from os import system
 
 # *** vscode ***
 VSCODE_EXTENSIONS = (
+    "donjayamanne.githistory",
     "ms-vscode.cpptools",
     "ms-python.python",
     "win: ms-vscode.powershell",
