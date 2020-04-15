@@ -1,3 +1,5 @@
+// https://users.rust-lang.org/t/running-powershell-cmdlets-and-functions/200/6
+
 use std::io::{stdout, Write};
 use std::fs;
 use std::fmt::Write as FmtWrite;
@@ -8,12 +10,21 @@ use std::collections::HashMap;
 use std::process::Command;
 
 
-
+#[derive(Debug)]
+struct UriParsed {
+    _original: String,
+    proto: String,
+    user: Option<String>,
+    port: Option<u16>,
+    host: String,
+    path: String,
+}
 
 #[derive(Debug)]
 struct NetlistItem {
     path: String,
     tags: HashSet<String>,
+    parsed: UriParsed,
 }
 
 struct DrawState {
@@ -57,7 +68,8 @@ fn main() {
             }
             Event::Key(e) if e.code == KeyCode::Enter => {
                 draw_state.status_bar.clear();
-                write!(draw_state.status_bar, "Access: {}", draw_state.list_data[draw_state.list_selected as usize].path );
+                //write!(draw_state.status_bar, "Access: {}", draw_state.list_data[draw_state.list_selected as usize].path );
+                input_text(&mut draw_state, "blaa");
             }
             _ => {
                 continue
@@ -141,9 +153,14 @@ fn load_config() -> Vec<NetlistItem> {
     let mut ret: Vec<NetlistItem> = vec![];
 
     for iShare in content["netlist"].as_array().unwrap() {
+        let path = iShare["path"].as_str().unwrap().to_string();
+        let tags = iShare["tags"].as_str().unwrap().to_string().split(" ").map(|x| x.to_string()).collect();
+        let parsed = if let Ok(x) = UriParsed::from_str(&path) { x } else { panic!("path=\"{}\" invalid"); };
+
         ret.push( NetlistItem{
-            path: iShare["path"].as_str().unwrap().to_string(),
-            tags: iShare["tags"].as_str().unwrap().to_string().split(" ").map(|x| x.to_string()).collect(),
+            path: path,
+            tags: tags,
+            parsed: parsed,
         });
 
         let x = UriParsed::from_str( &ret.last().unwrap().path );
@@ -206,15 +223,47 @@ fn setup_screen(aDrawState: &mut DrawState) {
     stdout().flush();
 }
 
-#[derive(Debug)]
-struct UriParsed {
-    _original: String,
-    proto: String,
-    user: Option<String>,
-    port: Option<u16>,
-    host: String,
-    path: String,
-}
+fn input_text(aDrawState: &mut DrawState, intent: &str) -> String {
+    setup_screen(aDrawState);
+
+    stdout().queue( cursor::MoveTo(4, 2 as u16) );
+    stdout().queue( style::Print(aDrawState.status_bar.clone()) );
+    stdout().flush();
+
+    let mut ret = String::new();
+
+    loop {
+        let e = read().unwrap();
+        match e {
+            Event::Key(e) if e.code == KeyCode::Backspace => {
+                if ret.chars().count() < 1 {continue;}
+                ret.pop();   
+            }
+            Event::Key(e) if e.code == KeyCode::Enter => {
+                return ret;
+            }
+            Event::Key(e) => { //TODO: match KeyCode::Char(e) before {
+                if let KeyCode::Char(e) = e.code {
+                    ret.push( e );
+                }
+            }
+            _ => {
+                continue
+            }
+        }
+
+        stdout().queue( cursor::MoveTo(4, 2 as u16) );
+        stdout().queue( style::Print(aDrawState.status_bar.clone()) );
+        for i in 0..ret.chars().count() {
+            stdout().queue( cursor::MoveTo(4+(i as u16), 2 as u16) );
+            stdout().queue( style::Print("*") );
+        }
+
+        stdout().flush();
+    };
+
+    return String::new();
+} 
 
 fn remove_last_char(s: &str, s_remove: &str) -> String {
     let mut ret = s.to_string();
