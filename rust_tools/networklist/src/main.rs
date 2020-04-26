@@ -8,6 +8,9 @@ use serde_json;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use std::process::Command;
+use std::ffi::OsString;
+use std::ffi::OsStr;
+
 
 
 #[derive(Debug)]
@@ -45,6 +48,26 @@ fn main() {
         status_bar: String::new(),
     };
 
+    {
+        Command::new("powershell.exe")
+            .arg("start-process")
+                .arg("-FilePath")
+                    .arg("powershell.exe")
+                .arg("-ArgumentList")
+                    .arg("\"-NoExit -Command new-psdrive -name k -persist -PsProvider FileSystem -Root \\\\saturn.local\\xc3po_ro \"")
+                    
+                      
+            //    .arg("new-psdrive")
+            //        .arg("-Name").arg("K")
+            //        .arg("-PSProvider").arg("FileSystem")
+            //        .arg("-Root").arg(r#"\\jupiter.local\xc3po_ro"#)
+            //        .arg("-Persist")
+            .output();
+    }
+    panic!("bla");
+
+
+
     redraw(&mut draw_state);
 
     loop {
@@ -68,8 +91,7 @@ fn main() {
             }
             Event::Key(e) if e.code == KeyCode::Enter => {
                 draw_state.status_bar.clear();
-                //write!(draw_state.status_bar, "Access: {}", draw_state.list_data[draw_state.list_selected as usize].path );
-                input_text(&mut draw_state, "blaa");
+                handle_item( &mut draw_state );
             }
             _ => {
                 continue
@@ -77,6 +99,28 @@ fn main() {
         }
 
         redraw(&mut draw_state);
+    }
+}
+
+fn handle_item(aDrawState: &mut DrawState)
+{
+    let item = &aDrawState.list_data[aDrawState.list_selected as usize];
+
+    match &item.parsed.proto[..] {
+        "smb" => {
+            if let Some(user) = &item.parsed.user {
+                //let password = input_text( aDrawState, "password", true );
+            }
+
+            if let Ok(result) = Command::new("ps").output() {
+                let out = String::from_utf8(result.stdout).unwrap();
+            }
+
+            panic!("bla");
+        }
+        _ => {
+            return;
+        }
     }
 }
 
@@ -223,14 +267,26 @@ fn setup_screen(aDrawState: &mut DrawState) {
     stdout().flush();
 }
 
-fn input_text(aDrawState: &mut DrawState, intent: &str) -> String {
-    setup_screen(aDrawState);
+fn input_text(aDrawState: &mut DrawState, intent: &str, aHideChars: bool) -> String {
+    let mut show_tui = |text: &str| {
+        setup_screen(aDrawState);
+        stdout().queue( cursor::MoveTo(4, 2 as u16) );
+        stdout().queue( style::Print(intent.to_string()) );
+        stdout().queue( cursor::MoveTo(4 + (intent.chars().count() as u16) + 1, 2 as u16) );
+        if aHideChars {
+            let fill = (0..text.chars().count()).map(|x| "*".to_string()).collect::<String>();
+            stdout().queue( style::Print( fill ) );
+        }
+        else {
+            stdout().queue( style::Print( text.to_string() ) );
+        }
 
-    stdout().queue( cursor::MoveTo(4, 2 as u16) );
-    stdout().queue( style::Print(aDrawState.status_bar.clone()) );
-    stdout().flush();
+        stdout().flush();
+    };
 
     let mut ret = String::new();
+
+    show_tui("");
 
     loop {
         let e = read().unwrap();
@@ -252,14 +308,7 @@ fn input_text(aDrawState: &mut DrawState, intent: &str) -> String {
             }
         }
 
-        stdout().queue( cursor::MoveTo(4, 2 as u16) );
-        stdout().queue( style::Print(aDrawState.status_bar.clone()) );
-        for i in 0..ret.chars().count() {
-            stdout().queue( cursor::MoveTo(4+(i as u16), 2 as u16) );
-            stdout().queue( style::Print("*") );
-        }
-
-        stdout().flush();
+        show_tui(&ret);
     };
 
     return String::new();
