@@ -9,7 +9,9 @@ VSCODE_EXTENSIONS = (
     "rust-lang.rust",
     "fabiospampinato.vscode-diff",
     "ryu1kn.partial-diff",
-    "slevesque.vscode-hexdump",)
+    "slevesque.vscode-hexdump",
+    "ms-vscode-remote.remote-ssh",
+    "ms-vscode-remote.remote-ssh-edit")
 
 for iVsCodeExt in VSCODE_EXTENSIONS:
     system("code --install-extension " + iVsCodeExt)

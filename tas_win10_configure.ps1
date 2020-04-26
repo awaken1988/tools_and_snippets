@@ -24,7 +24,7 @@ if( "y" -eq $IS_BASE ) {
     $PKG += "aimp"
     $PKG += "sysinternals"
     $PKG += "meld"
-    $PKG += "tigervnc"
+    $PKG += "tightvnc"
     $PKG += "sandboxie"
 }
 
