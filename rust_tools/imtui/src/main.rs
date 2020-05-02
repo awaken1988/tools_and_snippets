@@ -1,6 +1,9 @@
 use std::io::{stdout, Write};
 use crossterm::{cursor, terminal, execute, style, event, event::{Event, read, KeyCode}, ExecutableCommand, QueueableCommand};
 
+const BORDER_SPACE_X: usize = 1;
+const BORDER_SPACE_Y: usize = 1;
+
 fn setup_screen() {
     terminal::enable_raw_mode();
     stdout().execute( terminal::Clear(terminal::ClearType::All) );
@@ -243,6 +246,8 @@ impl<'a> BoxLayout<'a> {
             for iCol in 0..self.table[iRow].len() {
                 if let Some(col) = &mut self.table[iRow][iCol] {
                     col.used_size = col.widget.min_space();
+                    col.used_size.x += BORDER_SPACE_X;
+                    col.used_size.y += BORDER_SPACE_Y;
 
                     if col.used_size.x > self.used_max_x[iCol] {
                         self.used_max_x[iCol] = col.used_size.x;
@@ -279,10 +284,42 @@ impl<'a> BoxLayout<'a> {
         for iRow in 0..self.table.len() {
             for iCol in 0..self.table[iRow].len() {
                 if let Some(col) = &mut self.table[iRow][iCol] {
-                    col.widget.draw(col.offset, col.used_size);
+                    
+                    //draw content
+                    {
+                        let mut content_size = col.used_size;
+                        content_size.x -= BORDER_SPACE_X;
+                        content_size.x -= BORDER_SPACE_Y;
+                        col.widget.draw(col.offset, col.used_size);
+                    }
+
+                    //draw vertical bordder
+                    {
+                        let offset_x = col.offset.x + self.used_max_x[iCol] - 1;
+                        let start_y  = col.offset.y;
+
+                        for iRow in 0..(self.used_max_y[iRow]) {
+                            stdout().queue( cursor::MoveTo(offset_x as u16, (start_y + iRow) as u16) );
+                            stdout().queue( style::Print("|".to_string()) );
+                        }
+                    }
+
+                    //draw horizontal border
+                    {
+                    let offset_y = col.offset.y + self.used_max_y[iRow] - 1;
+                    let start_x  = col.offset.x;
+
+                    for iCol in 0..(self.used_max_x[iCol]) {
+                        stdout().queue( cursor::MoveTo((start_x + iCol) as u16, offset_y as u16) );
+                        stdout().queue( style::Print("-".to_string()) );
+                    }
+                }
+
                 }
             }
         }
+
+        stdout().flush();
     }
 }
 
