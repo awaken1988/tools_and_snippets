@@ -292,31 +292,41 @@ impl<'a> BoxLayout<'a> {
                         content_size.x -= BORDER_SPACE_Y;
                         col.widget.draw(col.offset, col.used_size);
                     }
+                }
 
-                    //draw vertical bordder
-                    {
-                        let offset_x = col.offset.x + self.used_max_x[iCol] - 1;
-                        let start_y  = col.offset.y;
+                }
+            }
 
-                        for iRow in 0..(self.used_max_y[iRow]) {
-                            stdout().queue( cursor::MoveTo(offset_x as u16, (start_y + iRow) as u16) );
-                            stdout().queue( style::Print("|".to_string()) );
-                        }
+        let mut curr_row_offset = 0;
+        for iRow in 0..self.table.len() {
+            let mut curr_col_offset = 0;
+            for iCol in 0..self.table[iRow].len() {
+                
+                //draw vertical bordder
+                {
+                    let offset_x = curr_col_offset + self.used_max_x[iCol] - 1;
+                    let start_y  = curr_row_offset;
+
+                    for iRow in 0..(self.used_max_y[iRow]) {
+                        stdout().queue( cursor::MoveTo(offset_x as u16, (start_y + iRow) as u16) );
+                        stdout().queue( style::Print("|".to_string()) );
                     }
+                }
 
-                    //draw horizontal border
-                    {
-                    let offset_y = col.offset.y + self.used_max_y[iRow] - 1;
-                    let start_x  = col.offset.x;
+                //draw horizontal border
+                {
+                    let offset_y = curr_row_offset + self.used_max_y[iRow] - 1;
+                    let start_x  = curr_col_offset;
 
                     for iCol in 0..(self.used_max_x[iCol]) {
                         stdout().queue( cursor::MoveTo((start_x + iCol) as u16, offset_y as u16) );
                         stdout().queue( style::Print("-".to_string()) );
                     }
                 }
-
-                }
+                
+                curr_col_offset += self.used_max_x[iCol];
             }
+            curr_row_offset += self.used_max_y[iRow];
         }
 
         stdout().flush();
