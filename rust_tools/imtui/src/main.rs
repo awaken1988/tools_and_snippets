@@ -49,11 +49,11 @@ fn main() -> () {
             layout.add(&list_1_0, Size2D{x:1, y: 0});
         
             //layout.set_expand_x(0, 1);
-            layout.set_expand_x(1, 1);
+            //layout.set_expand_x(1, 1);
             layout.set_expand_y(0, 1);
             layout.set_expand_y(1, 2);
             layout.set_expand_y(2, 3);
-            //layout.set_expand_x(2, 1);
+            layout.set_expand_x(2, 1);
             //layout.set_expand_y(0, 1);
 
             layout.draw();

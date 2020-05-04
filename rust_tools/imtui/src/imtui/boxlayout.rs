@@ -2,9 +2,6 @@ use std::io::{stdout, Write};
 use crossterm::{cursor, terminal, execute, style, event, event::{Event, read, KeyCode}, ExecutableCommand, QueueableCommand};
 use crate::imtui::def::{*};
 
-const BORDER_SPACE_X: usize = 1;
-const BORDER_SPACE_Y: usize = 1;
-
 pub struct BoxLayout<'a> {
     table: Vec<Vec<Option<BoxLayoutItem<'a>>>>,
 
@@ -16,6 +13,7 @@ pub struct BoxLayout<'a> {
 
     expand_x: Vec<usize>,
     expand_y: Vec<usize>,
+    border_width: usize,
 }
 
 #[derive(Clone)]
@@ -36,6 +34,7 @@ impl<'a> BoxLayout<'a> {
             items_y: 0,
             expand_x: Vec::new(),
             expand_y: Vec::new(),
+            border_width: 1,    //TODO: fix borders
         };
     }
 
@@ -85,8 +84,8 @@ impl<'a> BoxLayout<'a> {
                     //draw content
                     {
                         let mut content_size = col.used_size;
-                        content_size.x -= BORDER_SPACE_X;
-                        content_size.x -= BORDER_SPACE_Y;
+                        content_size.x -= self.border_width;
+                        content_size.y -= self.border_width;
                         col.widget.draw(col.offset, col.used_size);
                     }
                 }
@@ -171,8 +170,8 @@ impl<'a> BoxLayout<'a> {
             for i_y in 0..self.table[i_x].len() {
                 if let Some(col) = &mut self.table[i_x][i_y] {
                     col.used_size = col.widget.min_space();
-                    col.used_size.x += BORDER_SPACE_X;
-                    col.used_size.y += BORDER_SPACE_Y;
+                    col.used_size.x += self.border_width;
+                    col.used_size.y += self.border_width;
 
                     if col.used_size.x > self.used_max_x[i_x] {
                         self.used_max_x[i_x] = col.used_size.x;

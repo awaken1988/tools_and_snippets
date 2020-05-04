@@ -51,7 +51,7 @@ impl List {
 impl Widget for List {
     fn min_space(&self) -> Size2D {
         return Size2D { 
-            x: self.column_count()*5, 
+            x: self.column_count()*5+1, 
             y: 5 };
     }
 
@@ -83,8 +83,6 @@ impl Widget for List {
         
                 stdout().queue( cursor::MoveTo( (aLeftTop.x + width_per_col*iColNum) as u16,  (aLeftTop.y + iRow) as u16 ) );
                 stdout().queue( style::Print(print_copy) );
-                //stdout().queue( cursor::MoveTo((width_per_col*iColNum-1) as u16, iRow as u16) );
-                //stdout().queue( style::Print(separator) );
             }
 
             used_rows+=1;
