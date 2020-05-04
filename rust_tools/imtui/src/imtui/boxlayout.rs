@@ -167,33 +167,33 @@ impl<'a> BoxLayout<'a> {
         let term_size = terminal::size().unwrap();
 
         //set all widget to min size; all hor/vert cells should have the same size
-        for iRow in 0..self.table.len() {
-            for iCol in 0..self.table[iRow].len() {
-                if let Some(col) = &mut self.table[iRow][iCol] {
+        for i_x in 0..self.table.len() {
+            for i_y in 0..self.table[i_x].len() {
+                if let Some(col) = &mut self.table[i_x][i_y] {
                     col.used_size = col.widget.min_space();
                     col.used_size.x += BORDER_SPACE_X;
                     col.used_size.y += BORDER_SPACE_Y;
 
-                    if col.used_size.x > self.used_max_x[iCol] {
-                        self.used_max_x[iCol] = col.used_size.x;
+                    if col.used_size.x > self.used_max_x[i_x] {
+                        self.used_max_x[i_x] = col.used_size.x;
                     }
-                    if col.used_size.y > self.used_max_y[iRow] {
-                        self.used_max_y[iRow] = col.used_size.y;
+                    if col.used_size.y > self.used_max_y[i_y] {
+                        self.used_max_y[i_y] = col.used_size.y;
                     }
                 }
             }
         }
 
         //calculate the offset
-        for iRow in 0..self.table.len() {
-            for iCol in 0..self.table[iRow].len() {
-                if let Some(col) = &mut self.table[iRow][iCol] {
+        for i_x in 0..self.table.len() {
+            for i_y in 0..self.table[i_x].len() {
+                if let Some(col) = &mut self.table[i_x][i_y] {
                     let mut offset = Size2D{x: 0, y: 0};
 
-                    for i in 0..iCol {
+                    for i in 0..i_x {
                         offset.x += self.used_max_x[i];
                     }
-                    for i in 0..iRow {
+                    for i in 0..i_y {
                         offset.y += self.used_max_y[i];
                     }
 
@@ -203,7 +203,6 @@ impl<'a> BoxLayout<'a> {
         }   
 
         //expand x
-        if false
         {
             let used: usize = self.used_max_x.iter().sum();
             let rest = (term_size.0 as usize) - used;
@@ -214,20 +213,22 @@ impl<'a> BoxLayout<'a> {
             if expand_sum > 0 {
                 for i_x in 0..self.items_x {
                     let curr_extra_space = (self.expand_x[i_x] * rest) / expand_sum;
+                    
+                    self.used_max_x[i_x] += curr_extra_space;
+                    
                     for i_y in 0..self.items_y {
                         if let Some(cell) = &mut self.table[i_x][i_y] {
-                            cell.used_size.x += curr_extra_space;
+                            cell.used_size.x = self.used_max_x[i_x];
                             cell.offset.x += added_space;
                         }
                     }
                     added_space += curr_extra_space;
-                    self.used_max_x[i_x] += added_space;
+                    
                 }
             }
         }
 
         //expand y
-        if false
         {
             let used: usize = self.used_max_y.iter().sum();
             let rest = (term_size.1 as usize) - used;
@@ -236,16 +237,19 @@ impl<'a> BoxLayout<'a> {
             let mut added_space = 0;
 
             if expand_sum > 0 {
-                for i_x in 0..self.items_y {
-                    let curr_extra_space = (self.expand_x[i_x] * rest) / expand_sum;
-                    for i_y in 0..self.items_x {
+                for i_y in 0..self.items_y {
+                    let curr_extra_space = (self.expand_y[i_y] * rest) / expand_sum;
+                    
+                    self.used_max_y[i_y] += curr_extra_space;
+                    
+                    for i_x in 0..self.items_x {
                         if let Some(cell) = &mut self.table[i_x][i_y] {
-                            cell.used_size.y += curr_extra_space;
+                            cell.used_size.y = self.used_max_y[i_y];
                             cell.offset.y += added_space;
                         }
                     }
                     added_space += curr_extra_space;
-                    self.used_max_y[i_x] += added_space;
+                    
                 }
             }
         }

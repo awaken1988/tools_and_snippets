@@ -15,6 +15,14 @@ impl List {
         ret.add_row( vec!["1.1".to_string(), "1.2".to_string(), ]);
         ret.add_row( vec!["2.1".to_string(), "2.2".to_string(), ]);
         ret.add_row( vec!["3.1".to_string(), "3.2".to_string(), ]);
+        ret.add_row( vec!["4.1".to_string(), "4.2".to_string(), ]);
+        ret.add_row( vec!["5.1".to_string(), "5.2".to_string(), ]);
+        ret.add_row( vec!["6.1".to_string(), "6.2".to_string(), ]);
+        ret.add_row( vec!["7.1".to_string(), "7.2".to_string(), ]);
+        ret.add_row( vec!["8.1".to_string(), "8.2".to_string(), ]);
+        ret.add_row( vec!["9.1".to_string(), "9.2".to_string(), ]);
+        ret.add_row( vec!["a.1".to_string(), "a.2".to_string(), ]);
+        ret.add_row( vec!["b.1".to_string(), "b.2".to_string(), ]);
        
         
         return ret;
@@ -44,7 +52,7 @@ impl Widget for List {
     fn min_space(&self) -> Size2D {
         return Size2D { 
             x: self.column_count()*5, 
-            y: 3 };
+            y: 5 };
     }
 
     fn expand(&self) -> usize {
@@ -73,7 +81,7 @@ impl Widget for List {
                     }
                 }
         
-                stdout().queue( cursor::MoveTo((aLeftTop.x + width_per_col*iColNum) as u16, (aLeftTop.y + iRow) as u16) );
+                stdout().queue( cursor::MoveTo( (aLeftTop.x + width_per_col*iColNum) as u16,  (aLeftTop.y + iRow) as u16 ) );
                 stdout().queue( style::Print(print_copy) );
                 //stdout().queue( cursor::MoveTo((width_per_col*iColNum-1) as u16, iRow as u16) );
                 //stdout().queue( style::Print(separator) );
