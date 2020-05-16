@@ -17,5 +17,5 @@ for iVsCodeExt in VSCODE_EXTENSIONS:
     system("code --install-extension " + iVsCodeExt)
 
 # *** git ***
-system("git config core.filemode false")
+system("git config --global core.filemode false")
 system("git config --global core.autocrlf false")

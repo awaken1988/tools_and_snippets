@@ -2,7 +2,7 @@ use std::io::{stdout, Write};
 use crossterm::{cursor, terminal, execute, style, event, event::{Event, read, KeyCode}, ExecutableCommand, QueueableCommand};
 use crate::imtui::def::{*};
 
-pub struct BoxLayout<'a> {
+pub struct TableLayout<'a> {
     table: Vec<Vec<Option<BoxLayoutItem<'a>>>>,
 
     used_max_x: Vec<usize>,
@@ -24,9 +24,9 @@ struct BoxLayoutItem<'a> {
     offset: Size2D,
 }
 
-impl<'a> BoxLayout<'a> {
-    pub fn new() -> BoxLayout<'a> {
-        return BoxLayout {
+impl<'a> TableLayout<'a> {
+    pub fn new() -> TableLayout<'a> {
+        return TableLayout {
             table: Vec::new(),
             used_max_x: Vec::new(),
             used_max_y: Vec::new(),
