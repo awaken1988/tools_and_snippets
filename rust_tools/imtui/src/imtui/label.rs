@@ -7,12 +7,12 @@ pub struct Label {
 }
 
 impl Label {
-    pub fn new(text: &str) -> Box<dyn Widget> {
+    pub fn new(text: &str) -> Label {
         let ret = Label {
             text: text.to_string(), 
         };
 
-        return Box::new(ret);
+        return ret;
     }
 }
 

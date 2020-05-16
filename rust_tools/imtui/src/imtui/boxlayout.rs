@@ -18,7 +18,7 @@ pub struct TableLayout<'a> {
 
 #[derive(Clone)]
 struct BoxLayoutItem<'a> {
-    widget: &'a Box<dyn Widget>,
+    widget: &'a dyn Widget,
     position: Size2D,
     used_size: Size2D,
     offset: Size2D,
@@ -38,7 +38,7 @@ impl<'a> TableLayout<'a> {
         };
     }
 
-    pub fn add(&mut self, widget: &'a Box<dyn Widget>, position: Size2D) {
+    pub fn add(&mut self, widget: &'a dyn Widget, position: Size2D) {
         self.resize_table(position);
 
         if self.table[0].len() <= (position.y) {
@@ -100,7 +100,7 @@ impl<'a> TableLayout<'a> {
                 
                 //draw vertical bordder
                 {
-                    let offset_x = curr_col_offset + self.used_max_x[iCol] - 1;
+                    let offset_x = curr_col_offset + self.used_max_x[iCol] - 1; 
                     let start_y  = curr_row_offset;
 
                     for iRow in 0..(self.used_max_y[iRow]) {

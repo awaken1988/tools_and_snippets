@@ -2,7 +2,8 @@ use std::io::{stdout, Write};
 use crossterm::{cursor, terminal, execute, style, event, event::{Event, read, KeyCode}, ExecutableCommand, QueueableCommand};
 use crate::imtui::def::{*};
 
-const TABLELAYOUT_SCROLLBAR_WIDTH: usize = 1;
+const LIST_SCROLLBAR_WIDTH: usize = 1;
+const LIST_SELECTION_WIDTH: usize = 1;
 
 pub struct List {
     data: Vec<Vec<String>>,
@@ -10,24 +11,15 @@ pub struct List {
 }
 
 impl List {
-    pub fn new() -> Box<dyn Widget> {
-        let mut ret = Box::new(List {
+    pub fn new() -> List {
+        let mut ret = List {
             data: Vec::new(),
             selection: None,
-        });
+        };
 
-        ret.add_row( vec!["1.1".to_string(), "1.2".to_string(), ]);
-        ret.add_row( vec!["2.1".to_string(), "2.2".to_string(), ]);
-        ret.add_row( vec!["3.1".to_string(), "3.2".to_string(), ]);
-        ret.add_row( vec!["4.1".to_string(), "4.2".to_string(), ]);
-        ret.add_row( vec!["5.1".to_string(), "5.2".to_string(), ]);
-        ret.add_row( vec!["6.1".to_string(), "6.2".to_string(), ]);
-        ret.add_row( vec!["7.1".to_string(), "7.2".to_string(), ]);
-        ret.add_row( vec!["8.1".to_string(), "8.2".to_string(), ]);
-        ret.add_row( vec!["9.1".to_string(), "9.2".to_string(), ]);
-        ret.add_row( vec!["a.1".to_string(), "a.2".to_string(), ]);
-        ret.add_row( vec!["b.1".to_string(), "b.2".to_string(), ]);
-       
+        for i_test in (0..23) {
+            ret.add_row( vec![format!("{} aaa", i_test).to_string(), format!("{} bbb", i_test).to_string(), ]);
+        }
         
         return ret;
     }
@@ -52,16 +44,31 @@ impl List {
     }
 
     pub fn increment_selection(&mut self, incr: usize) {
-        if let Some(x) = &mut self.selection {
+        if self.data.is_empty() {
+            self.selection = None;
+        }
+        else if let Some(x) = &mut self.selection {
             *x += incr;
+            if *x >= self.data.len() {
+                *x = self.data.len() - 1;
+            }
         } else {
             self.selection = Some(0);
         }
     }
 
     pub fn decrement_selection(&mut self, incr: usize) {
-        if let Some(x) = &mut self.selection {
-            *x -= incr;
+        if self.data.is_empty() {
+            self.selection = None;
+        }
+        else if let Some(x) = &mut self.selection {
+            if *x < incr {
+                *x = 0
+            }
+            else {
+                *x -= incr;
+            }
+           
         } else {
             self.selection = Some(0);
         }
@@ -73,7 +80,7 @@ impl Widget for List {
         return Size2D { 
             x: self.column_count()*5
                 +1 
-                +TABLELAYOUT_SCROLLBAR_WIDTH, 
+                +LIST_SCROLLBAR_WIDTH, 
             y: 5 };
     }
 
@@ -84,15 +91,26 @@ impl Widget for List {
     fn draw(&self, aLeftTop: Size2D, aDimension: Size2D)
     {   
         let cols = self.column_count();
-        let width_per_col = (aDimension.x-TABLELAYOUT_SCROLLBAR_WIDTH) / cols;
+        let width_per_col = (aDimension.x-LIST_SCROLLBAR_WIDTH-LIST_SELECTION_WIDTH) / cols;
+
+        let half_avail_y = aDimension.y / 2;
+        let mut start_rel_y = 0;
+
+        if let Some(sel) = self.selection {
+            if sel < half_avail_y {
+                start_rel_y = 0;
+            }
+            else {
+                start_rel_y = sel - half_avail_y;
+            }
+        }
+
+        let mut end_rel_y: usize = *([self.data.len(), start_rel_y+aDimension.y-1 ].iter().min().unwrap());
+
+        
 
         //draw fields
-        let mut used_rows = 0;
-        for iRow in 0..(self.data.len()) {
-            if used_rows >= aDimension.y {
-                break;
-            }
-
+        for iRow in start_rel_y..(end_rel_y) {
             for (iColNum, iCol) in self.data[iRow].iter().enumerate() {
                 let mut print_copy = iCol.clone();
                 let separator = "|".to_string();
@@ -104,19 +122,27 @@ impl Widget for List {
                     }
                 }
         
-                stdout().queue( cursor::MoveTo( (aLeftTop.x + width_per_col*iColNum) as u16,  (aLeftTop.y + iRow) as u16 ) );
-                stdout().queue( style::Print(print_copy) );
-            }
+                if let Some(x) = self.selection {
+                    if iRow == x {
+                        stdout().queue( style::SetBackgroundColor( style::Color::Green  ) );
+                    }
+                }
+                else {
+                    stdout().queue( style::SetBackgroundColor( style::Color::Black ) );
+                }
 
-            used_rows+=1;
+                stdout().queue( cursor::MoveTo( (aLeftTop.x + width_per_col*iColNum) as u16,  (aLeftTop.y + iRow - start_rel_y) as u16 ) );
+                stdout().queue( style::Print(print_copy) );
+                stdout().queue( style::SetBackgroundColor( style::Color::Black ) );
+            }
         }
 
         //draw scrollbar
-        if let Some(selection) = self.selection {
-            let scrollbar_y_ppos = (aDimension.y * selection) / self.data.len();
-            stdout().queue( cursor::MoveTo( (aLeftTop.x + aDimension.x - 1) as u16,  (aLeftTop.y + scrollbar_y_ppos) as u16 ) );
-            stdout().queue( style::Print("-".to_string()) );
-        }
+        //if let Some(selection) = self.selection {
+        //    let scrollbar_y_ppos = (aDimension.y * selection) / self.data.len();
+        //    stdout().queue( cursor::MoveTo( (aLeftTop.x + aDimension.x - 1) as u16,  (aLeftTop.y + scrollbar_y_ppos) as u16 ) );
+        //    stdout().queue( style::Print("#".to_string()) );
+        //}
         
     }
 }

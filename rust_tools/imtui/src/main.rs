@@ -26,14 +26,14 @@ fn main() -> () {
                 
             }
             Event::Key(e) if e.code == KeyCode::Up => {
-                list_0_2.increment_selection(1);
-                list_2_0.increment_selection(1);
-                list_1_0.increment_selection(1);
-            }
-            Event::Key(e) if e.code == KeyCode::Down => {
                 list_0_2.decrement_selection(1);
                 list_2_0.decrement_selection(1);
                 list_1_0.decrement_selection(1);
+            }
+            Event::Key(e) if e.code == KeyCode::Down => {
+                list_0_2.increment_selection(1);
+                list_2_0.increment_selection(1);
+                list_1_0.increment_selection(1);
             }
             Event::Key(e) if e.code == KeyCode::Enter => {
                
