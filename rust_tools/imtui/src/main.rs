@@ -14,6 +14,8 @@ fn main() -> () {
     let mut list_2_0 = List::new();
     let mut list_1_0 = List::new();
 
+    let mut box_state = BoxLayoutState::new();
+
     loop {
        
 
@@ -44,7 +46,7 @@ fn main() -> () {
         }
 
         setup_screen();
-        let mut layout = TableLayout::new(); 
+        let mut layout = BoxLayout::new(&mut box_state); 
         layout.add(&lbl_0_0, Size2D{x:0, y: 0});
         layout.add(&lbl_1_1, Size2D{x:1, y: 1});
         layout.add(&lbl_2_2, Size2D{x:2, y: 2});

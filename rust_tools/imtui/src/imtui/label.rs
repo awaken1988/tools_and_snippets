@@ -1,5 +1,5 @@
 use std::io::{stdout, Write};
-use crossterm::{cursor, terminal, execute, style, event, event::{Event, read, KeyCode}, ExecutableCommand, QueueableCommand};
+use crossterm::{cursor, terminal, execute, style, event, event::{Event, read, KeyCode, KeyEvent}, ExecutableCommand, QueueableCommand};
 use crate::imtui::def::{*};
 
 pub struct Label {
@@ -39,5 +39,10 @@ impl Widget for Label {
 
         stdout().queue( cursor::MoveTo(aLeftTop.x as u16, aLeftTop.y as u16) );
         stdout().queue( style::Print(print_copy) );
+    }
+
+    fn handle_key(&mut self, aKeyEvent: KeyEvent)
+    {
+            
     }
 }

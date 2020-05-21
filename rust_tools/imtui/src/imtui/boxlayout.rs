@@ -1,8 +1,14 @@
 use std::io::{stdout, Write};
-use crossterm::{cursor, terminal, execute, style, event, event::{Event, read, KeyCode}, ExecutableCommand, QueueableCommand};
+use crossterm::{cursor, terminal, execute, style, event, event::{Event, read, KeyCode, KeyEvent}, ExecutableCommand, QueueableCommand};
 use crate::imtui::def::{*};
 
-pub struct TableLayout<'a> {
+pub struct BoxLayoutState {
+    
+
+    selection: Option<Size2D>
+}
+
+pub struct BoxLayout<'a> {
     table: Vec<Vec<Option<BoxLayoutItem<'a>>>>,
 
     used_max_x: Vec<usize>,
@@ -14,6 +20,8 @@ pub struct TableLayout<'a> {
     expand_x: Vec<usize>,
     expand_y: Vec<usize>,
     border_width: usize,
+
+    state: &'a mut BoxLayoutState,
 }
 
 #[derive(Clone)]
@@ -24,9 +32,17 @@ struct BoxLayoutItem<'a> {
     offset: Size2D,
 }
 
-impl<'a> TableLayout<'a> {
-    pub fn new() -> TableLayout<'a> {
-        return TableLayout {
+impl BoxLayoutState {
+    pub fn new() -> BoxLayoutState {
+        return BoxLayoutState {
+            selection: None,
+        }
+    }
+}
+
+impl<'a> BoxLayout<'a> {
+    pub fn new(aState: &'a mut BoxLayoutState) -> BoxLayout<'a> {
+        return BoxLayout {
             table: Vec::new(),
             used_max_x: Vec::new(),
             used_max_y: Vec::new(),
@@ -35,7 +51,12 @@ impl<'a> TableLayout<'a> {
             expand_x: Vec::new(),
             expand_y: Vec::new(),
             border_width: 1,    //TODO: fix borders
+            state: aState,
         };
+    }
+
+    pub fn handle_key(aKeyEvent: KeyEvent) {
+
     }
 
     pub fn add(&mut self, widget: &'a dyn Widget, position: Size2D) {

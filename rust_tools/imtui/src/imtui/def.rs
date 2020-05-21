@@ -1,5 +1,5 @@
 use std::io::{stdout, Write};
-use crossterm::{cursor, terminal, execute, style, event, event::{Event, read, KeyCode}, ExecutableCommand, QueueableCommand};
+use crossterm::{cursor, terminal, execute, style, event, event::{Event, read, KeyCode, KeyEvent}, ExecutableCommand, QueueableCommand};
 
 pub fn setup_screen() {
     terminal::enable_raw_mode();
@@ -30,4 +30,6 @@ pub trait Widget {
     fn min_space(&self) -> Size2D;
     fn expand(&self) -> usize;
     fn draw(&self, aLeftTop: Size2D, aDimension: Size2D);
+
+    fn handle_key(&mut self, aKeyEvent: KeyEvent);
 }
