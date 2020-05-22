@@ -11,6 +11,8 @@ use std::process::Command;
 use std::ffi::OsString;
 use std::ffi::OsStr;
 
+mod imtui;
+
 
 
 #[derive(Debug)]
@@ -40,38 +42,52 @@ struct DrawState {
 }
 
 fn main() {
-    let mut draw_state = DrawState{
-        list_line_start: 0, 
-        list_line_count: 0, 
-        list_selected: 0,
-        list_data: load_config(),
-        status_bar: String::new(),
-    };
+  
+    //{
+    //    Command::new("powershell.exe")
+    //        .arg("start-process")
+    //            .arg("-FilePath")
+    //                .arg("powershell.exe")
+    //            .arg("-ArgumentList")
+    //                .arg("\"-NoExit -Command new-psdrive -name k -persist -PsProvider FileSystem -Root \\\\saturn.local\\xc3po_ro \"")
+    //                
+    //                  
+    //        //    .arg("new-psdrive")
+    //        //        .arg("-Name").arg("K")
+    //        //        .arg("-PSProvider").arg("FileSystem")
+    //        //        .arg("-Root").arg(r#"\\jupiter.local\xc3po_ro"#)
+    //        //        .arg("-Persist")
+    //        .output();
+    //}
+    
+    let mut config = load_config();
 
-    {
-        Command::new("powershell.exe")
-            .arg("start-process")
-                .arg("-FilePath")
-                    .arg("powershell.exe")
-                .arg("-ArgumentList")
-                    .arg("\"-NoExit -Command new-psdrive -name k -persist -PsProvider FileSystem -Root \\\\saturn.local\\xc3po_ro \"")
-                    
-                      
-            //    .arg("new-psdrive")
-            //        .arg("-Name").arg("K")
-            //        .arg("-PSProvider").arg("FileSystem")
-            //        .arg("-Root").arg(r#"\\jupiter.local\xc3po_ro"#)
-            //        .arg("-Persist")
-            .output();
+    let mut layout_state = imtui::BoxLayoutState::new();
+    
+
+    let mut config_list = imtui::List::new();
+    for i_cfg in &config {
+        config_list.add_row( vec![
+            format!("{}", i_cfg.parsed._original).to_string(),] )
     }
-    panic!("bla");
 
-
-
-    redraw(&mut draw_state);
+    let mut status_bar = imtui::Label::new("...");
 
     loop {
-        draw_state.status_bar.clear();
+        {
+            let mut layout = imtui::BoxLayout::new(&mut layout_state);
+
+            layout.add(&config_list, imtui::Size2D{x: 0, y: 0}); 
+            layout.add(&status_bar, imtui::Size2D{x: 0, y: 1}); 
+
+            layout.set_expand_y(0, 1);
+            layout.set_expand_x(0, 1);
+
+            setup_screen();
+            layout.draw();
+        }
+        
+
 
         let e = read().unwrap();
         match e {
@@ -82,34 +98,31 @@ fn main() {
                 
             }
             Event::Key(e) if e.code == KeyCode::Up => {
-                if draw_state.list_selected < 1 { continue; }
-                draw_state.list_selected -= 1;
+                config_list.decrement_selection(1);
             }
             Event::Key(e) if e.code == KeyCode::Down => {
-                if draw_state.list_selected >= ((draw_state.list_data.len() as u32)-1) { continue; }
-                draw_state.list_selected += 1;
+                config_list.increment_selection(1);
             }
             Event::Key(e) if e.code == KeyCode::Enter => {
-                draw_state.status_bar.clear();
-                handle_item( &mut draw_state );
+                if let Some(selection) = config_list.selection {
+                    handle_item( &config[selection] );
+                }
             }
             _ => {
                 continue
             }
         }
 
-        redraw(&mut draw_state);
+        
     }
 }
 
-fn handle_item(aDrawState: &mut DrawState)
+fn handle_item(aItem: &NetlistItem)
 {
-    let item = &aDrawState.list_data[aDrawState.list_selected as usize];
-
-    match &item.parsed.proto[..] {
+    match &aItem.parsed.proto[..] {
         "smb" => {
-            if let Some(user) = &item.parsed.user {
-                //let password = input_text( aDrawState, "password", true );
+            if let Some(user) = &aItem.parsed.user {
+                let password = input_text("password", true );
             }
 
             if let Ok(result) = Command::new("ps").output() {
@@ -121,71 +134,6 @@ fn handle_item(aDrawState: &mut DrawState)
         _ => {
             return;
         }
-    }
-}
-
-fn redraw(aDrawState: &mut DrawState)
-{
-    setup_screen(aDrawState);
-
-    let mut filtered_count = 0;
-    let mut filtered_selected: Option<u32> = None ;
-    for (iNum, iItem) in aDrawState.list_data.iter().enumerate() {
-        //TODO: apply filter
-        filtered_count+=1;
-
-        if (iNum as u32) == aDrawState.list_selected {
-            filtered_selected = Some(iNum as u32);
-        }
-    }
-
-    let filtered_selected: u32 = if let Some(x) = filtered_selected {
-        x
-    }
-    else {
-        0
-    };
-
-    
-    let mut filtered_skip: u32 = 0;
-    if filtered_selected > (aDrawState.list_line_count/2) {
-        filtered_skip = filtered_selected - (aDrawState.list_line_count/2);
-    }
-
-    let mut curr_filtered: i32 = -1;
-    let mut line = String::new();
-    for iItem in &aDrawState.list_data {
-        //TODO: apply filter
-
-        curr_filtered+=1;
-        if (curr_filtered as u32) < (filtered_skip as u32) {
-            continue;
-        }
-
-        let line_pos = (curr_filtered as u32 - filtered_skip as u32) as u16;
-
-        line.clear();
-        write!(line, "    |-{}", iItem.path);
-
-        //write!(line, "[");
-        //for iTag in &iItem.tags {
-        //    write!(line, "{} ", iTag);
-        //}
-        //write!(line, "]");
-
-        if (curr_filtered as u32) == (filtered_selected as u32) {
-            stdout().queue( style::SetForegroundColor( style::Color::Green ) );
-        }
-        else {
-            stdout().queue( style::SetForegroundColor( style::Color::White ) );
-        }
-        
-        stdout().queue( style::SetBackgroundColor( style::Color::Black ) );
-        stdout().queue( cursor::MoveTo(0, line_pos as u16  ) );
-        stdout().queue( style::Print(&line) );
-        stdout().flush();
-
-        
     }
 }
 
@@ -214,7 +162,7 @@ fn load_config() -> Vec<NetlistItem> {
     return ret;
 }
 
-fn setup_screen(aDrawState: &mut DrawState) {
+fn setup_screen() {
     terminal::enable_raw_mode();
     stdout().execute( terminal::Clear(terminal::ClearType::All) );
 
@@ -228,48 +176,14 @@ fn setup_screen(aDrawState: &mut DrawState) {
         stdout().queue( style::Print(fill_line) );
     }
 
-    //headline
-    {
-        stdout().queue( cursor::MoveTo(0, 0) );
-        stdout().queue( style::SetBackgroundColor( style::Color::Green ) );
-        stdout().queue( style::SetForegroundColor( style::Color::Black ) );
-        stdout().queue( style::Print("netlist") );
-
-    }
-
-    //help
-    let help = vec!["ESC: quit", "F5: quit"];
-    let mut help_next_pos: usize = 0;
-    for iHelp in help {
-        stdout().queue( cursor::MoveTo(help_next_pos as u16, term_size.1-1) );
-        stdout().queue( style::SetBackgroundColor( style::Color::Green ) );
-        stdout().queue( style::SetForegroundColor( style::Color::Black ) );
-        stdout().queue( style::Print(iHelp) );
-
-        help_next_pos = help_next_pos + iHelp.chars().count() + 1;
-    }
-
-    //status bar
-    {
-        stdout().queue( style::SetBackgroundColor( style::Color::White ) );
-        stdout().queue( style::SetForegroundColor( style::Color::Black ) );
-
-        let pos = (term_size.1 as u32) - 3;
-
-        stdout().queue( cursor::MoveTo(0, pos as u16) );
-        stdout().queue( style::Print(aDrawState.status_bar.clone()) );
-
-    }
-
-    aDrawState.list_line_start = 2;
-    aDrawState.list_line_count = (term_size.1 as u32) -  aDrawState.list_line_start - 5 ;
+    stdout().queue( style::SetForegroundColor( style::Color::White ) );
 
     stdout().flush();
 }
 
-fn input_text(aDrawState: &mut DrawState, intent: &str, aHideChars: bool) -> String {
+fn input_text(intent: &str, aHideChars: bool) -> String {
     let mut show_tui = |text: &str| {
-        setup_screen(aDrawState);
+        setup_screen();
         stdout().queue( cursor::MoveTo(4, 2 as u16) );
         stdout().queue( style::Print(intent.to_string()) );
         stdout().queue( cursor::MoveTo(4 + (intent.chars().count() as u16) + 1, 2 as u16) );
