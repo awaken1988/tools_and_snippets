@@ -29,6 +29,7 @@ struct UriParsed {
 struct NetlistItem {
     path: String,
     tags: HashSet<String>,
+    name_value: HashMap<String, String>,
     parsed: UriParsed,
 }
 
@@ -42,33 +43,15 @@ struct DrawState {
 }
 
 fn main() {
-  
-    //{
-    //    Command::new("powershell.exe")
-    //        .arg("start-process")
-    //            .arg("-FilePath")
-    //                .arg("powershell.exe")
-    //            .arg("-ArgumentList")
-    //                .arg("\"-NoExit -Command new-psdrive -name k -persist -PsProvider FileSystem -Root \\\\saturn.local\\xc3po_ro \"")
-    //                
-    //                  
-    //        //    .arg("new-psdrive")
-    //        //        .arg("-Name").arg("K")
-    //        //        .arg("-PSProvider").arg("FileSystem")
-    //        //        .arg("-Root").arg(r#"\\jupiter.local\xc3po_ro"#)
-    //        //        .arg("-Persist")
-    //        .output();
-    //}
-    
     let mut config = load_config();
-
     let mut layout_state = imtui::BoxLayoutState::new();
-    
-
     let mut config_list = imtui::List::new();
+    
     for i_cfg in &config {
         config_list.add_row( vec![
-            format!("{}", i_cfg.parsed._original).to_string(),] )
+            format!("{}", i_cfg.parsed._original).to_string(),
+            format!("{}", i_cfg.tags.iter().map(|x| &x[..]).collect::<Vec<&str>>().join(" ")  ).to_string(),
+        ] );
     }
 
     let mut status_bar = imtui::Label::new("...");
@@ -121,15 +104,42 @@ fn handle_item(aItem: &NetlistItem)
 {
     match &aItem.parsed.proto[..] {
         "smb" => {
-            if let Some(user) = &aItem.parsed.user {
-                let password = input_text("password", true );
-            }
+            //windows 10
+            {
+                let mut cmd = "-NoExit -Command ".to_string();
+                let mut extra_psdrive_opt = "".to_string();
 
-            if let Ok(result) = Command::new("ps").output() {
-                let out = String::from_utf8(result.stdout).unwrap();
-            }
+                if let Some(user) = &aItem.parsed.user {
+                    extra_psdrive_opt.push_str(" -Credential $cred ");
+                    cmd = format!("{cmd} Set-Variable -Name 'cred' -Value $(Get-Credential -UserName '{user}' -Message 'Password'); ", 
+                        cmd=cmd,
+                        user=user);
+                }
 
-            panic!("bla");
+                if let Some(drive_letter) = aItem.name_value.get("drive") {
+                    extra_psdrive_opt = format!("{opt} -Name '{drive}' ",
+                        opt=extra_psdrive_opt,
+                        drive=drive_letter)
+                }
+
+                cmd = format!("{cmd} write-host '\\\\{host}{path}'; ", 
+                    cmd=cmd, 
+                    host=aItem.parsed.host,
+                    path=aItem.parsed.path.replace("/", "\\") );
+                cmd = format!("{cmd} New-PSDrive -Persist {extra} -PSProvider 'FileSystem' '\\\\{host}{path}'; ", 
+                    cmd=cmd, 
+                    host=aItem.parsed.host,
+                    path=aItem.parsed.path.replace("/", "\\"),
+                    extra=extra_psdrive_opt );
+
+                Command::new("powershell.exe")
+                .arg("start-process")
+                    .arg("-FilePath")
+                        .arg("powershell.exe")
+                    .arg("-ArgumentList")
+                        .arg(format!("\"-NoExit {}\"", cmd))
+                .output();
+            }
         }
         _ => {
             return;
@@ -146,12 +156,26 @@ fn load_config() -> Vec<NetlistItem> {
 
     for iShare in content["netlist"].as_array().unwrap() {
         let path = iShare["path"].as_str().unwrap().to_string();
-        let tags = iShare["tags"].as_str().unwrap().to_string().split(" ").map(|x| x.to_string()).collect();
+        let tags: HashSet<String> = iShare["tags"].as_str().unwrap().to_string().split(" ").map(|x| x.to_string()).collect();
         let parsed = if let Ok(x) = UriParsed::from_str(&path) { x } else { panic!("path=\"{}\" invalid"); };
+
+        let mut name_value = HashMap::new();
+
+        for i_tag in &tags {
+            if !i_tag.contains("=") { continue;}
+
+            let splitted: Vec<&str> = i_tag.split("=").collect();
+            if splitted.len() != 2 {
+                panic!("{} contains illegal \"s\"", iShare["tags"].as_str().unwrap())
+            }
+
+            name_value.insert(splitted[0].to_string(), splitted[1].to_string());
+        }
 
         ret.push( NetlistItem{
             path: path,
             tags: tags,
+            name_value: name_value,
             parsed: parsed,
         });
 
