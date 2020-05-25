@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::process::Command;
 use std::ffi::OsString;
 use std::ffi::OsStr;
+use tempfile;
 
 mod imtui;
 
@@ -105,41 +106,35 @@ fn handle_item(aItem: &NetlistItem)
     match &aItem.parsed.proto[..] {
         "smb" => {
             //windows 10
+            let mut exec_path: String;
             {
-                let mut cmd = "-NoExit -Command ".to_string();
-                let mut extra_psdrive_opt = "".to_string();
+                let mut tmpscript = tempfile::Builder::new().suffix(".ps1").tempfile().unwrap();
+                let (mut file, mut path) = tmpscript.keep().unwrap();
+                exec_path = path.to_str().unwrap().to_string();
+                let mut psdrive_additional = String::new();
+
+                write!(file, "# {} \n", aItem.parsed._original);
 
                 if let Some(user) = &aItem.parsed.user {
-                    extra_psdrive_opt.push_str(" -Credential $cred ");
-                    cmd = format!("{cmd} Set-Variable -Name 'cred' -Value $(Get-Credential -UserName '{user}' -Message 'Password'); ", 
-                        cmd=cmd,
-                        user=user);
+                    write!(file, "$cred = Get-Credential -UserName '{user}' -Message 'Password' \n", user=user);
+                    psdrive_additional = format!("{} -Credential $cred", psdrive_additional);
                 }
+
+                write!(file, "New-PSDrive -Persist -PSProvider 'FileSystem' {} ", psdrive_additional);
 
                 if let Some(drive_letter) = aItem.name_value.get("drive") {
-                    extra_psdrive_opt = format!("{opt} -Name '{drive}' ",
-                        opt=extra_psdrive_opt,
-                        drive=drive_letter)
+                    write!(file, "-Name '{drive}' ", drive=drive_letter);
                 }
 
-                cmd = format!("{cmd} write-host '\\\\{host}{path}'; ", 
-                    cmd=cmd, 
+                write!(file, "-Root '\\\\{host}{path}' \n",  
                     host=aItem.parsed.host,
-                    path=aItem.parsed.path.replace("/", "\\") );
-                cmd = format!("{cmd} New-PSDrive -Persist {extra} -PSProvider 'FileSystem' '\\\\{host}{path}'; ", 
-                    cmd=cmd, 
-                    host=aItem.parsed.host,
-                    path=aItem.parsed.path.replace("/", "\\"),
-                    extra=extra_psdrive_opt );
-
-                Command::new("powershell.exe")
-                .arg("start-process")
-                    .arg("-FilePath")
-                        .arg("powershell.exe")
-                    .arg("-ArgumentList")
-                        .arg(format!("\"-NoExit {}\"", cmd))
-                .output();
+                    path=aItem.parsed.path.replace("/", "\\"),);           
             }
+
+            let result = Command::new("powershell.exe")
+                .arg("-ExecutionPolicy").arg("Bypass")
+                .arg("-File").arg(exec_path)
+            .output().unwrap();
         }
         _ => {
             return;
