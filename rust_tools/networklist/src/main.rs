@@ -1,5 +1,8 @@
 // https://users.rust-lang.org/t/running-powershell-cmdlets-and-functions/200/6
 
+#[cfg_attr(windows, path = "os_specific_windows.rs")]
+mod os_specific;
+
 use std::io::{stdout, Write};
 use std::fs;
 use std::fmt::Write as FmtWrite;
@@ -17,7 +20,7 @@ mod imtui;
 
 
 #[derive(Debug)]
-struct UriParsed {
+pub struct UriParsed {
     _original: String,
     proto: String,
     user: Option<String>,
@@ -27,7 +30,7 @@ struct UriParsed {
 }
 
 #[derive(Debug)]
-struct NetlistItem {
+pub struct NetlistItem {
     path: String,
     tags: HashSet<String>,
     name_value: HashMap<String, String>,
@@ -47,6 +50,9 @@ fn main() {
     let mut config = load_config();
     let mut layout_state = imtui::BoxLayoutState::new();
     let mut config_list = imtui::List::new();
+    let mut cmd_output = imtui::List::new();
+
+    cmd_output.add_row( vec!["bla".to_string()] );
     
     for i_cfg in &config {
         config_list.add_row( vec![
@@ -62,10 +68,16 @@ fn main() {
             let mut layout = imtui::BoxLayout::new(&mut layout_state);
 
             layout.add(&config_list, imtui::Size2D{x: 0, y: 0}); 
-            layout.add(&status_bar, imtui::Size2D{x: 0, y: 1}); 
+            layout.add(&cmd_output, imtui::Size2D{x: 0, y: 1}); 
+            layout.add(&status_bar, imtui::Size2D{x: 0, y: 2}); 
 
+            
+
+            layout.set_expand_y(0, 3);
             layout.set_expand_y(0, 1);
+
             layout.set_expand_x(0, 1);
+
 
             setup_screen();
             layout.draw();
@@ -89,7 +101,7 @@ fn main() {
             }
             Event::Key(e) if e.code == KeyCode::Enter => {
                 if let Some(selection) = config_list.selection {
-                    handle_item( &config[selection] );
+                    handle_item( &config[selection], &mut cmd_output );
                 }
             }
             _ => {
@@ -101,40 +113,14 @@ fn main() {
     }
 }
 
-fn handle_item(aItem: &NetlistItem)
+fn handle_item(aItem: &NetlistItem, aOutput: &mut imtui::List)
 {
     match &aItem.parsed.proto[..] {
         "smb" => {
-            //windows 10
-            let mut exec_path: String;
-            {
-                let mut tmpscript = tempfile::Builder::new().suffix(".ps1").tempfile().unwrap();
-                let (mut file, mut path) = tmpscript.keep().unwrap();
-                exec_path = path.to_str().unwrap().to_string();
-                let mut psdrive_additional = String::new();
-
-                write!(file, "# {} \n", aItem.parsed._original);
-
-                if let Some(user) = &aItem.parsed.user {
-                    write!(file, "$cred = Get-Credential -UserName '{user}' -Message 'Password' \n", user=user);
-                    psdrive_additional = format!("{} -Credential $cred", psdrive_additional);
-                }
-
-                write!(file, "New-PSDrive -Persist -PSProvider 'FileSystem' {} ", psdrive_additional);
-
-                if let Some(drive_letter) = aItem.name_value.get("drive") {
-                    write!(file, "-Name '{drive}' ", drive=drive_letter);
-                }
-
-                write!(file, "-Root '\\\\{host}{path}' \n",  
-                    host=aItem.parsed.host,
-                    path=aItem.parsed.path.replace("/", "\\"),);           
-            }
-
-            let result = Command::new("powershell.exe")
-                .arg("-ExecutionPolicy").arg("Bypass")
-                .arg("-File").arg(exec_path)
-            .output().unwrap();
+            os_specific::handle_smb(aItem);
+        }
+        "ssh" => {
+            os_specific::handle_ssh(aItem);
         }
         _ => {
             return;
