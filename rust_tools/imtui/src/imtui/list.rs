@@ -7,7 +7,7 @@ const LIST_SELECTION_WIDTH: usize = 1;
 
 pub struct List {
     data: Vec<Vec<String>>,
-    selection: Option<usize>
+    pub selection: Option<usize>
 }
 
 impl List {
@@ -17,9 +17,9 @@ impl List {
             selection: None,
         };
 
-        for i_test in (0..23) {
-            ret.add_row( vec![format!("{} aaa", i_test).to_string(), format!("{} bbb", i_test).to_string(), ]);
-        }
+        //for i_test in (0..23) {
+        //    ret.add_row( vec![format!("{} aaa", i_test).to_string(), format!("{} bbb", i_test).to_string(), ]);
+        //}
         
         return ret;
     }
