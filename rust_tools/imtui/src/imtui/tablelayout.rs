@@ -44,9 +44,13 @@ impl<'a> TableLayout<'a> {
         }
     }
 
+    pub fn size(&self) -> Size2D {
+        return Size2D{x: self.rows.len(), y: self.rows.get(0).map_or(0, |v| v.len())}
+    }
+
     //NOTE: cache the size in future?
     fn make_table_fit(&mut self, position: Size2D) {
-        if let Some(result) = position.x.checked_sub(self.rows.len()) {
+        if let Some(result) = (position.x+1).checked_sub(self.rows.len()) {
             for i_rows in 0..result {
                 self.rows.push( Vec::new() )
             }
@@ -54,7 +58,7 @@ impl<'a> TableLayout<'a> {
 
         let max_cols = self.max_cols_in_row();
         for i_row in &mut self.rows {
-            if let Some(result) = i_row.len().checked_sub(max_cols+1) {
+            if let Some(result) = (position.y+1).checked_sub(i_row.len()) {
                 for i_col_fill in 0..result {
                     i_row.push(None);
                 }

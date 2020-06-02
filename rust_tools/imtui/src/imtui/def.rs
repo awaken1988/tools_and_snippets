@@ -20,7 +20,7 @@ pub fn setup_screen() {
     stdout().flush();
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Size2D {
     pub x: usize,
     pub y: usize,
