@@ -35,11 +35,6 @@ impl<'a> TableLayout<'a> {
     }
 
     pub fn is_cell_free(&self, position: Size2D) -> bool {
-        for i_row in &self.rows {
-            println!("len={}", i_row.len());
-        }
-
-
         if position.y >= self.rows.len() {
             return true;
         }
@@ -94,8 +89,6 @@ impl<'a> TableLayout<'a> {
                 }
             } 
         }
-
-        println!("pos={:?}; x={}; y={}", position, self.rows.len(), self.rows[0].len() );
     }
 
     fn max_cols_in_row(&self) -> usize {
