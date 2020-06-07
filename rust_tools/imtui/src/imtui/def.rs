@@ -20,16 +20,20 @@ pub fn setup_screen() {
     stdout().flush();
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Default)]
 pub struct Size2D {
     pub x: usize,
     pub y: usize,
 }
 
+impl Size2D {
+    pub fn zero() -> Size2D {
+        return Size2D {x: 0, y: 0};
+    }
+}
+
 pub trait Widget {
     fn min_space(&self) -> Size2D;
-    fn expand(&self) -> usize;
     fn draw(&self, aLeftTop: Size2D, aDimension: Size2D);
-
     fn handle_key(&mut self, aKeyEvent: KeyEvent);
 }
