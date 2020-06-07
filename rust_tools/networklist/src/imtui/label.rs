@@ -23,10 +23,6 @@ impl Widget for Label {
             y: 1 };
     }
 
-    fn expand(&self) -> usize {
-        return 0;
-    } 
-
     fn draw(&self, aLeftTop: Size2D, aDimension: Size2D)
     {
         let mut print_copy = self.text.clone();

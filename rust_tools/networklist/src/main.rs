@@ -16,7 +16,7 @@ use std::ffi::OsStr;
 use tempfile;
 
 mod imtui;
-
+use imtui::Widget;
 
 
 #[derive(Debug)]
@@ -48,7 +48,6 @@ struct DrawState {
 
 fn main() {
     let mut config = load_config();
-    let mut layout_state = imtui::BoxLayoutState::new();
     let mut config_list = imtui::List::new();
     let mut cmd_output = imtui::List::new();
 
@@ -65,22 +64,15 @@ fn main() {
 
     loop {
         {
-            let mut layout = imtui::BoxLayout::new(&mut layout_state);
+            let term_size = terminal::size().unwrap();
+            let mut layout = imtui::TableLayout::new();
 
-            layout.add(&config_list, imtui::Size2D{x: 0, y: 0}); 
-            layout.add(&cmd_output, imtui::Size2D{x: 0, y: 1}); 
-            layout.add(&status_bar, imtui::Size2D{x: 0, y: 2}); 
-
-            
-
-            layout.set_expand_y(0, 3);
-            layout.set_expand_y(0, 1);
-
-            layout.set_expand_x(0, 1);
-
+            layout.add(&mut config_list, imtui::Size2D{x: 0, y: 0}); 
+            layout.add(&mut cmd_output, imtui::Size2D{x: 0, y: 1}); 
+            layout.add(&mut status_bar, imtui::Size2D{x: 0, y: 2}); 
 
             setup_screen();
-            layout.draw();
+            layout.draw(imtui::Size2D{x: 0, y: 0}, imtui::Size2D{x: term_size.0 as usize, y: term_size.1 as usize});
         }
         
 

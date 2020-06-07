@@ -84,10 +84,6 @@ impl Widget for List {
             y: 5 };
     }
 
-    fn expand(&self) -> usize {
-        return 0;
-    }
-
     fn draw(&self, aLeftTop: Size2D, aDimension: Size2D)
     {   
         let cols = self.column_count();
