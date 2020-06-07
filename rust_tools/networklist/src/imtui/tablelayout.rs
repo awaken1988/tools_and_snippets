@@ -58,9 +58,9 @@ impl<'a> TableLayout<'a> {
         return self;
     }
 
-    pub fn expand(&mut self, expand: Size2D) {
+    pub fn expand(&mut self, expand: &Size2D) {
         if let Some(last_added) = self.last_added {
-            self.cell_properties[last_added.y][last_added.x].expand = expand;
+            self.cell_properties[last_added.y][last_added.x].expand = expand.clone();
         }
         else {
             panic!("no item to set the expand property; do an add before")
@@ -137,8 +137,8 @@ impl<'a> TableLayout<'a> {
         let mut vertical_delta = dimension.y - table_calc.vertical_sum;
 
         //sum
-        let mut horizontal_expand: Vec<usize> = vec![0, self.max_cols_in_row()];
-        let mut vertical_expand: Vec<usize> = vec![0, self.rows.len()];
+        let mut horizontal_expand: Vec<usize> = vec![0; self.max_cols_in_row()];
+        let mut vertical_expand: Vec<usize> = vec![0; self.rows.len()];
 
         for i_row in 0..self.rows.len() {
             for i_col in 0..self.max_cols_in_row() {

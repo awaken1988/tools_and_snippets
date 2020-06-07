@@ -67,7 +67,7 @@ fn main() {
             let term_size = terminal::size().unwrap();
             let mut layout = imtui::TableLayout::new();
 
-            layout.add(&mut config_list, imtui::Size2D{x: 0, y: 0}); 
+            layout.add(&mut config_list, imtui::Size2D{x: 0, y: 0}).expand(&imtui::Size2D{x: 1, y: 1}); 
             layout.add(&mut cmd_output, imtui::Size2D{x: 0, y: 1}); 
             layout.add(&mut status_bar, imtui::Size2D{x: 0, y: 2}); 
 
