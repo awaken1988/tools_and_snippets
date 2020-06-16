@@ -26,12 +26,14 @@ struct TableLayoutCalculation {
 
 struct TableLayoutCellProperty {
     expand: Size2D,
+    border: Size2D,
 }
 
 impl TableLayoutCellProperty {
     fn new() -> TableLayoutCellProperty {
         return TableLayoutCellProperty{
             expand: Size2D::zero(),
+            border: Size2D::zero(),
         }
     }
 }
@@ -58,13 +60,26 @@ impl<'a> TableLayout<'a> {
         return self;
     }
 
-    pub fn expand(&mut self, expand: &Size2D) {
+    pub fn expand(&mut self, expand: &Size2D) -> &mut Self {
         if let Some(last_added) = self.last_added {
             self.cell_properties[last_added.y][last_added.x].expand = expand.clone();
         }
         else {
             panic!("no item to set the expand property; do an add before")
         }
+
+        return self;
+    }
+
+    pub fn border(&mut self, expand: &Size2D) -> &mut Self {
+        if let Some(last_added) = self.last_added {
+            self.cell_properties[last_added.y][last_added.x].border = expand.clone();
+        }
+        else {
+            panic!("no item to set the border property; do an add before")
+        }
+
+        return self;
     }
 
     pub fn is_cell_free(&self, position: Size2D) -> bool {
@@ -193,7 +208,7 @@ impl<'a> TableLayout<'a> {
         for i_row in 0..self.rows.len() {   
             for i_col in 0..self.rows[i_row].len() {
                 if let Some(widget) = &self.rows[i_row][i_col] {
-                    let min_space = widget.min_space();
+                    let min_space = widget.min_space() + self.cell_properties[i_row][i_col].border;
                     if horizontal_cell_width[i_col] < min_space.x {
                         horizontal_cell_width[i_col] = min_space.x;
                     }
@@ -215,6 +230,36 @@ impl<'a> TableLayout<'a> {
         };
     }
 
+    fn draw_border(&self, aTopLeft: &Size2D, aDimension: &Size2D, aBorder: &Size2D) {
+        if aBorder.x > 0 {
+            let end_y = aTopLeft.y + aDimension.y + aBorder.y;
+            let start_x = aTopLeft.x + aDimension.x ;
+            let end_x = start_x + aBorder.x;
+            
+            
+            for i_y in aTopLeft.y..end_y {
+                for i_x in start_x..end_x {
+                    stdout().queue( cursor::MoveTo( i_x as u16,  i_y as u16 ) );
+                    stdout().queue( style::Print("|".to_string()) );
+                }
+            }
+        }
+        if aBorder.y > 0 {
+            let start_y = aTopLeft.y + aDimension.y;
+            let end_y = start_y + aBorder.y;
+            let start_x = aTopLeft.x;
+            let len_x = aDimension.x;
+
+            for i_y in start_y..end_y {
+                let mut separator = String::with_capacity(len_x);
+                for i_len in 0..len_x {
+                    separator.push('-');
+                }
+                stdout().queue( cursor::MoveTo( start_x as u16,  i_y as u16 ) );
+                stdout().queue( style::Print(separator)  );
+            }
+        }
+    }
 }
 
 impl<'a> Widget for TableLayout<'a> {
@@ -232,11 +277,27 @@ impl<'a> Widget for TableLayout<'a> {
             for i_col in 0..self.rows[i_row].len() {
                 let mut horizontal_use = cell_size.horizontal_cell_width[i_col];
                 let mut vertical_use = cell_size.vertical_cell_height[i_row];
+                
+                let border_space = self.cell_properties[i_row][i_col].border; 
+
+                let pos = Size2D{
+                    x: horizontal_used, 
+                    y: vertical_used };
+
+                let dimension = Size2D{
+                    x: horizontal_use - border_space.x, 
+                    y: vertical_use - border_space.y };
+
+                
+
+                //draw widget
                 if let Some(widget) = &self.rows[i_row][i_col] {
-                    widget.draw(
-                        Size2D{x: horizontal_used, y: vertical_used},
-                        Size2D{x: horizontal_use, y: vertical_use});
+                    widget.draw(pos, dimension);
                 }
+
+                //draw border
+                self.draw_border(&pos, &dimension, &border_space);
+
                 horizontal_used += cell_size.horizontal_cell_width[i_col];
             }
             vertical_used += cell_size.vertical_cell_height[i_row];

@@ -32,6 +32,18 @@ impl Size2D {
     }
 }
 
+impl std::ops::Add for Size2D {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
+}
+
+
 pub trait Widget {
     fn min_space(&self) -> Size2D;
     fn draw(&self, aLeftTop: Size2D, aDimension: Size2D);

@@ -61,15 +61,23 @@ fn main() {
     }
 
     let mut status_bar = imtui::Label::new("...");
+    let mut help_bar = imtui::Label::new("Esc: Exit;   F5: Refresh;   Enter: Mount Item;");
+    let mut credits = imtui::Label::new("written by ...");
 
     loop {
         {
             let term_size = terminal::size().unwrap();
             let mut layout = imtui::TableLayout::new();
 
-            layout.add(&mut config_list, imtui::Size2D{x: 0, y: 0}).expand(&imtui::Size2D{x: 1, y: 1}); 
-            layout.add(&mut cmd_output, imtui::Size2D{x: 0, y: 1}); 
+            layout.add(&mut config_list, imtui::Size2D{x: 0, y: 0})
+                .expand(&imtui::Size2D{x: 1, y: 2})
+                .border(&imtui::Size2D{x: 1, y: 2});
+            layout.add(&mut cmd_output, imtui::Size2D{x: 0, y: 1})
+                .expand(&imtui::Size2D{x: 1, y: 2})
+                .border(&imtui::Size2D{x: 1, y: 1}); 
             layout.add(&mut status_bar, imtui::Size2D{x: 0, y: 2}); 
+            layout.add(&mut help_bar, imtui::Size2D{x: 0, y: 3}); 
+            layout.add(&mut credits, imtui::Size2D{x: 1, y: 3}).border(&imtui::Size2D{x: 1, y: 1}); 
 
             setup_screen();
             layout.draw(imtui::Size2D{x: 0, y: 0}, imtui::Size2D{x: term_size.0 as usize, y: term_size.1 as usize});
