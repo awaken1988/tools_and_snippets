@@ -224,7 +224,7 @@ impl<'a> Widget for TableLayout<'a> {
     
     fn draw(&self, aLeftTop: Size2D, aDimension: Size2D) {
         let mut cell_size = self.collect_min_size();
-        let mut cell_size_expanded = self.expand_cells(aDimension, &cell_size);
+        let mut cell_size = self.expand_cells(aDimension, &cell_size);
 
         let mut vertical_used = 0;
         for i_row in 0..self.rows.len() {   
