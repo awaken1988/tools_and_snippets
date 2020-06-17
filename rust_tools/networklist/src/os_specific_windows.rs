@@ -70,16 +70,23 @@
         let mut ps_script = String::new();
 
         write!(ps_script, "# {} \n", aItem.parsed._original);
-        write!(ps_script, "ssh ");
+        write!(ps_script, "# host={} \n", aItem.parsed.host);
+        if let Some(user) = &aItem.parsed.user {
+            write!(ps_script, "# host={} \n", user);
+        }
+        
+        write!(ps_script, "Start-Process -FilePath ssh -ArgumentList @(\"");
         if let Some(user) = &aItem.parsed.user {
             write!(ps_script, "{}@", user);
         }
-
         write!(ps_script, "{}", aItem.parsed.host);
+        write!(ps_script, "\"");
 
         if let Some(port) = aItem.parsed.port {
-            write!(ps_script, ":{}", port);
+            write!(ps_script, ", \"-p\", \"{}\"", port);
         }
+
+        write!(ps_script, ")");
 
         execute_script(&ps_script);
     }

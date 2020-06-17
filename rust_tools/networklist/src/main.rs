@@ -58,11 +58,14 @@ fn main() {
             format!("{}", i_cfg.parsed._original).to_string(),
             format!("{}", i_cfg.tags.iter().map(|x| &x[..]).collect::<Vec<&str>>().join(" ")  ).to_string(),
         ] );
+        println!("{:?}",i_cfg.parsed);
     }
+
+    //return;
 
     let mut status_bar = imtui::Label::new("...");
     let mut help_bar = imtui::Label::new("Esc: Exit;   F5: Refresh;   Enter: Mount Item;");
-    let mut credits = imtui::Label::new("written by ...");
+    let mut credits = imtui::Label::new("...");
 
     loop {
         {
@@ -70,8 +73,8 @@ fn main() {
             let mut layout = imtui::TableLayout::new();
 
             layout.add(&mut config_list, imtui::Size2D{x: 0, y: 0})
-                .expand(&imtui::Size2D{x: 1, y: 2})
-                .border(&imtui::Size2D{x: 1, y: 2});
+                .expand(&imtui::Size2D{x: 1, y: 3})
+                .border(&imtui::Size2D{x: 1, y: 1});
             layout.add(&mut cmd_output, imtui::Size2D{x: 0, y: 1})
                 .expand(&imtui::Size2D{x: 1, y: 2})
                 .border(&imtui::Size2D{x: 1, y: 1}); 
@@ -138,7 +141,7 @@ fn load_config() -> Vec<NetlistItem> {
     for iShare in content["netlist"].as_array().unwrap() {
         let path = iShare["path"].as_str().unwrap().to_string();
         let tags: HashSet<String> = iShare["tags"].as_str().unwrap().to_string().split(" ").map(|x| x.to_string()).collect();
-        let parsed = if let Ok(x) = UriParsed::from_str(&path) { x } else { panic!("path=\"{}\" invalid"); };
+        let parsed = UriParsed::from_str(&path).unwrap();
 
         let mut name_value = HashMap::new();
 
@@ -258,7 +261,7 @@ fn peek_next(s: &Vec<char>, peek: &str, start_pos: usize) -> bool {
 } 
 
 impl UriParsed {
-    fn from_str(s: &str) -> Result<UriParsed, &'static str> {
+    fn from_str(s: &str) -> Result<UriParsed, String> {
         let PROTO_SEP = "://";
         let USER_SEP = "@";
 
@@ -288,7 +291,8 @@ impl UriParsed {
         while iChIdx < ch.len() {
             last.push(ch[iChIdx]);
             let mut addional_idx = 0;
-            
+            let is_end = iChIdx+1 == ch.len();
+
             if ParseState::EXPECT_PROTO == state && peek_next(&ch, PROTO_SEP, iChIdx+1) {
                 ret.proto = last.clone();
                 state = ParseState::EXPECT_USER_OR_HOST;
@@ -315,6 +319,9 @@ impl UriParsed {
                 else if is_ip6_start && is_ip6_end && (is_next_dp || is_next_slash) {
                     is_ready = true;
                 }
+                else if is_end {
+                    is_ready = true;
+                }
 
                 if is_ready {
                     if is_next_dp { 
@@ -330,11 +337,11 @@ impl UriParsed {
                 }
             }
             else if ParseState::EXPECTED_PORT == state {
-                if peek_next(&ch, "/", iChIdx+1) {
+                if peek_next(&ch, "/", iChIdx+1) || is_end {
                     ret.port = if let Ok(x) = last.parse::<u16>() {
                         Some(x)
                     } else {
-                        return Err("port is not an integer")
+                        return Err(format!("port is not an integer; path={}", s));
                     };
 
                     state = ParseState::EXPECT_USER_OR_HOST;
