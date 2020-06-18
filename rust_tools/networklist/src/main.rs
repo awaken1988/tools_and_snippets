@@ -118,17 +118,32 @@ fn main() {
 
 fn handle_item(aItem: &NetlistItem, aOutput: &mut imtui::List)
 {
+    let mut is_ok = false;
+    let mut ret_num: i32 = -1;
+    let mut output = String::new();
+
     match &aItem.parsed.proto[..] {
         "smb" => {
-            os_specific::handle_smb(aItem);
+            let result = os_specific::handle_smb(aItem);
+            is_ok = result.0;
+            ret_num = result.1;
+            output = result.2;
         }
         "ssh" => {
-            os_specific::handle_ssh(aItem);
+            let result = os_specific::handle_ssh(aItem);
+            is_ok = result.0;
+            ret_num = result.1;
+            output = result.2;
         }
         _ => {
             return;
         }
     }
+
+    for i_line in output.lines() {
+        aOutput.add_row( vec![i_line.to_string(), ] );
+    }
+    aOutput.increment_selection( output.lines().count() );
 }
 
 fn load_config() -> Vec<NetlistItem> {
