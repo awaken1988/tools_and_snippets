@@ -88,6 +88,7 @@ if( "y" -eq $IS_DEVELOPER ) {
 #   mRemoteNG	mremoteng	Base        really slow
 
 #TODO: install chocolatey automatically if it is not avail
+#TODO: install rust und rust_tools
 
 Write-Host "Install: " $PKG
 

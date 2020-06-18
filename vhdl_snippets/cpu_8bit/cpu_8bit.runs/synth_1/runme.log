@@ -1,0 +1,276 @@
+
+*** Running vivado
+    with args -log sram.vds -m64 -product Vivado -mode batch -messageDb vivado.pb -notrace -source sram.tcl
+
+
+****** Vivado v2019.2 (64-bit)
+  **** SW Build 2708876 on Wed Nov  6 21:39:14 MST 2019
+  **** IP Build 2700528 on Thu Nov  7 00:09:20 MST 2019
+    ** Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
+
+source sram.tcl -notrace
+create_project: Time (s): cpu = 00:00:06 ; elapsed = 00:00:07 . Memory (MB): peak = 1517.484 ; gain = 48.016 ; free physical = 3158 ; free virtual = 7451
+Command: synth_design -top sram -part xczu3eg-sfvc784-1-i
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xczu3eg'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xczu3eg'
+INFO: Launching helper process for spawning children vivado processes
+INFO: Helper process launched with PID 24066 
+---------------------------------------------------------------------------------
+Starting Synthesize : Time (s): cpu = 00:00:10 ; elapsed = 00:00:14 . Memory (MB): peak = 1755.984 ; gain = 215.605 ; free physical = 2858 ; free virtual = 7155
+---------------------------------------------------------------------------------
+INFO: [Synth 8-638] synthesizing module 'sram' [/home/vitis/cpu_8bit/cpu_8bit.srcs/sources_1/new/sram.vhd:42]
+INFO: [Synth 8-256] done synthesizing module 'sram' (1#1) [/home/vitis/cpu_8bit/cpu_8bit.srcs/sources_1/new/sram.vhd:42]
+---------------------------------------------------------------------------------
+Finished Synthesize : Time (s): cpu = 00:00:14 ; elapsed = 00:00:19 . Memory (MB): peak = 1818.734 ; gain = 278.355 ; free physical = 2892 ; free virtual = 7192
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Constraint Validation : Time (s): cpu = 00:00:14 ; elapsed = 00:00:19 . Memory (MB): peak = 1824.672 ; gain = 284.293 ; free physical = 2889 ; free virtual = 7189
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Loading Part and Timing Information
+---------------------------------------------------------------------------------
+Loading part: xczu3eg-sfvc784-1-i
+INFO: [Synth 8-6742] Reading net delay rules and data
+INFO: [Device 21-403] Loading part xczu3eg-sfvc784-1-i
+---------------------------------------------------------------------------------
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:14 ; elapsed = 00:00:19 . Memory (MB): peak = 1838.613 ; gain = 298.234 ; free physical = 2887 ; free virtual = 7187
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6904] The RAM "sram/content_reg" of size (depth=256 x width=8) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:15 ; elapsed = 00:00:20 . Memory (MB): peak = 1838.613 ; gain = 298.234 ; free physical = 2879 ; free virtual = 7180
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+No constraint files found.
+---------------------------------------------------------------------------------
+Start RTL Component Statistics 
+---------------------------------------------------------------------------------
+Detailed RTL Component Info : 
++---Registers : 
+	                8 Bit    Registers := 1     
++---RAMs : 
+	               2K Bit         RAMs := 1     
+---------------------------------------------------------------------------------
+Finished RTL Component Statistics 
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start RTL Hierarchical Component Statistics 
+---------------------------------------------------------------------------------
+Hierarchical RTL Component report 
+Module sram 
+Detailed RTL Component Info : 
++---Registers : 
+	                8 Bit    Registers := 1     
++---RAMs : 
+	               2K Bit         RAMs := 1     
+---------------------------------------------------------------------------------
+Finished RTL Hierarchical Component Statistics
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Part Resource Summary
+---------------------------------------------------------------------------------
+Part Resources:
+DSPs: 360 (col length:72)
+BRAMs: 432 (col length: RAMB18 72 RAMB36 36)
+---------------------------------------------------------------------------------
+Finished Part Resource Summary
+---------------------------------------------------------------------------------
+No constraint files found.
+---------------------------------------------------------------------------------
+Start Cross Boundary and Area Optimization
+---------------------------------------------------------------------------------
+Warning: Parallel synthesis criteria is not met 
+INFO: [Synth 8-6904] The RAM "sram/content_reg" of size (depth=256 x width=8) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
+RAM Pipeline Warning: Read Address Register Found For RAM content_reg. We will not be able to pipeline it. This may degrade performance. 
+RAM Pipeline Warning: Read Address Register Found For RAM content_reg. We will not be able to pipeline it. This may degrade performance. 
+INFO: [Synth 8-6904] The RAM "sram/content_reg" of size (depth=256 x width=8) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
+RAM Pipeline Warning: Read Address Register Found For RAM content_reg. We will not be able to pipeline it. This may degrade performance. 
+---------------------------------------------------------------------------------
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:36 ; elapsed = 00:00:56 . Memory (MB): peak = 2551.121 ; gain = 1010.742 ; free physical = 2155 ; free virtual = 6583
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start ROM, RAM, DSP and Shift Register Reporting
+---------------------------------------------------------------------------------
+
+Distributed RAM: Preliminary Mapping	Report (see note below)
++------------+-------------+-----------+----------------------+---------------------------+
+|Module Name | RTL Object  | Inference | Size (Depth x Width) | Primitives                | 
++------------+-------------+-----------+----------------------+---------------------------+
+|sram        | content_reg | Implied   | 256 x 8              | RAM64X1D x 4	RAM64M8 x 4	 | 
++------------+-------------+-----------+----------------------+---------------------------+
+
+Note: The table above is a preliminary report that shows the Distributed RAMs at the current stage of the synthesis flow. Some Distributed RAMs may be reimplemented as non Distributed RAM primitives later in the synthesis flow. Multiple instantiated RAMs are reported only once.
+---------------------------------------------------------------------------------
+Finished ROM, RAM, DSP and Shift Register Reporting
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+No constraint files found.
+---------------------------------------------------------------------------------
+Start Timing Optimization
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Timing Optimization : Time (s): cpu = 00:00:36 ; elapsed = 00:00:57 . Memory (MB): peak = 2551.121 ; gain = 1010.742 ; free physical = 2154 ; free virtual = 6582
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start ROM, RAM, DSP and Shift Register Reporting
+---------------------------------------------------------------------------------
+
+Distributed RAM: Final Mapping	Report
++------------+-------------+-----------+----------------------+---------------------------+
+|Module Name | RTL Object  | Inference | Size (Depth x Width) | Primitives                | 
++------------+-------------+-----------+----------------------+---------------------------+
+|sram        | content_reg | Implied   | 256 x 8              | RAM64X1D x 4	RAM64M8 x 4	 | 
++------------+-------------+-----------+----------------------+---------------------------+
+
+---------------------------------------------------------------------------------
+Finished ROM, RAM, DSP and Shift Register Reporting
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Technology Mapping
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Technology Mapping : Time (s): cpu = 00:00:36 ; elapsed = 00:00:57 . Memory (MB): peak = 2551.121 ; gain = 1010.742 ; free physical = 2154 ; free virtual = 6582
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished IO Insertion : Time (s): cpu = 00:00:49 ; elapsed = 00:01:10 . Memory (MB): peak = 2551.121 ; gain = 1010.742 ; free physical = 2154 ; free virtual = 6582
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Instances
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Instances : Time (s): cpu = 00:00:49 ; elapsed = 00:01:10 . Memory (MB): peak = 2551.121 ; gain = 1010.742 ; free physical = 2154 ; free virtual = 6582
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+
+Report Check Netlist: 
++------+------------------+-------+---------+-------+------------------+
+|      |Item              |Errors |Warnings |Status |Description       |
++------+------------------+-------+---------+-------+------------------+
+|1     |multi_driven_nets |      0|        0|Passed |Multi driven nets |
++------+------------------+-------+---------+-------+------------------+
+---------------------------------------------------------------------------------
+Start Rebuilding User Hierarchy
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:49 ; elapsed = 00:01:10 . Memory (MB): peak = 2551.121 ; gain = 1010.742 ; free physical = 2154 ; free virtual = 6582
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Ports
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Ports : Time (s): cpu = 00:00:49 ; elapsed = 00:01:10 . Memory (MB): peak = 2551.121 ; gain = 1010.742 ; free physical = 2154 ; free virtual = 6582
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:49 ; elapsed = 00:01:10 . Memory (MB): peak = 2551.121 ; gain = 1010.742 ; free physical = 2154 ; free virtual = 6582
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Nets
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Nets : Time (s): cpu = 00:00:49 ; elapsed = 00:01:10 . Memory (MB): peak = 2551.121 ; gain = 1010.742 ; free physical = 2154 ; free virtual = 6582
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Writing Synthesis Report
+---------------------------------------------------------------------------------
+
+Report BlackBoxes: 
++-+--------------+----------+
+| |BlackBox name |Instances |
++-+--------------+----------+
++-+--------------+----------+
+
+Report Cell Usage: 
++------+---------+------+
+|      |Cell     |Count |
++------+---------+------+
+|1     |BUFG     |     1|
+|2     |LUT3     |     4|
+|3     |LUT6     |     8|
+|4     |RAM64M8  |     4|
+|5     |RAM64X1D |     4|
+|6     |FDRE     |     8|
+|7     |IBUF     |    10|
+|8     |OBUF     |     8|
++------+---------+------+
+
+Report Instance Areas: 
++------+---------+-------+------+
+|      |Instance |Module |Cells |
++------+---------+-------+------+
+|1     |top      |       |    47|
++------+---------+-------+------+
+---------------------------------------------------------------------------------
+Finished Writing Synthesis Report : Time (s): cpu = 00:00:49 ; elapsed = 00:01:10 . Memory (MB): peak = 2551.121 ; gain = 1010.742 ; free physical = 2154 ; free virtual = 6582
+---------------------------------------------------------------------------------
+Synthesis finished with 0 errors, 0 critical warnings and 0 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:49 ; elapsed = 00:01:10 . Memory (MB): peak = 2551.121 ; gain = 1010.742 ; free physical = 2155 ; free virtual = 6583
+Synthesis Optimization Complete : Time (s): cpu = 00:00:49 ; elapsed = 00:01:10 . Memory (MB): peak = 2551.129 ; gain = 1010.742 ; free physical = 2155 ; free virtual = 6583
+INFO: [Project 1-571] Translating synthesized netlist
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2551.129 ; gain = 0.000 ; free physical = 2224 ; free virtual = 6652
+INFO: [Netlist 29-17] Analyzing 19 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Project 1-570] Preparing netlist for logic optimization
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2551.129 ; gain = 0.000 ; free physical = 2143 ; free virtual = 6580
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 19 instances were transformed.
+  BUFG => BUFGCE: 1 instance 
+  IBUF => IBUF (IBUFCTRL, INBUF): 10 instances
+  RAM64M8 => RAM64M8 (RAMD64E(x8)): 4 instances
+  RAM64X1D => RAM64X1D (RAMD64E(x2)): 4 instances
+
+INFO: [Common 17-83] Releasing license: Synthesis
+15 Infos, 0 Warnings, 0 Critical Warnings and 0 Errors encountered.
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:01:01 ; elapsed = 00:01:26 . Memory (MB): peak = 2551.129 ; gain = 1033.645 ; free physical = 2279 ; free virtual = 6715
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2551.129 ; gain = 0.000 ; free physical = 2279 ; free virtual = 6715
+WARNING: [Constraints 18-5210] No constraints selected for write.
+Resolution: This message can indicate that there are no constraints for the design, or it can indicate that the used_in flags are set such that the constraints are ignored. This later case is used when running synth_design to not write synthesis constraints to the resulting checkpoint. Instead, project constraints are read when the synthesized design is opened.
+INFO: [Common 17-1381] The checkpoint '/home/vitis/cpu_8bit/cpu_8bit.runs/synth_1/sram.dcp' has been generated.
+INFO: [runtcl-4] Executing : report_utilization -file sram_utilization_synth.rpt -pb sram_utilization_synth.pb
+INFO: [Common 17-206] Exiting Vivado at Mon Apr 13 17:16:12 2020...
