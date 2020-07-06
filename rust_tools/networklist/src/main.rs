@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::process::Command;
 use std::ffi::OsString;
 use std::ffi::OsStr;
+use std::env;
 use tempfile;
 
 mod imtui;
@@ -147,8 +148,9 @@ fn handle_item(aItem: &NetlistItem, aOutput: &mut imtui::List)
 }
 
 fn load_config() -> Vec<NetlistItem> {
-
-    let mut content = fs::read_to_string("../../../../netlist.json").unwrap();
+    let args: Vec<String> = env::args().collect();
+    let filename = &args[1];
+    let mut content = fs::read_to_string(filename).unwrap();
     let content: serde_json::Value = serde_json::from_str(&content).unwrap();
 
     let mut ret: Vec<NetlistItem> = vec![];
