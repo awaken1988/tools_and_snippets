@@ -1,6 +1,11 @@
 from os import system
+from sys import platform
+from urllib.request import urlretrieve
+import tempfile
 
-# *** vscode ***
+#-------------------------------
+# vscode extensions
+#-------------------------------
 VSCODE_EXTENSIONS = (
     "donjayamanne.githistory",
     "ms-vscode.cpptools",
@@ -8,6 +13,7 @@ VSCODE_EXTENSIONS = (
     "win: ms-vscode.powershell",
     "rust-lang.rust",
     "fabiospampinato.vscode-diff",
+    "jinsihou.diff-tool",
     "ryu1kn.partial-diff",
     "slevesque.vscode-hexdump",
     "ms-vscode-remote.remote-ssh",
@@ -15,7 +21,9 @@ VSCODE_EXTENSIONS = (
 
 for iVsCodeExt in VSCODE_EXTENSIONS:
     system("code --install-extension " + iVsCodeExt)
-
-# *** git ***
+    
+#-------------------------------
+# git
+#-------------------------------
 system("git config --global core.filemode false")
 system("git config --global core.autocrlf false")
