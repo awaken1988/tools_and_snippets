@@ -47,12 +47,14 @@ virtualbox
 "@
 
 $PKG_GAMING=@"
+steam
+origin
+battle.net
 dolphin
 teamspeak
 discord
 visualboyadvance
 snes9x
-blubbb
 "@
 
 $PKG_ALL=@{
