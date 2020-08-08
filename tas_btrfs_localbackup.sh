@@ -45,7 +45,7 @@ for iSnap in ${SNAPS[@]}; do
     echo "[INFO]    left_src  = $PREV_SNAP"
     echo "[INFO]    right_src = $iSnap"
 
-    btrfs send -qp $PREV_SNAP $iSnap | btrfs receive $DEST_BASE 1>/dev/null   
+    btrfs send -p $PREV_SNAP $iSnap | btrfs receive $DEST_BASE 1>/dev/null   
 
     if [ $? -ne 0 ]; then exit 1; fi;
     PREV_SNAP=$iSnap
