@@ -10,7 +10,7 @@ Set-ItemProperty -Path $explorer_key -Name HideFileExt  -Value 0
 #############################################
 $rust_installer = ($env:TEMP+"\rustup-init.exe")
 Invoke-WebRequest -Uri https://win.rustup.rs/x86_64 -OutFile $rust_installer
-start-process -Wait -NoNewWindow -FilePath $rust_installer -ArgumentList "-y" 
+start-process -Wait -NoNewWindow -FilePath $rust_installer -ArgumentList "--default-host", "x86_64-pc-windows-gnu","-y" 
 #if we have more rustup commands: RefreshEnv
 
 

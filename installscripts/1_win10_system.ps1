@@ -14,7 +14,6 @@ gimp
 inkscape
 skype
 teamviewer
-s
 putty
 aimp
 sysinternals
@@ -23,6 +22,8 @@ tightvnc
 sandboxie
 vscode
 syspin
+git
+totalcommander
 "@
 
 $PKG_TOOLS=@"
