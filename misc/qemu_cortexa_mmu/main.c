@@ -6,17 +6,18 @@ typedef unsigned int uint32_t;
 
 #define MMU_TABLE_LVL1_ENTRIES 4096
 
-uint32_t mmu_lvl1[MMU_TABLE_LVL1_ENTRIES];
+uint32_t mmu_lvl1[MMU_TABLE_LVL1_ENTRIES] __attribute__((aligned(16*1024))) ;
 
 void mmu_init()
 {
-    for(uint32_t i_sec=0; i_sec<3; i_sec++) {
+    for(uint32_t i_sec=0; i_sec<MMU_TABLE_LVL1_ENTRIES; i_sec++) {
         uint32_t section = 0;
         section |= 0x2;
         section |= i_sec << 20; //Section base address
-        section |= 0x1 << 3;    //C
-        section |= 0x1 << 2;    //B
+        section |= 0x0 << 3;    //C
+        section |= 0x0 << 2;    //B
         section |= 0xf<<5;      //domain
+        section |= 0x3<<10;     //AP[0:1]
 
         mmu_lvl1[i_sec] = section;
     }
@@ -55,7 +56,6 @@ void mmu_init()
     }
 
 
-    enable_mmu:
     //enable MMU
     __asm__ volatile("push {r0,r1}");
     __asm__ volatile("MRC p15, 0, R1, c1, C0, 0"); // ;Read control register
