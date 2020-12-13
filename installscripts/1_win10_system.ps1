@@ -24,6 +24,7 @@ vscode
 syspin
 git
 totalcommander
+avastfreeantivirus
 "@
 
 $PKG_TOOLS=@"
