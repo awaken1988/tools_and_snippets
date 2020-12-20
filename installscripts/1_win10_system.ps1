@@ -54,7 +54,6 @@ origin
 battle.net
 dolphin
 teamspeak
-discord
 visualboyadvance
 snes9x
 "@
