@@ -1,3 +1,8 @@
+Param (
+    [string]$router  = "192.168.0.1",     
+    [string]$lanhost = "192.168.0.100"                
+)
+
 $ping_hosts = @(
     @{
             name = "wan";
@@ -6,17 +11,12 @@ $ping_hosts = @(
     };
     @{
             name  = "router"
-            hosts = @("192.168.0.1");
+            hosts = @($router);
             idx   = 0
     }
     @{
-            name  = "lan"
-            hosts = @("192.168.0.100");
-            idx   = 0
-    }
-    @{
-            name  = "fail"
-            hosts = @("192.168.123.234");
+            name  = "lanhost"
+            hosts = @($lanhost);
             idx   = 0
     }
 );
