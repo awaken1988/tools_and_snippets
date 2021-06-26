@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
-mod defs;
+pub mod defs;
 mod xorshift64;
+
+
 
 //TODO: try tempalte variant
 fn append_gener(x: & mut HashMap<String,defs::GeneratorBuilder>, y: defs::GeneratorBuilder) {

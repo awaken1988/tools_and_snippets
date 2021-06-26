@@ -1,7 +1,9 @@
 use std::io::Read;
 use std::collections::VecDeque;
+use std::collections::HashMap;
 
 use crate::generator::defs::GeneratorBuilder;
+use crate::generator::defs::GeneratorArgument;
 
 struct Xorshift64
 {
@@ -10,9 +12,15 @@ struct Xorshift64
 }
 
 impl Xorshift64 {
-    fn new() -> Xorshift64 {
+    fn new(arg: &HashMap<String,String>) -> Xorshift64 {
+        let mut seed: u64 = 88172645463325252;
+
+        if let Some(arg_seed) = arg.get("seed") {
+            seed = arg_seed.parse::<u64>().expect("Xorshift64: seed must be a value");
+        }
+
         return Xorshift64 {
-            state: 88172645463325252,
+            state: seed,
             buff:  VecDeque::<u8>::new(),
         }
     }
@@ -45,10 +53,17 @@ impl std::io::Read for Xorshift64
 }
 
 pub fn get() -> GeneratorBuilder {
+    let mut args = HashMap::new();
+
+    let  arg_seed = GeneratorArgument::new("seed");
+
+    args.insert(arg_seed.name, arg_seed);
+
     return GeneratorBuilder {
         name: String::from("xorshift64"),
-        generator: || {
-            return Box::new( Xorshift64::new() )
+        generator: |arg| {
+            return Box::new( Xorshift64::new(arg) );
         },
+        arguments: args,
     }
 }
