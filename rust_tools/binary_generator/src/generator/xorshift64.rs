@@ -36,7 +36,7 @@ impl Xorshift64 {
             }
         }
 
-        self.buff.pop_back().unwrap()
+        self.buff.pop_front().unwrap()
     }
 }
 

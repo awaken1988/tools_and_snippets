@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 pub mod defs;
 mod xorshift64;
+mod counter;
 
 
 
@@ -16,6 +17,7 @@ pub fn get_all() -> HashMap<String,defs::GeneratorBuilder> {
     let mut geners: HashMap<String,defs::GeneratorBuilder> = HashMap::<>::new();
 
     append_gener(&mut geners, xorshift64::get());
+    append_gener(&mut geners, counter::get());
 
     return geners;
 }

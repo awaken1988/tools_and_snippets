@@ -23,14 +23,7 @@ fn main() -> std::io::Result<()> {
             .long("out")
             .about("generated output file")
             .takes_value(true)
-            .required(true))
-        .arg(clap::Arg::new("generator") 
-            .long("generator")
-            .about("name of the generator")
-            .takes_value(true)
-            .required(true)
-            .possible_values(&["xorshift64"])
-        );
+            .required(true));
 
     for (iGenName, iGen) in generators.iter() {
         let mut sub = App::new(iGenName);
@@ -50,45 +43,44 @@ fn main() -> std::io::Result<()> {
     
     let args = arg_checker.get_matches();
     
-    if let Some(generator_builder) = generators.get( args.value_of("generator").unwrap() ) {
-        let mut generator_arg: HashMap<String,String> = HashMap::new();
-
-        if let Some(sub_args) = args.subcommand_matches(&generator_builder.name) {
-            for (iArgName, iArg) in &generator_builder.arguments {
-
-                if let Some(arg) = sub_args.value_of(iArgName) {
-                    println!("arg added {}", iArgName);
-                    generator_arg.insert(iArgName.to_string(), arg.to_string());
+    //get the generator
+    let mut generator = {
+        if let Some(subcmd_name) = args.subcommand_name() {
+            let mut generator_builder = generators.get(subcmd_name).unwrap();
+            let mut generator_arg: HashMap<String,String> = HashMap::new();
+    
+    
+            if let Some(sub_args) = args.subcommand_matches(&generator_builder.name) {
+                for (iArgName, iArg) in &generator_builder.arguments {
+    
+                    if let Some(arg) = sub_args.value_of(iArgName) {
+                        println!("arg added {}", iArgName);
+                        generator_arg.insert(iArgName.to_string(), arg.to_string());
+                    }
                 }
             }
+
+            (generator_builder.generator)(&generator_arg)
         }
- 
-        let mut generator = (generator_builder.generator)(&generator_arg);
-        
-
-
-        let file = File::create(args.value_of("out").unwrap())?;
-        let mut  buffered_file = BufWriter::new(file);
-        
-        let stopwatch = Instant::now();
-        for i in 0..(1*1024*1024) {
-            let mut out = [0;1];
-            generator.read(&mut out);
-        
-            buffered_file.write(&out).unwrap();
-        
-            //println!("0x{:x}", out[0] )
+        else {
+            panic!("no subcommand choosen");
         }
-        println!("File Generated in {} milliseconds", stopwatch.elapsed().as_millis());
-    }
-    else {
-        println!("Unknown Generator \"{}\"", args.value_of("generator").unwrap());
-    }
-
-   
- 
-
+    };
     
+    //write to file
+    let file = File::create(args.value_of("out").unwrap())?;
+    let mut  buffered_file = BufWriter::new(file);
+    
+    let stopwatch = Instant::now();
+    for i in 0..(1*1024*1024) {
+        let mut out = [0;1];
+        generator.read(&mut out);
+    
+        buffered_file.write(&out).unwrap();
+    
+        //println!("0x{:x}", out[0] )
+    }
+    println!("File Generated in {} milliseconds", stopwatch.elapsed().as_millis());
 
     return Ok(());
 }
