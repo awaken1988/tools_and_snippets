@@ -10,13 +10,31 @@
 
     
     <div id="excercise-div">
+      <form id="excercise-form">
+        <select id="excercise-select">
 
+        </select>
+      </form>
+      Das ist der ursprünglich text
     </div>
 
     <script>
-      $.getJSON("/api/excercise_list", function(data) {
-        console.log(data)
-      })
+      function load_excercise_list() {
+        $.getJSON("/api/excercise_list", function(data) {
+          console.log(data);
+
+          $.each(data, function(key, val) {
+            console.log(key+' '+val);
+            $('<option value="'+key+'"/>'+key+'</option>').appendTo('#excercise-select')
+          })
+
+        })
+      };
+
+
+      $(document).ready( function() {
+        load_excercise_list();        
+      });
 
     </script>
 

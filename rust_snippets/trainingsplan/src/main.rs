@@ -12,7 +12,7 @@ async fn excercise_list() -> impl Responder {
    //    Excercise{name: "Balance Kniebeuge", value_type: ExcerciseValueType::Time},
    //];
 
-   let des = get_exercices();
+   let des = get_excercices();
 
    serde_json::to_string(&des)
 }
