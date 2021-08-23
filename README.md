@@ -45,7 +45,7 @@ This script can be used for WINDOWS & LINUX
 Todo: Linux not tested
 
 ## tas_wireguard_gen.py
-create a wireguard configuration with start topology
+create a wireguard configuration with star topology
 ```
 tas_wireguard_gen.py hosts.txt
 ```
