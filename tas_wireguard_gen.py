@@ -97,14 +97,14 @@ def write_networkd_conf(settings):
             if 0 == i:
                 continue
 
-            ip4=settings["ip4"] + iHost["ip4"]
-            ip6=settings["ip6"] + iHost["ip6"]
+            allow_ip4=settings["ip4"] + iHost["ip4"]
+            allow_ip6=settings["ip6"] + iHost["ip6"]
 
             f.write("\n[WireGuardPeer]\n")
             f.write("PublicKey={}\n".format( iHost["pub"] ))
             f.write("PresharedKey={}\n".format( settings["psk"]))
-            f.write("AllowedIPs={}\n".format(ip4) )
-            f.write("AllowedIPs={}\n".format(ip6) )
+            f.write("AllowedIPs={}\n".format(allow_ip4) )
+            f.write("AllowedIPs={}\n".format(allow_ip6) )
            
     with open(fliename_network,"w") as f:
         f.write("[Match]\n")
@@ -123,9 +123,9 @@ def write_networkd_conf(settings):
         f.write("\n[Network]\n")
         f.write("Address={}\n".format( ip6+"/64" ))
         
-        f.write("\n[Route]\n")
-        f.write("Gateway={}\n".format( ip6 ))
-        f.write("Destination={}\n".format( settings["ip6"]+"0/64" ))
+        #f.write("\n[Route]\n")
+        #f.write("Gateway={}\n".format( ip6 ))
+        #f.write("Destination={}\n".format( settings["ip6"]+"0/64" ))
 
 #TODO: merge this with write_networkd_conf
 def write_server_conf(settings):
@@ -138,7 +138,7 @@ def write_server_conf(settings):
         f.write("[Interface]\n")
         f.write("PrivateKey={}\n".format(  settings["hosts"][0]["priv"] ))
         f.write("ListenPort=51820\n" )
-        f.write("Address={},{}\n".format( ip4+"/24", ip6+"64" ))
+        f.write("Address={},{}\n".format( ip4+"/24", ip6+"/64" ))
     
         for i, iHost in enumerate(settings["hosts"]):
             if 0 == i:
@@ -156,8 +156,13 @@ def write_server_conf(settings):
 
 settings=load_file()
 generate_load(settings)
-print(settings)
+#print(settings)
 
 write_client_conf(settings)
 write_networkd_conf(settings)
 write_server_conf(settings)
+
+print("")
+print("For client-to-client connection do:")
+print("    net.ipv6.conf.all.forwarding = 1")
+print("Note: enable only the specific interface does not work for ipv6???")
