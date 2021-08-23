@@ -44,6 +44,37 @@ This script can be used for WINDOWS & LINUX
 
 Todo: Linux not tested
 
+## tas_wireguard_gen.py
+create a wireguard configuration with start topology
+```
+tas_wireguard_gen.py hosts.txt
+```
+
+Example of hosts.txt
+```
+_ifname=private
+_server_endpoint=your.server:51820
+_ip4=10.222.208.
+_ip6=fd00:cafe:0:8::
+
+server      1      1
+client0     10     a
+client1     20     14
+client2     21     15
+```
+The lines start with _ are global configurations.
+* _ifname: Interface name of your tunnel
+* _server_endpoint: where your wg server is running
+* _ip4: the address without the last part
+* _ip6: the address without the last part
+
+For the first entry (here server) a server cfg is configured.
+For the following entries client configs are generated.
+This script do not generate new keys for clients already created.
+So adding clients and rerun the script is possible
+
+Note: ipv6 client to client not yet work with this config
+
 ## tas_easyrsa.py
 Generates a OpenVPN configuration. (server and clients)
 
