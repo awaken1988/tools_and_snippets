@@ -120,7 +120,7 @@ cfg = read_cfg(os.path.basename(sys.argv[1]))
 if ("clean" in cfg) and cfg["clean"]:
     print("CLEAN: all permission to root")
     executeCmd("setfacl -b -R -P ./*")
-    executeCmd("chmod 750 -R ./*")
+    executeCmd("chmod 770 -R ./*")
     executeCmd("chown root:root -R ./*")
 if "setacl" in cfg:
     executeJson(cfg["setacl"])
