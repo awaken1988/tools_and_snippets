@@ -27,12 +27,6 @@ VSCODE_EXTENSIONS = (
 
 for iVsCodeExt in VSCODE_EXTENSIONS:
     system("code --install-extension " + iVsCodeExt)
-    
-#-------------------------------
-# git
-#-------------------------------
-system("git config --global core.filemode false")
-system("git config --global core.autocrlf false")
 
 #-------------------------------
 # build rust stuff
