@@ -1,6 +1,11 @@
 // https://users.rust-lang.org/t/running-powershell-cmdlets-and-functions/200/6
 
-#[cfg_attr(windows, path = "os_specific_windows.rs")]
+//#[cfg_attr(windows, path = "os_specific_windows.rs")]
+//mod os_specific;
+
+#![allow(warnings)]
+
+#[cfg_attr(target_os = "linux", path = "os_specific_linux.rs")]
 mod os_specific;
 
 use std::io::{stdout, Write};
@@ -62,7 +67,9 @@ fn main() {
         println!("{:?}",i_cfg.parsed);
     }
 
-    //return;
+    os_specific::prepare();
+
+    return;
 
     let mut status_bar = imtui::Label::new("...");
     let mut help_bar = imtui::Label::new("Esc: Exit;   F5: Refresh;   Enter: Mount Item;");
