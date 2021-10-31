@@ -15,6 +15,7 @@ mod generator;
 fn main() -> std::io::Result<()> {
     let generators = generator::get_all();
 
+    //create args for each generator
     let mut arg_checker = clap::App::new("binary_generator")
         .version("0.1")
         .author("Martin K.")
@@ -23,7 +24,13 @@ fn main() -> std::io::Result<()> {
             .long("out")
             .about("generated output file")
             .takes_value(true)
-            .required(true));
+            .required(true))
+        .arg(clap::Arg::new("size")
+            .long("size")
+            .about("size of the generated output")
+            .takes_value(true)
+            .required(true)
+        );
 
     for (iGenName, iGen) in generators.iter() {
         let mut sub = App::new(iGenName);
@@ -67,12 +74,15 @@ fn main() -> std::io::Result<()> {
         }
     };
     
+    //out size
+    let out_size = (args.value_of("size").unwrap()).parse::<usize>().unwrap();
+
     //write to file
     let file = File::create(args.value_of("out").unwrap())?;
     let mut  buffered_file = BufWriter::new(file);
     
     let stopwatch = Instant::now();
-    for i in 0..(1*1024*1024) {
+    for i in 0..out_size {
         let mut out = [0;1];
         generator.read(&mut out);
     
