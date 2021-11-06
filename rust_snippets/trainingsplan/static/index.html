@@ -15,21 +15,47 @@
 
         </select>
       </form>
-      Das ist der ursprünglich text
+    </div>
+
+    <div id="input-div">
+      <div id="input-Duration-div" hidden>
+        Duration: <input type="number" value="0"/> minutes
+      </div>
     </div>
 
     <script>
+      var excercise_map = new Map();
+
+      //load excercises
       function load_excercise_list() {
         $.getJSON("/api/excercise_list", function(data) {
           console.log(data);
+          
+          excercise_map.clear();
 
           $.each(data, function(key, val) {
             console.log(key+' '+val);
+            excercise_map.set(key, val)
             $('<option value="'+key+'"/>'+key+'</option>').appendTo('#excercise-select')
           })
 
         })
       };
+
+      //show menu
+      $('#excercise-select').change(function() {
+        var name = $('#excercise-select option:selected').text();
+        var data = excercise_map.get(name);
+
+        console.log('select changed ' + name);
+
+        data.value_type.forEach(type_name => {
+          $('#input-'+type_name+'-div').show('slow','linear');
+        });
+
+
+        console.log();
+      });
 
 
       $(document).ready( function() {
