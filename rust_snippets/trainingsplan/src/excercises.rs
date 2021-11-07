@@ -3,24 +3,31 @@ use serde_json::Result;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-#[derive(PartialEq, Eq, Hash, Clone, Serialize)]
+#[derive(PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub enum ExcerciseValueType {
     Duration=0, 
     Weigth=1,
     Repetition=2,
 }
 
-#[derive(Serialize)]
-pub struct Excercise {
+#[derive(Serialize,Deserialize)]
+pub struct ExcerciseTemplate {
     pub value_type: HashSet<ExcerciseValueType>,
-    pub name: &'static str,
-
+    pub name: String,
 }
 
-impl Excercise {
-    pub fn new(name: &'static str, value_type: &HashSet<ExcerciseValueType>) -> Excercise {
-        Excercise{name: name, value_type: value_type.clone()}
+impl ExcerciseTemplate {
+    pub fn new(name: &String, value_type: &HashSet<ExcerciseValueType>) -> ExcerciseTemplate {
+        ExcerciseTemplate{name: name.clone(), value_type: value_type.clone()}
     }
+}
+
+#[derive(Serialize,Deserialize)]
+pub struct Excercise {
+    pub excercise_template: ExcerciseTemplate,
+    pub duration:   Option<u32>,
+    pub weigth:     Option<u32>,
+    pub repetition: Option<u32>,
 }
 
 macro_rules! insert_excercise_type {
@@ -43,11 +50,11 @@ macro_rules! insert_excercise {
 
         insert_excercise_type!(typeset, $($types),+);
 
-        $m.insert($name, Excercise::new($name, &typeset));
+        $m.insert($name, ExcerciseTemplate::new(&String::from($name), &typeset));
     };
 }
 
-pub fn get_excercices() -> HashMap<&'static str, Excercise> {
+pub fn get_excercices() -> HashMap<&'static str, ExcerciseTemplate> {
     let mut ret = HashMap::new();
 
     insert_excercise!(ret, "Einbeinstand",             ExcerciseValueType::Duration);          

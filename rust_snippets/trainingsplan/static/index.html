@@ -23,12 +23,21 @@
       </div>
     </div>
 
+    <button id="exercise_add" type="button">Click Me!</button> 
+
     <script>
       var excercise_map = new Map();
 
+      function selected_excersize_template() {
+        var name = $('#excercise-select option:selected').text();
+        var data = excercise_map.get(name);
+
+        return {'name': name, 'data': data};
+      }
+
       //load excercises
       function load_excercise_list() {
-        $.getJSON("/api/excercise_list", function(data) {
+        $.getJSON("/api/excercise_template_list", function(data) {
           console.log(data);
           
           excercise_map.clear();
@@ -52,9 +61,27 @@
         data.value_type.forEach(type_name => {
           $('#input-'+type_name+'-div').show('slow','linear');
         });
+      });
 
+      //exercise_add
+      $('#exercise_add').click(function() {
+        var excercise_tmpl =  selected_excersize_template()
+        console.log(excercise_tmpl);
+      
+        const post_data = {
+          'excercise_template': excercise_tmpl.data,
+          'duration': 0,
+          'weigth': 0,
+          'repetition': 0,
+        };
 
-        console.log();
+        $.ajax({
+          type: "POST",
+          url: "/api/excersice_add",
+          data: JSON.stringify(post_data),
+          contentType : 'application/json',
+        });
+
       });
 
 
