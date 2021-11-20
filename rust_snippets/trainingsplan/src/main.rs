@@ -12,6 +12,8 @@ use std::io::prelude::*;
 mod excercises;
 use excercises::{*};
 
+mod sqldb;
+
 #[derive(Deserialize)]
 struct ExcerciseAdd {
     name: String,
@@ -38,43 +40,26 @@ async fn excercise_add(info: web::Json<Excercise>) -> Result<String> {
     Ok(format!("Welcome {}!", info.excercise_template.name))
 }
 
-//#[actix_web::main]
-//async fn main() -> std::io::Result<()> {
-//    //std::env::set_var("RUST_LOG", "info,actix_web=error");
-//    env_logger::from_env(Env::default().default_filter_or("info")).init();
-//
-//
-//    HttpServer::new(|| {
-//        App::new()
-//            .wrap(Logger::default())
-//            .wrap(Logger::new("%a %{User-Agent}i"))
-//            .service(fs::Files::new("/static", "./static/").show_files_listing())
-//            .route("/api/excercise_template_list", actix_web::web::get().to(excercise_list)) //TODO: rename to template_list
-//            .route("/api/excersice_add", actix_web::web::post().to(excercise_add))
-//    })
-//    .bind("127.0.0.1:8080")?
-//    .run()
-//    .await
-//}
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
 
-//sqlite test
-fn main() -> Result<()> {
+    //prepare db
+    sqldb::create_db();
 
-    let basedir = std::fs::canonicalize("./runtime").unwrap();
-    let dbfile  = basedir.as_path().join("main.sqlite3");
 
-    std::fs::create_dir_all(basedir).unwrap();
+    //std::env::set_var("RUST_LOG", "info,actix_web=error");
+    env_logger::from_env(Env::default().default_filter_or("info")).init();
 
-    let is_created      = dbfile.is_file();
 
-    let  dbcon = rusqlite::Connection::open_with_flags(
-        dbfile, 
-        rusqlite::OpenFlags::SQLITE_OPEN_CREATE | rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE)
-        .unwrap();
-
-    if !is_created {
-        dbcon.execute("CREATE TABLE excercise_template(id INTEGER, name TEXT NOT NULL)", []).unwrap();
-    }
-    
-    Ok(())
+    HttpServer::new(|| {
+        App::new()
+            .wrap(Logger::default())
+            .wrap(Logger::new("%a %{User-Agent}i"))
+            .service(fs::Files::new("/static", "./static/").show_files_listing())
+            .route("/api/excercise_template_list", actix_web::web::get().to(excercise_list)) //TODO: rename to template_list
+            .route("/api/excersice_add", actix_web::web::post().to(excercise_add))
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
 }

@@ -3,11 +3,42 @@ use serde_json::Result;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-#[derive(PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Hash, Clone, Serialize, Deserialize, Debug)]
 pub enum ExcerciseValueType {
-    Duration=0, 
-    Weigth=1,
+    Duration=0,     //in Seconds
+    Weight=1,       //in Kg
     Repetition=2,
+}
+
+impl ExcerciseValueType {
+    pub fn names() -> [&'static str; 3] {
+        return ["Duration", "Weight", "Repetition"];
+    }
+
+    pub fn values() -> [ExcerciseValueType; 3] {
+        return [ExcerciseValueType::Duration, ExcerciseValueType::Weight, ExcerciseValueType::Repetition];
+    }
+
+    pub fn from_string(excercise_type: &str) -> Option<ExcerciseValueType> {
+        if( excercise_type == "Duration"  ) {
+            return Some(ExcerciseValueType::Duration);
+        }
+        else if( excercise_type == "Weight" ) {
+            return Some(ExcerciseValueType::Weight);
+        }
+        else if( excercise_type == "Repetition" ) {
+            return Some(ExcerciseValueType::Repetition);
+        }
+        else {
+            return None;
+        }
+    }
+}
+
+impl std::fmt::Display for ExcerciseValueType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 #[derive(Serialize,Deserialize)]
@@ -26,7 +57,7 @@ impl ExcerciseTemplate {
 pub struct Excercise {
     pub excercise_template: ExcerciseTemplate,
     pub duration:   Option<u32>,
-    pub weigth:     Option<u32>,
+    pub weigh1t:     Option<u32>,
     pub repetition: Option<u32>,
 }
 
