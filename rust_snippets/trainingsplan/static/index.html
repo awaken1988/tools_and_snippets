@@ -3,18 +3,32 @@
   <head>
     <meta charset="utf-8" />
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <style>
+      #excercise-div, #excersice-current-div {
+        border: 1px solid black;
+        margin: 2em;
+        padding: 1em
+      }
+    </style>
   </head>
 
   <body>
     <h>Trainingsplan</h>
 
-    
     <div id="excercise-div">
       <form id="excercise-form">
         <select id="excercise-select">
 
         </select>
       </form>
+
+      <button id="exercise-add" type="button">Click Me!</button>
+    </div>
+
+    <div id="excersice-current-div">
+      <ul id="excercise-current-ul">
+
+      </ul>
     </div>
 
     <div id="input-div">
@@ -61,6 +75,20 @@
         data.value_type.forEach(type_name => {
           $('#input-'+type_name+'-div').show('slow','linear');
         });
+      });
+
+      //exercise-add
+      $('#exercise-add').click(function() {
+        var excercise_tmpl =  selected_excersize_template()
+        
+
+        var add_li   = $('<li></li>')
+        var add_name = $('<b></b>').text(excercise_tmpl.name) 
+
+        add_li.append(add_name)
+
+        $("#excercise-current-ul").append(add_li);
+
       });
 
       //exercise_add
