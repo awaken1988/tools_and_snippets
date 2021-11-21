@@ -21,7 +21,7 @@ struct ExcerciseAdd {
 }
 
 async fn excercise_list() -> impl Responder {
-   let des = get_excercices();
+   let des = sqldb::get_excercise_template();
 
    serde_json::to_string(&des)
 }
@@ -36,6 +36,8 @@ async fn excercise_add(info: web::Json<Excercise>) -> Result<String> {
         .unwrap();
     file.write_all(info.excercise_template.name.as_bytes()).unwrap();
     file.write_all("\n".as_bytes()).unwrap();
+
+    sqldb::write_excercise_log(&info);
 
     Ok(format!("Welcome {}!", info.excercise_template.name))
 }

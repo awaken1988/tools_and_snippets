@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt::Write;
 
 #[derive(PartialEq, Eq, Hash, Clone, Serialize, Deserialize, Debug)]
 pub enum ExcerciseValueType {
@@ -41,7 +42,7 @@ impl std::fmt::Display for ExcerciseValueType {
     }
 }
 
-#[derive(Serialize,Deserialize)]
+#[derive(Serialize,Deserialize, Clone)]
 pub struct ExcerciseTemplate {
     pub value_type: HashSet<ExcerciseValueType>,
     pub name: String,
@@ -53,12 +54,38 @@ impl ExcerciseTemplate {
     }
 }
 
+impl std::fmt::Display for ExcerciseTemplate {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut tmp = String::new();
+
+        write!(tmp, "name={} value_types=", self.name);
+
+       
+        for i in &self.value_type {
+            write!(tmp, "{},", i);
+        }
+
+        write!(f, "{}", tmp)
+    }
+}
+
+
 #[derive(Serialize,Deserialize)]
 pub struct Excercise {
     pub excercise_template: ExcerciseTemplate,
     pub duration:   Option<u32>,
-    pub weigh1t:     Option<u32>,
+    pub weight:     Option<u32>,
     pub repetition: Option<u32>,
+}
+
+impl Excercise {
+    pub fn get_value(&self, value_type: &ExcerciseValueType) -> Option<u32> {
+        match value_type {
+            ExcerciseValueType::Duration =>   { return self.duration },
+            ExcerciseValueType::Weight =>     { return self.weight },
+            ExcerciseValueType::Repetition => { return self.repetition },
+        }
+    }
 }
 
 macro_rules! insert_excercise_type {
@@ -81,11 +108,11 @@ macro_rules! insert_excercise {
 
         insert_excercise_type!(typeset, $($types),+);
 
-        $m.insert($name, ExcerciseTemplate::new(&String::from($name), &typeset));
+        $m.insert(($name).to_string(), ExcerciseTemplate::new(&String::from($name), &typeset));
     };
 }
 
-pub fn get_excercices() -> HashMap<&'static str, ExcerciseTemplate> {
+pub fn get_excercices() -> HashMap<String, ExcerciseTemplate> {
     let mut ret = HashMap::new();
 
     insert_excercise!(ret, "Einbeinstand",             ExcerciseValueType::Duration);          

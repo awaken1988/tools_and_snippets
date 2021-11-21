@@ -1,22 +1,30 @@
 use crate::excercises;
 use std::fmt::Write;
-use std::collections::HashSet;
+use std::collections::{HashSet,HashMap};
 
 use crate::excercises::{ExcerciseTemplate,ExcerciseValueType};
 
 struct ColumnQuery {
-    columns: Vec<String>,
+    columns:       Vec<String>,
+    columns_value: Vec<String>,
 }
 
 impl ColumnQuery {
     fn new() -> ColumnQuery {
         ColumnQuery {
-            columns: Vec::new(),
+            columns:       Vec::new(),
+            columns_value: Vec::new(),
         }
     }
 
-    fn add(mut self, name: &str) -> ColumnQuery {
+    fn add_name(mut self, name: &str) -> ColumnQuery {
         self.columns.push(name.to_string());
+        self
+    }
+
+    fn add_name_value(mut self, name: &str, value: &str) -> ColumnQuery {
+        self.columns.push(name.to_string());
+        self.columns_value.push(value.to_string());
         self
     }
 
@@ -30,9 +38,20 @@ impl ColumnQuery {
         self
     }
 
-    fn result(&self) -> String {
+    fn result_names(&self) -> String {
         let mut ret = String::new();
         for (idx, name) in self.columns.iter().enumerate() {
+            if(idx > 0 ) {
+                write!(ret, ",");
+            }
+            write!(ret, "{}", name);
+        }
+        return ret;
+    }
+
+    fn result_values(&self) -> String {
+        let mut ret = String::new();
+        for (idx, name) in self.columns_value.iter().enumerate() {
             if(idx > 0 ) {
                 write!(ret, ",");
             }
@@ -55,16 +74,16 @@ pub fn create_db()
     get_excercise_template();
 }
 
-pub fn get_excercise_template() 
+pub fn get_excercise_template() -> HashMap<String, ExcerciseTemplate>
 {
     let db = open();
 
     let columns = ColumnQuery::new()
-        .add("name")
+        .add_name("name")
         .add_list(ExcerciseValueType::names());
 
 
-    let query = format!("SELECT {} from excercise_template", columns.result());
+    let query = format!("SELECT {} from excercise_template", columns.result_names());
 
     let mut stmt    = db.prepare(query.as_str()).unwrap();
     let result_iter = stmt.query_map([], |row| {
@@ -83,10 +102,38 @@ pub fn get_excercise_template()
         Ok(ExcerciseTemplate::new(&name, &all_types))
     }).unwrap();
 
-    for i in result_iter {
-        println!("mydb content {}", i.unwrap().name)
+    let mut ret = HashMap::new();
+
+    for i_row in result_iter {
+        let i_row_unwrapped = i_row.unwrap();
+
+        println!("get_excercise_template {}", i_row_unwrapped.to_string());
+
+        ret.insert(i_row_unwrapped.name.clone(), i_row_unwrapped.clone());
     }
 
+    return ret;
+}
+
+pub fn write_excercise_log(log_entry: &excercises::Excercise )
+{
+    let db = open();
+
+    let mut columns = ColumnQuery::new();
+
+    //find excercise_template foreing key
+    columns = columns.add_name_value("template_id",
+        &format!("(SELECT id from excercise_template WHERE name ='{}')", &log_entry.excercise_template.name));
+
+   
+    for i_type in ExcerciseValueType::values() {
+        if let Some(value) = log_entry.get_value(&i_type) {
+            columns = columns.add_name_value(&i_type.to_string(), &format!("{}", value));
+        }
+    }   
+    let insert_sql = format!("INSERT INTO excercise_log({}) VALUES({})", columns.result_names(), columns.result_values());
+    println!("write_excercise_log: {}", insert_sql);
+    db.execute(&insert_sql, []).unwrap();
 }
 
 pub fn open() -> rusqlite::Connection {
