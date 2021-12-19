@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="logic.js"></script> 
     <style>
       #excercise-div, #excersice-current-div {
         border: 1px solid black;
@@ -31,13 +32,7 @@
       </ul>
     </div>
 
-    <div id="input-div">
-      <div id="input-Duration-div" hidden>
-        Duration: <input type="number" value="0"/> minutes
-      </div>
-    </div>
-
-    <button id="exercise_add" type="button">Click Me!</button> 
+    <input id="excercise-sync" type="button" value="Sync">Sync</input>
 
     <script>
       var excercise_map = new Map();
@@ -81,17 +76,14 @@
       $('#exercise-add').click(function() {
         var excercise_tmpl =  selected_excersize_template()
         
+        let entry = create_excercise_entry(excercise_tmpl)
 
-        var add_li   = $('<li></li>')
-        var add_name = $('<b></b>').text(excercise_tmpl.name) 
-
-        add_li.append(add_name)
-
-        $("#excercise-current-ul").append(add_li);
+        $("#excercise-current-ul").append(entry);
 
       });
 
       //exercise_add
+      /*
       $('#exercise_add').click(function() {
         var excercise_tmpl =  selected_excersize_template()
         console.log(excercise_tmpl);
@@ -111,7 +103,9 @@
         });
 
       });
+      */
 
+      $('#excercise-sync').click(sync_excercise);
 
       $(document).ready( function() {
         load_excercise_list();        
