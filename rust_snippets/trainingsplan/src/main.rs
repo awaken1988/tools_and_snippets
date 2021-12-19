@@ -26,20 +26,37 @@ async fn excercise_list() -> impl Responder {
    serde_json::to_string(&des)
 }
 
-async fn excercise_add(info: web::Json<Excercise>) -> Result<String> {
+//TODO: make a proper typ in excercises.rs
+#[derive(Serialize,Deserialize,Debug)]
+struct ExcerciseSync {
+    pub id:         u32,
 
-    let mut file = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .append(true)
-        .open("out.txt")
-        .unwrap();
-    file.write_all(info.excercise_template.name.as_bytes()).unwrap();
-    file.write_all("\n".as_bytes()).unwrap();
+    #[serde(default)]
+    pub duration:   Option<u32>,
+    
+    #[serde(default)]
+    pub weight:     Option<u32>,
+    
+    #[serde(default)]
+    pub repetition: Option<u32>,
+}
 
-    sqldb::write_excercise_log(&info);
+async fn excercise_add(info: web::Json<ExcerciseSync>) -> Result<String> {
 
-    Ok(format!("Welcome {}!", info.excercise_template.name))
+//    let mut file = OpenOptions::new()
+//        .create(true)
+//        .write(true)
+//        .append(true)
+//        .open("out.txt")
+//        .unwrap();
+//    file.write_all(info.excercise_template.name.as_bytes()).unwrap();
+//    file.write_all("\n".as_bytes()).unwrap();
+
+//    sqldb::write_excercise_log(&info);
+
+    println!("{:?}", info);
+
+    Ok(format!("Welcome {}!",info.id))
 }
 
 #[actix_web::main]

@@ -43,6 +43,24 @@ function create_excercise_entry(aTemplate)
 function sync_excercise()
 {
     $('.excercise_item').each(function(){
-        console.log(this)
+       
+        let post_data = {
+            'id': 1357
+        };
+
+        $(this).children('[class^=excercise_input_]').each(function() {
+            let excercise_name = $(this).attr('class').replace('excercise_input_', '')
+
+            post_data[excercise_name] = parseInt($(this).val());
+        });
+
+        console.log( post_data );
+
+        $.ajax({
+            type: "POST",
+            url: "/api/excersice_add",
+            data: JSON.stringify(post_data),
+            contentType : 'application/json',
+          });
     });
 }
