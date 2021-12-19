@@ -44,13 +44,14 @@ impl std::fmt::Display for ExcerciseValueType {
 
 #[derive(Serialize,Deserialize, Clone)]
 pub struct ExcerciseTemplate {
-    pub value_type: HashSet<ExcerciseValueType>,
+    pub id: u32,
     pub name: String,
+    pub value_type: HashSet<ExcerciseValueType>,
 }
 
 impl ExcerciseTemplate {
-    pub fn new(name: &String, value_type: &HashSet<ExcerciseValueType>) -> ExcerciseTemplate {
-        ExcerciseTemplate{name: name.clone(), value_type: value_type.clone()}
+    pub fn new(id: u32, name: &String, value_type: &HashSet<ExcerciseValueType>) -> ExcerciseTemplate {
+        ExcerciseTemplate{id: id, name: name.clone(), value_type: value_type.clone()}
     }
 }
 
@@ -90,12 +91,18 @@ impl Excercise {
 
 macro_rules! insert_excercise_type {
     ($typeset:expr, $type0:expr) => {
-        $typeset.insert($type0)
-    };
-    ($typeset:expr, $type0:expr, $($typex:expr),+) => {
         $typeset.insert($type0);
-        insert_excercise_type!($typeset, $($typex),+);
     };
+    ($typeset:expr, $type0:expr, $type1:expr) => {
+        $typeset.insert($type0);
+        $typeset.insert($type1);
+    };
+
+//TODO: does not work; maybe because +
+//    ($typeset:expr, $type0:expr, $($typex:expr),+) => {
+//        $typeset.insert($type0);
+//        insert_excercise_type!($typeset, $($typex),+);
+//    };
 }
 
 macro_rules! insert_excercise {
@@ -108,7 +115,9 @@ macro_rules! insert_excercise {
 
         insert_excercise_type!(typeset, $($types),+);
 
-        $m.insert(($name).to_string(), ExcerciseTemplate::new(&String::from($name), &typeset));
+        let id = $m.len() as u32;
+
+        $m.insert(($name).to_string(), ExcerciseTemplate::new(id, &String::from($name), &typeset));
     };
 }
 
@@ -131,7 +140,17 @@ pub fn get_excercices() -> HashMap<String, ExcerciseTemplate> {
     insert_excercise!(ret, "Terraband Rücken",         ExcerciseValueType::Duration);              
     insert_excercise!(ret, "Terraband Brust",          ExcerciseValueType::Duration);          
     insert_excercise!(ret, "Terraband Schulter",       ExcerciseValueType::Duration);              
-    insert_excercise!(ret, "Terraband Bizeps/Trizeps", ExcerciseValueType::Duration);                      
+    insert_excercise!(ret, "Terraband Bizeps/Trizeps", ExcerciseValueType::Duration);
+    
+    insert_excercise!(ret, "Liegestütze",              ExcerciseValueType::Repetition, ExcerciseValueType::Weight);
+    insert_excercise!(ret, "Klimmzug",                 ExcerciseValueType::Repetition, ExcerciseValueType::Weight);
+    insert_excercise!(ret, "Seitenheben",              ExcerciseValueType::Repetition, ExcerciseValueType::Weight);
+    insert_excercise!(ret, "Frontheben",               ExcerciseValueType::Repetition, ExcerciseValueType::Weight);
+    insert_excercise!(ret, "Bankdrücken",              ExcerciseValueType::Repetition, ExcerciseValueType::Weight);
+    insert_excercise!(ret, "Kreuzheben",               ExcerciseValueType::Repetition, ExcerciseValueType::Weight);
+    insert_excercise!(ret, "Kniebeuge",                ExcerciseValueType::Repetition, ExcerciseValueType::Weight);
+    insert_excercise!(ret, "Kniebeuge Einbeinig",      ExcerciseValueType::Repetition, ExcerciseValueType::Weight);
+    insert_excercise!(ret, "Beinpresse",               ExcerciseValueType::Repetition, ExcerciseValueType::Weight);
 
     ret
 }

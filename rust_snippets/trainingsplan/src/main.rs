@@ -26,22 +26,9 @@ async fn excercise_list() -> impl Responder {
    serde_json::to_string(&des)
 }
 
-//TODO: make a proper typ in excercises.rs
-#[derive(Serialize,Deserialize,Debug)]
-struct ExcerciseSync {
-    pub id:         u32,
 
-    #[serde(default)]
-    pub duration:   Option<u32>,
-    
-    #[serde(default)]
-    pub weight:     Option<u32>,
-    
-    #[serde(default)]
-    pub repetition: Option<u32>,
-}
 
-async fn excercise_add(info: web::Json<ExcerciseSync>) -> Result<String> {
+async fn excercise_add(info: web::Json<sqldb::ExcerciseSync>) -> Result<String> {
 
 //    let mut file = OpenOptions::new()
 //        .create(true)
@@ -55,6 +42,8 @@ async fn excercise_add(info: web::Json<ExcerciseSync>) -> Result<String> {
 //    sqldb::write_excercise_log(&info);
 
     println!("{:?}", info);
+
+    sqldb::write_excercise_log(&info);
 
     Ok(format!("Welcome {}!",info.id))
 }

@@ -1,8 +1,26 @@
 use crate::excercises;
 use std::fmt::Write;
 use std::collections::{HashSet,HashMap};
+use serde::{Deserialize, Serialize};
 
 use crate::excercises::{ExcerciseTemplate,ExcerciseValueType};
+
+//TODO: make a proper typ in excercises.rs
+#[derive(Serialize,Deserialize,Debug)]
+pub struct ExcerciseSync {
+    pub id:         u32,
+
+    #[serde(default)]
+    pub duration:   Option<u32>,
+    
+    #[serde(default)]
+    pub weight:     Option<u32>,
+    
+    #[serde(default)]
+    pub repetition: Option<u32>,
+}
+
+
 
 struct ColumnQuery {
     columns:       Vec<String>,
@@ -79,6 +97,7 @@ pub fn get_excercise_template() -> HashMap<String, ExcerciseTemplate>
     let db = open();
 
     let columns = ColumnQuery::new()
+        .add_name("id")
         .add_name("name")
         .add_list(ExcerciseValueType::names());
 
@@ -89,17 +108,24 @@ pub fn get_excercise_template() -> HashMap<String, ExcerciseTemplate>
     let result_iter = stmt.query_map([], |row| {
         let mut all_types = HashSet::<ExcerciseValueType>::new();
 
-        for i in 1..3 {
+        let offset: usize = 2;
+
+        //TODO: magic values
+        for i in offset..(offset+ExcerciseValueType::names().len()) {
             if let Ok(value) = rusqlite::Row::get::<usize, u32>(row,i) {
+                println!("{:?}", all_types);
                 if(value == 1) {
                     all_types.insert( ExcerciseValueType::from_string(&columns.get(i)).unwrap() );
                 }
             }
         }
 
-        let name = rusqlite::Row::get::<usize, String>(row,0).unwrap();
+        println!("{:?}", all_types);
 
-        Ok(ExcerciseTemplate::new(&name, &all_types))
+        let name = rusqlite::Row::get::<usize, String>(row,1).unwrap();
+        let id   = rusqlite::Row::get::<usize, u32>(row,0).unwrap();
+
+        Ok(ExcerciseTemplate::new(id, &name, &all_types))
     }).unwrap();
 
     let mut ret = HashMap::new();
@@ -115,22 +141,27 @@ pub fn get_excercise_template() -> HashMap<String, ExcerciseTemplate>
     return ret;
 }
 
-pub fn write_excercise_log(log_entry: &excercises::Excercise )
+pub fn write_excercise_log(log_entry: &ExcerciseSync )
 {
     let db = open();
 
     let mut columns = ColumnQuery::new();
 
     //find excercise_template foreing key
-    columns = columns.add_name_value("template_id",
-        &format!("(SELECT id from excercise_template WHERE name ='{}')", &log_entry.excercise_template.name));
-
+    columns = columns.add_name_value("template_id", &format!("{}", log_entry.id)  );
    
-    for i_type in ExcerciseValueType::values() {
-        if let Some(value) = log_entry.get_value(&i_type) {
-            columns = columns.add_name_value(&i_type.to_string(), &format!("{}", value));
-        }
-    }   
+    //TODO: use more generic way, we have the value names as array
+    //  for now its hardcoded
+    if let Some(x) = log_entry.duration {
+        columns = columns.add_name_value("duration", &format!("{}", x));
+    }
+    if let Some(x) = log_entry.repetition {
+        columns = columns.add_name_value("repetition", &format!("{}", x));
+    }
+    if let Some(x) = log_entry.weight {
+        columns = columns.add_name_value("weight", &format!("{}", x));
+    }
+    
     let insert_sql = format!("INSERT INTO excercise_log({}) VALUES({})", columns.result_names(), columns.result_values());
     println!("write_excercise_log: {}", insert_sql);
     db.execute(&insert_sql, []).unwrap();
