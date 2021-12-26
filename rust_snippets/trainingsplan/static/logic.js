@@ -2,45 +2,48 @@
 
 function create_excercise_entry(aTemplate)
 {
-    let li      = $('<li></li>')
+    let li      = $('<li class="excersice-entry-li"></li>')
     $(li).addClass("excercise_item");
     $(li).data('excercise-template', aTemplate);
 
     //excercise name
     let excercise_name = $('<b></b>').text(aTemplate.name);
-    li.append(excercise_name);
+    li.append($('<div class="excersice_input_name"/>')
+        .append(excercise_name));
 
     aTemplate.data.value_type.forEach( function(aValueType) {
         console.log(aValueType);
+
+        let entry_value_name  = ""
+        let entry_unit        = ""
+        let entry_class       = ""
+
         if(aValueType == 'Duration') {
-            let duration_input = $('<input type="number" />') ;
-
-            li.append( document.createTextNode('Duration: '));
-            li.append(duration_input);
-            li.append(document.createTextNode('[Seconds]'));
-            li.append(document.createTextNode(';    '));
-
-            $(duration_input).addClass("excercise_input_duration");
+            entry_value_name  = "Duration"
+            entry_unit        = "Seconds"
+            entry_class       = "excercise_input_duration"
         }
         if(aValueType == 'Repetition') {
-            let repetition_input = $('<input type="number" />') ;
-
-            li.append(document.createTextNode('Repetition: '));
-            li.append(repetition_input);
-            li.append(document.createTextNode(';    '));
-
-            $(repetition_input).addClass("excercise_input_repetition");
+            entry_value_name  = "Repetition"
+            entry_class       = "excercise_input_repetition"
         }
         if(aValueType == 'Weight') {
-            let weight_input = $('<input type="number" />') ;
+            entry_value_name = "Weight"
+            entry_unit       = "Kg"
+            entry_class      = "excercise_input_weight"
+        }
 
-            li.append(document.createTextNode('Weight: '));
-            li.append(weight_input);
-            li.append(document.createTextNode('[Kg]'));
-            li.append(document.createTextNode(';    '));
+        let curr_input = $('<input type="number" />') ;
 
-            $(weight_input).addClass("excercise_input_weight");
-        } 
+      
+        li.append($('<div class="excersice_input_value_name"/>')
+            .append(document.createTextNode(entry_value_name)));
+        li.append(curr_input);
+        li.append($('<div class="excersice_input_unit"/>')
+            .append(document.createTextNode('['+entry_unit+']')));
+        
+
+        $(curr_input).addClass(entry_class);
     });
 
     //remove

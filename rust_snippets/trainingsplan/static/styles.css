@@ -1,0 +1,36 @@
+
+#excercise-div {
+    display:flex;
+}
+
+#excercise-form {
+   
+}
+
+#exercise-add {
+  
+}
+
+
+
+.excersice-entry-li {
+    display: flex;
+    column-gap: 0.8em;
+}
+
+.excersice-entry-li > .excersice_input_name {
+    width: 24em;
+}
+
+.excersice-entry-li > .excersice_value_name {
+    width: 24em;
+}
+
+.excersice-entry-li > input {
+    width: 6em;
+}
+
+.excersice-entry-li > .excersice_input_unit {
+    width:8em;
+}
+
