@@ -25,7 +25,7 @@ fn main() {
                 if x > 100000 {
                     break;
                 }
-                *a.lock().unwrap() += 1;
+                *a.lock()? += 1;
             }
             println!("thread ready {}", i);   
             return x;
