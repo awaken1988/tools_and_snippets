@@ -131,4 +131,4 @@ umount ${BTRFS_ROOT}
 
 echo "INSTALLATION SUCCESSFULLY"
 echo "  Note: for USB-Drives copy:"
-echo "     /efi/EFI/GRUB/grubx64.efi -> /efi/EFI/BOOT/bootx64.efi 
+echo "     /efi/EFI/GRUB/grubx64.efi -> /efi/EFI/BOOT/bootx64.efi "
