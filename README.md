@@ -32,8 +32,10 @@ These tools help you to create snapshots and sync them with another btrfs partit
 btrfs_snap.py /mnt/movies /mnt/documents
 ```
 This creates a  readonly snapshot under 
+```
 > /mnt/.snapshot_movies/2018_12_01__2000
 > /mnt/.snapshot_documents/2018_12_01__2000
+```
 
 ### Example: btrfs_backup.py
 Assume we have created a lot of snapshots as described in the previous example. With this tool we sync the snapshots with a destination.
