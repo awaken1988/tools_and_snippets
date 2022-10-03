@@ -79,7 +79,7 @@ exec_archroot   "printf \"${ROOT_PASSWORD}\\n${ROOT_PASSWORD}\\n\" | passwd root
 arch-chroot ${INSTALL_ROOT}   ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime 
 arch-chroot ${INSTALL_ROOT}   hwclock --systohc
 arch-chroot ${INSTALL_ROOT}   locale-gen
-arch-chroot ${INSTALL_ROOT}   timedatectl set-local-rtc 1
+#FIXME: arch-chroot ${INSTALL_ROOT}   timedatectl set-local-rtc 1
 
 #get UUID
 UUID_ROOT=$(blkid ${ROOT_PARTITION} -s UUID -o value)
@@ -128,3 +128,7 @@ umount ${INSTALL_ROOT}/var/cache/pacman/pkg
 umount ${INSTALL_ROOT}/btrfs_root
 umount ${INSTALL_ROOT}
 umount ${BTRFS_ROOT}
+
+echo "INSTALLATION SUCCESSFULLY"
+echo "  Note: for USB-Drives copy:"
+echo "     /efi/EFI/GRUB/grubx64.efi -> /efi/EFI/BOOT/bootx64.efi "
