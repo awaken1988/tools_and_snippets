@@ -3,7 +3,7 @@ A collection of several helper scripts, code snippets ... .
 # Helper Scripts
 
 ## arch_install.sh
-This script can be run from a archlinux install live cd. It creates a fully encrypted linux installation on UEFI Systems. All the files in /boot are also encrypted
+This script can be run from a archlinux install live cd. It creates a fully encrypted linux installation on UEFI Systems. All the files in /boot are also encrypted.
 The script will ask for the corresponding block devices. If the script finished without errors you have a fully encrypted system
 
 Prerequisites:
@@ -29,16 +29,17 @@ These tools help you to create snapshots and sync them with another btrfs partit
 
 ### Example: btrfs_snap.sh
 ```
-btrfs_snap.sh /mnt/movies
+btrfs_snap.py /mnt/movies /mnt/documents
 ```
 This creates a  readonly snapshot under 
 > /mnt/.snapshot_movies/2018_12_01__2000
+> /mnt/.snapshot_documents/2018_12_01__2000
 
-### Example: btrfs_localbackup.py
+### Example: btrfs_backup.py
 Assume we have created a lot of snapshots as described in the previous example. With this tool we sync the snapshots with a destination.
 That means do incremental backups between btrfs hardrives
 ```
-btrfs_localbackup.sh --src /mnt/movies --dest /media/backup
+btrfs_backup.py --src /mnt/movies --dest /media/backup
 ```
 The tool takes all the snapshots from the .snapshot_movies folder and send it to the backup server.
 
