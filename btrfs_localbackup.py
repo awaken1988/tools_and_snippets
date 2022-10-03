@@ -15,8 +15,11 @@ def scriptDir():
     return os.path.dirname(__file__)
 
 def scriptRelative(aPath):
-    if os.path.isabs(aPath):    return aPath
-    else:                       return path.abspath(path.join(scriptDir(), aPath))
+    ret = ""
+    if os.path.isabs(aPath):    ret = aPath
+    else:                       ret = path.abspath(path.join(scriptDir(), aPath))
+
+    if ret.endswith("/"):       ret = ret[0:-1]
 
 def getOptions():
     parser = argparse.ArgumentParser()
