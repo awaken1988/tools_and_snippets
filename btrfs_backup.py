@@ -11,15 +11,14 @@ def errorReturn(aMsg):
     print(aMsg)
     sys.exit(1)
 
-def scriptDir():
-    return os.path.dirname(__file__)
-
-def scriptRelative(aPath):
+def makeAbsolute(aPath):
     ret = ""
     if os.path.isabs(aPath):    ret = aPath
-    else:                       ret = path.abspath(path.join(scriptDir(), aPath))
+    else:                       ret = path.abspath(path.join(os.getcwd(), aPath))
 
     if ret.endswith("/"):       ret = ret[0:-1]
+
+    return ret
 
 def getOptions():
     parser = argparse.ArgumentParser()
@@ -28,19 +27,17 @@ def getOptions():
     args = parser.parse_args()
 
     return {
-        "src":  scriptRelative(args.src),
-        "dest": scriptRelative(args.dest)
+        "src":  makeAbsolute(args.src),
+        "dest": makeAbsolute(args.dest)
     }
 
 options = getOptions()
-
-print("{}".format(os.path.dirname(__file__)))
 
 src       = options["src"]
 src_name  = path.basename(src)
 dest_base = options["dest"]
 dest      = path.join(dest_base, src_name)
-src_snaps = path.join(src, "/../.snapshot_"+src_name)
+src_snaps = path.join(src, "../.snapshot_"+src_name)
 
 if not path.isdir(dest):
     print("Destination dir {} does not exist".format(dest))
@@ -95,10 +92,10 @@ for iSnap in snapshots:
 #-------------------
 #Execute
 #-------------------
-print("Are you sure    yes/no/dry")
+print("Are you sure    y/n/dry")
 choose=input()
 
-is_run    = choose == "yes"
+is_run    = choose == "y"
 is_dryrun = choose == "dry"
 
 if not is_run and  not is_dryrun:
