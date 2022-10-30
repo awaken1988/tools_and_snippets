@@ -1,5 +1,0 @@
-[workspace]
-members = [
-    "networklist",
-    "rust_test_binary"
-]

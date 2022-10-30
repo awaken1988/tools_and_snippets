@@ -5,3 +5,5 @@ antlr-4.7-complete.jar
 *.vscode
 
 rust_snippets/*/target
+
+/tools/rust/network_check/target/
