@@ -1,34 +1,38 @@
 use std::{net::{IpAddr, Ipv4Addr, Ipv6Addr}, time::Duration, thread, time::SystemTime, iter, fs, fs::File, io::Write};
+use chrono::{Datelike, Timelike, Utc, Local};
 use dns_lookup::{lookup_host, lookup_addr};
 use ping::ping;
+use itertools::Itertools;
 
-struct CheckerState<'a>
+struct PingChecker
 {
+    name: String,
     idx:  usize,
-    addresses: &'a Vec<IpAddr>,
-
+    addr: Vec<IpAddr>,
 }
 
-impl<'a> CheckerState<'a> {
-    fn new(addresses: &'a Vec<IpAddr>) -> CheckerState {
-        return CheckerState {
-            idx: addresses.len(),
-            addresses: addresses,
-        };
+impl PingChecker {
+    fn new(addresses: Vec<IpAddr>, name: &str) -> PingChecker {
+        PingChecker {
+            name: name.to_string(),
+            idx:  0,
+            addr: addresses
+        }
     }
 
     fn next_id(&mut self) -> usize {
         self.idx+=1;
-        if self.idx >= self.addresses.len() {
+        if self.idx >= self.addr.len() {
             self.idx=0;
         }
             
         return self.idx
     } 
 
-    fn check(&mut self)-> Option<IpAddr> {
-        for i_round in 0..self.addresses.len() {
-            let ip_addr = self.addresses[self.next_id()];
+    fn check(&mut self) -> Option<IpAddr>{
+        for i_round in 0..self.addr.len() {
+            let idx = self.next_id();
+            let ip_addr = self.addr[idx];
 
             let ping_result = ping(
                 ip_addr,
@@ -37,8 +41,6 @@ impl<'a> CheckerState<'a> {
                 Option::None,
                 Option::None,
                 Option::None);
-
-           
 
             if let Ok(()) = ping_result {
                 return Some(ip_addr);
@@ -69,60 +71,45 @@ fn main() {
         .flatten()
         .collect::<Vec<IpAddr>>();
 
-    println!("Test Ips:");
-    for address in addresses.iter() {
-        println!("    {}", address.to_string()); 
-    }
+    let mut checker = {
+        let v4 = addresses.iter().cloned()
+            .filter(|x| if let IpAddr::V4(y) = x {true} else {false} )
+            .collect::<Vec<IpAddr>>();
 
+        let v6 = addresses.iter().cloned()
+         .filter(|x| if let IpAddr::V6(y) = x {true} else {false} )
+            .collect::<Vec<_>>();
 
-    let mut checker = CheckerState::new(&addresses);
+        vec![PingChecker::new(v4, "ip4"), PingChecker::new(v6, "ip6")]
+    };
 
     let mut outfile = File::create("out.txt").expect("cannot open logfile");
 
     loop {
-        let sys_time           = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).expect("cannot get unixtime");
-        let is_connected = checker.check();
+        //let now = SystemTime::now();
+        //let sys_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).expect("cannot get unixtime");
 
-        let mut output = format!("{}", sys_time.as_secs());
+        let dt = Local::now();
 
-        if let Some(ip_addr) = checker.check() {
-            output = format!("{} true {}", output, ip_addr.to_string());
+        let mut output_result = String::new();
+        let mut output_detail: String = String::new();
+
+        for i in checker.iter_mut() {
+            let mut result =i.check();
+
+            let result_str       =  if let Some(x) = result {"y"} else {"n"};
+            let address_string =  if let Some(x) = result {x.to_string()} else {".".to_string()};
+
+            output_result = format!("{} {}", output_result, result_str);
+            output_detail = format!("{} {}", output_detail, address_string);
         }
-        else {
-            output = format!("{} false", output);
-        }
+
+        let output  = format!("{} {} {}", dt.format("%Y-%m-%d__%H:%M:%S"), output_result, output_detail);
+
 
         println!("{}", output);
         outfile.write(format!("{}\n",output).as_bytes());
 
         thread::sleep(Duration::from_secs(4));
     }
-
-
-
-    // for i in addresses {
-    //        match i {
-    //         IpAddr::V4(x) => println!("v4 {}", i),
-    //         IpAddr::V6(x) => println!("v6 {}", i),
-    //        }
-    // }
-
-
-    // let x = ping(
-    //     IpAddr::from([127,0,0,1,]),
-    //     Some(Duration::from_secs(3)),
-    //     Option::None,
-    //     Option::None,
-    //     Option::None,
-    //     Option::None).unwrap();
-    // let result=lookup_host("8.8.8.8").unwrap();
-    // for i in result.iter() {
-    //     match i {
-    //         IpAddr::V4(x) => println!("v4 {}", i),
-    //         IpAddr::V6(x) => println!("v6 {}", i),
-    //     }
-    // }
-
-
-    println!("Hello, world!");
 }
