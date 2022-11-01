@@ -4,6 +4,7 @@ use dns_lookup::{lookup_host, lookup_addr};
 use ping::ping;
 use itertools::Itertools;
 use default_net;
+use clap::{Parser, Command, Arg};
 
 struct PingChecker
 {
@@ -81,8 +82,16 @@ fn remote_checker() -> Vec<PingChecker> {
     vec![PingChecker::new(v4, "INTERNET4"), PingChecker::new(v6, "INTERNET6")]
 }
 
+fn cli() -> Command {
+    Command::new("network_check")
+        .about("Test internet connection periodically")
+        .arg(Arg::new("out")
+            .long("out")
+    )
+}
 
 fn main() {
+    let matches = cli().get_matches();
     let mut checker = remote_checker();
 
 
@@ -90,7 +99,15 @@ fn main() {
         checker.push(PingChecker::new(vec![x.ip_addr], "ROUTER"));
     };
 
-    let mut outfile = File::create("out.txt").expect("cannot open logfile");
+    
+    let mut out: Option<File>= {
+        if let Some(outpath) = matches.get_one::<String>("out") {
+            Some(File::create(outpath).expect("cannot open logfile"))
+        }
+        else {
+            Option::None
+        }
+    };  
 
     loop {
         let dt = Local::now();
@@ -113,7 +130,12 @@ fn main() {
         
 
         println!("{}", output);
-        outfile.write(format!("{}\n",output).as_bytes());
+
+        if let Some(out) = &mut out {
+            out.write(format!("{}\n",output).as_bytes());
+        }
+
+       
 
         thread::sleep(Duration::from_secs(4));
     }
