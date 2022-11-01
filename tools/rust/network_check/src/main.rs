@@ -32,7 +32,9 @@ impl PingChecker {
     } 
 
     fn check(&mut self) -> Option<IpAddr>{
-        for i_round in 0..self.addr.len() {
+        let max_rounds = std::cmp::min(6, self.addr.len());
+
+        for i_round in 0..max_rounds {
             let idx = self.next_id();
             let ip_addr = self.addr[idx];
 
@@ -85,21 +87,20 @@ fn remote_checker() -> Vec<PingChecker> {
 fn cli() -> Command {
     Command::new("network_check")
         .about("Test internet connection periodically")
-        .arg(Arg::new("out")
-            .long("out")
-    )
+        .arg(Arg::new("out").long("out"))
+        .arg(Arg::new("delay").long("delay").default_value("10"))
 }
 
 fn main() {
     let matches = cli().get_matches();
     let mut checker = remote_checker();
 
-
+    //Try to get Gateway
     if let Ok(x) = default_net::get_default_gateway() {
         checker.push(PingChecker::new(vec![x.ip_addr], "ROUTER"));
     };
 
-    
+    //Output file
     let mut out: Option<File>= {
         if let Some(outpath) = matches.get_one::<String>("out") {
             Some(File::create(outpath).expect("cannot open logfile"))
@@ -135,8 +136,8 @@ fn main() {
             out.write(format!("{}\n",output).as_bytes());
         }
 
-       
-
-        thread::sleep(Duration::from_secs(4));
+        let delay = u64::from_str_radix(matches.get_one::<String>("delay").unwrap_or(&"10".to_string()), 10).unwrap();
+        
+        thread::sleep(Duration::from_secs(delay));
     }
 }
