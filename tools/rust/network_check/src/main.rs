@@ -3,6 +3,7 @@ use chrono::{Datelike, Timelike, Utc, Local};
 use dns_lookup::{lookup_host, lookup_addr};
 use ping::ping;
 use itertools::Itertools;
+use default_net;
 
 struct PingChecker
 {
@@ -51,8 +52,7 @@ impl PingChecker {
     }
 }
 
-fn main() {
-
+fn remote_checker() -> Vec<PingChecker> {
     let hostnames = vec![
         "www.google.de".to_string(),
         "www.heise.de".to_string(),
@@ -70,25 +70,29 @@ fn main() {
         .map_while(|x| if let Ok(y) = x {Some(y)} else { Option::None }  )
         .flatten()
         .collect::<Vec<IpAddr>>();
+    let v4 = addresses.iter().cloned()
+        .filter(|x| if let IpAddr::V4(y) = x {true} else {false} )
+        .collect::<Vec<IpAddr>>();
 
-    let mut checker = {
-        let v4 = addresses.iter().cloned()
-            .filter(|x| if let IpAddr::V4(y) = x {true} else {false} )
-            .collect::<Vec<IpAddr>>();
+    let v6 = addresses.iter().cloned()
+     .filter(|x| if let IpAddr::V6(y) = x {true} else {false} )
+        .collect::<Vec<_>>();
 
-        let v6 = addresses.iter().cloned()
-         .filter(|x| if let IpAddr::V6(y) = x {true} else {false} )
-            .collect::<Vec<_>>();
+    vec![PingChecker::new(v4, "INTERNET4"), PingChecker::new(v6, "INTERNET6")]
+}
 
-        vec![PingChecker::new(v4, "ip4"), PingChecker::new(v6, "ip6")]
+
+fn main() {
+    let mut checker = remote_checker();
+
+
+    if let Ok(x) = default_net::get_default_gateway() {
+        checker.push(PingChecker::new(vec![x.ip_addr], "ROUTER"));
     };
 
     let mut outfile = File::create("out.txt").expect("cannot open logfile");
 
     loop {
-        //let now = SystemTime::now();
-        //let sys_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).expect("cannot get unixtime");
-
         let dt = Local::now();
 
         let mut output_result = String::new();
@@ -97,15 +101,16 @@ fn main() {
         for i in checker.iter_mut() {
             let mut result =i.check();
 
-            let result_str       =  if let Some(x) = result {"y"} else {"n"};
+            let result_str     =  if let Some(x) = result {i.name.clone()} else {String::new()};
             let address_string =  if let Some(x) = result {x.to_string()} else {".".to_string()};
 
-            output_result = format!("{} {}", output_result, result_str);
+            output_result = format!("{} {:>12}", output_result, result_str);
             output_detail = format!("{} {}", output_detail, address_string);
         }
 
-        let output  = format!("{} {} {}", dt.format("%Y-%m-%d__%H:%M:%S"), output_result, output_detail);
+        let output  = format!("{} {}            Hosts: {}", dt.format("%Y-%m-%d__%H:%M:%S"), output_result, output_detail);
 
+        
 
         println!("{}", output);
         outfile.write(format!("{}\n",output).as_bytes());
