@@ -66,6 +66,10 @@ fn remote_checker() -> Vec<PingChecker> {
         "1.1.1.1".to_string(),
         "2001:4860:4860::8888".to_string(),
         "2001:4860:4860::8844".to_string(),
+        "208.67.222.222".to_string(),
+        "208.67.220.220".to_string(),
+        "1.1.1.1".to_string(),
+        "1.0.0.1".to_string(),
     ];
 
     let addresses = hostnames.iter()
