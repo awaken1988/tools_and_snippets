@@ -15,6 +15,7 @@ struct PingChecker
 
 impl PingChecker {
     fn new(addresses: Vec<IpAddr>, name: &str) -> PingChecker {
+        assert!(addresses.len() > 0, "no ip addresses available");
         PingChecker {
             name: name.to_string(),
             idx:  0,
@@ -85,7 +86,7 @@ fn remote_checker() -> Vec<PingChecker> {
      .filter(|x| if let IpAddr::V6(y) = x {true} else {false} )
         .collect::<Vec<_>>();
 
-    vec![PingChecker::new(v4, "INTERNET4"), PingChecker::new(v6, "INTERNET6")]
+    vec![PingChecker::new(v4, "www4"), PingChecker::new(v6, "www6")]
 }
 
 fn cli() -> Command {
@@ -101,7 +102,7 @@ fn main() {
 
     //Try to get Gateway
     if let Ok(x) = default_net::get_default_gateway() {
-        checker.push(PingChecker::new(vec![x.ip_addr], "ROUTER"));
+        checker.push(PingChecker::new(vec![x.ip_addr], "gw"));
     };
 
     //Output file
@@ -123,14 +124,14 @@ fn main() {
         for i in checker.iter_mut() {
             let mut result =i.check();
 
-            let result_str     =  if let Some(x) = result {i.name.clone()} else {String::new()};
+            let result_str       =  if let Some(x) = result {"i.name.clone()"}   else {"."};
             let address_string =  if let Some(x) = result {x.to_string()} else {".".to_string()};
 
-            output_result = format!("{} {:>12}", output_result, result_str);
-            output_detail = format!("{} {}", output_detail, address_string);
+            output_result = format!("{}{} ", output_result, i.name.clone());
+            output_detail = format!("{}{}",  output_detail, address_string);
         }
 
-        let output  = format!("{} {}            Hosts: {}", dt.format("%Y-%m-%d__%H:%M:%S"), output_result, output_detail);
+        let output  = format!("{}    {}    Hosts:{}", dt.format("%Y-%m-%d__%H:%M:%S"), output_result, output_detail);
 
         
 
