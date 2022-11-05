@@ -115,6 +115,10 @@ fn main() {
         }
     };  
 
+    let max_checker_name = checker.iter()
+        .map(|x| x.name.len())
+        .max().unwrap() + 1;
+
     loop {
         let dt = Local::now();
 
@@ -124,11 +128,11 @@ fn main() {
         for i in checker.iter_mut() {
             let mut result =i.check();
 
-            let result_str       =  if let Some(x) = result {"i.name.clone()"}   else {"."};
+            let result_str     =  if let Some(x) = result {i.name.clone()}   else {".".to_string()};
             let address_string =  if let Some(x) = result {x.to_string()} else {".".to_string()};
 
-            output_result = format!("{}{} ", output_result, i.name.clone());
-            output_detail = format!("{}{}",  output_detail, address_string);
+            output_result = format!("{}{:width$} ", output_result, result_str, width=max_checker_name);
+            output_detail = format!("{}{}; ",  output_detail, address_string);
         }
 
         let output  = format!("{}    {}    Hosts:{}", dt.format("%Y-%m-%d__%H:%M:%S"), output_result, output_detail);
