@@ -14,11 +14,7 @@ fn main() {
     let root = "C:/tftp".to_string();
     let port: u16 = 69;
 
-    let socket = Arc::new(
-        Mutex::new(
-            UdpSocket::bind("127.0.0.1:69")
-        )
-    );
+    let socket = UdpSocket::bind("127.0.0.1:69").unwrap();
 
     loop {
         let mut buf = Vec::<u8>::new();
@@ -26,7 +22,7 @@ fn main() {
 
         //let (amt, src) = socket.get_mut().unwrap().as_mut().unwrap().recv_from(&mut buf).unwrap();
     
-        let (amt, src) = socket.lock().unwrap().as_mut().unwrap().recv_from(&mut buf).unwrap();
+        let (amt, src) = socket.recv_from(&mut buf).unwrap();
 
         buf.resize(amt, 0);
 
@@ -39,10 +35,10 @@ fn main() {
             connections.insert(src,sender);
 
             let mut remote = src;
-            remote.set_port(port);
+            //remote.set_port(port);
 
             let root = root.clone();
-            let socket = Arc::clone(&socket).unwrap();
+            let socket = socket.try_clone().unwrap();
             thread::spawn(move|| {
                 Connection::Connection::new(
                     receiver, 

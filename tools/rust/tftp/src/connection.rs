@@ -41,6 +41,18 @@ enum Opcode {
     Error = 5,
 }
 
+#[derive(Clone,Copy,Debug)]
+enum TftpError {
+    NotDefined           = 0,
+    FileNotFound         = 1,
+    AccessViolation      = 2,
+    DiskFull             = 3,
+    IllegalOperation     = 4,
+    UnknownTransferID    = 5,
+    FileAlreadyExists    = 6,
+    NoSuchUser           = 7,
+}
+
 enum State {
     WAIT_REQUEST,
 }
@@ -126,11 +138,11 @@ pub struct Connection {
     blocksize:  usize,
     root:       String,
     remote:     SocketAddr,
-    socket:     Arc<Mutex<UdpSocket>> 
+    socket:     UdpSocket,
 }
 
 impl Connection {
-    pub fn new(recva: Receiver<Vec<u8>>, roota: String, remotea: SocketAddr, socketa: Arc<Mutex<UdpSocket>>) -> Connection {
+    pub fn new(recva: Receiver<Vec<u8>>, roota: String, remotea: SocketAddr, socketa: UdpSocket) -> Connection {
         return Connection{
             state: State::WAIT_REQUEST, 
             recv: recva,
@@ -141,8 +153,38 @@ impl Connection {
         };
     }
 
-    fn send_raw(data: &[u8]) {
+    fn send_raw(&mut self, data: &[u8]) {
+        self.socket.send_to(data, self.remote).unwrap();
+    }
 
+    fn send_error(&mut self, error: TftpError, msg: Option<&str>) {
+        let mut outmsg = match error {
+            TftpError::NotDefined          => "Not defined",
+            TftpError::FileNotFound        => "File not found.",
+            TftpError::AccessViolation     => "Access violation.",
+            TftpError::DiskFull            => "Disk full or allocation exceeded.",
+            TftpError::IllegalOperation    => "Illegal TFTP operation.",
+            TftpError::UnknownTransferID   => "Unknown transfer ID.",
+            TftpError::FileAlreadyExists   => "File already exists.",
+            TftpError::NoSuchUser          => "No such user.",
+        };
+
+        if let Some(x) = msg {
+            outmsg = x; 
+        }
+
+        let opcode_raw = Opcode::Error as u16;
+        let error_raw = error as u16;
+        let mut buf = vec![
+            (opcode_raw>>8) as u8, 
+            (opcode_raw>>0) as u8 ,
+            (error_raw>>8)  as u8, 
+            (error_raw>>0)  as u8,];
+
+        buf.extend_from_slice(outmsg.as_bytes());
+        buf.push(0);
+
+        self.send_raw(&buf);
     }
 
     fn read(&mut self, filename: &str) {
@@ -152,13 +194,14 @@ impl Connection {
         let request_path = OsString::from(&filename);
         let full_path  = Path::new(&base_path).join(request_path);
 
-        if !full_path.starts_with(base_path) {
-            return;
-        }
+        self.send_error(TftpError::FileNotFound, None);
 
+        // if !full_path.starts_with(base_path) {
+        //     return;
+        // }
     }
     fn write(&mut self, filename: &str) {
-
+    
     }
 
 
