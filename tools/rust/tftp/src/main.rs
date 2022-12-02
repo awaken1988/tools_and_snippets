@@ -1,21 +1,27 @@
 use std::{
     net::{UdpSocket, SocketAddr}, 
     collections::HashMap, 
-    sync::mpsc::{Sender, Receiver, channel},
+    sync::{mpsc::{Sender, Receiver, channel}, Arc},
     thread, time::Duration};
 
-const PAYLOAD_MAX:  usize    = 1500;
-const RECV_TIMEOUT: Duration = Duration::from_secs(2);
+
+
+mod Connection;
 
 fn main() {
     let mut connections = HashMap::<SocketAddr,Sender<Vec<u8>>>::new();
 
-    let socket = UdpSocket::bind("127.0.0.1:11000").unwrap();
+    let root = "C:/tftp".to_string();
+
+    let socket = UdpSocket::bind("127.0.0.1:69").unwrap();
 
     loop {
         let mut buf = Vec::<u8>::new();
+        buf.resize(4096, 0);
 
         let (amt, src) = socket.recv_from(&mut buf).unwrap();
+
+        buf.resize(amt, 0);
 
         if connections.contains_key(&src) {
             connections.get(&src).unwrap().send(buf);
@@ -25,13 +31,9 @@ fn main() {
 
             connections.insert(src,sender);
 
+            let root = root.clone();
             thread::spawn(move|| {
-                loop {
-                    let data  = receiver.recv_timeout(RECV_TIMEOUT).unwrap();
-                    let data = &data[..];
-
-                    
-                }
+                Connection::Connection::new(receiver, root.clone()).run();
             });
             connections.get(&src).unwrap().send(buf);
         }
