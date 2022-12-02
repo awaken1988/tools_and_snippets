@@ -1,8 +1,12 @@
 use std::error::Error;
+use std::ffi::OsString;
 use std::fmt;
+use std::net::{SocketAddr, UdpSocket};
+use std::sync::{Mutex, Arc};
 use std::{sync::mpsc::Receiver, time::Duration};
 use std::default::Default;
 use std::str;
+use std::path::Path;
 
 const PAYLOAD_MAX:     usize    = 1500;
 const RECV_TIMEOUT:    Duration = Duration::from_secs(2);
@@ -117,24 +121,41 @@ enum HandshakeState {
 }
 
 pub struct Connection {
-    state:     State,
-    recv:      Receiver<Vec<u8>>,
-    blocksize: usize,
-    root:      String,
+    state:      State,
+    recv:       Receiver<Vec<u8>>,
+    blocksize:  usize,
+    root:       String,
+    remote:     SocketAddr,
+    socket:     Arc<Mutex<UdpSocket>> 
 }
 
 impl Connection {
-    pub fn new(recva: Receiver<Vec<u8>>, roota: String) -> Connection {
+    pub fn new(recva: Receiver<Vec<u8>>, roota: String, remotea: SocketAddr, socketa: Arc<Mutex<UdpSocket>>) -> Connection {
         return Connection{
             state: State::WAIT_REQUEST, 
             recv: recva,
             blocksize: 512,
             root: roota,
+            remote: remotea,
+            socket: socketa,
         };
+    }
+
+    fn send_raw(data: &[u8]) {
+
     }
 
     fn read(&mut self, filename: &str) {
         println!("read {}", filename);
+
+        let base_path    = OsString::from(&self.root);
+        let request_path = OsString::from(&filename);
+        let full_path  = Path::new(&base_path).join(request_path);
+
+        if !full_path.starts_with(base_path) {
+            return;
+        }
+
     }
     fn write(&mut self, filename: &str) {
 
