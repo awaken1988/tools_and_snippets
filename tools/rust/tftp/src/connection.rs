@@ -1,12 +1,15 @@
 use std::error::Error;
 use std::ffi::OsString;
 use std::fmt;
+use std::io::Read;
 use std::net::{SocketAddr, UdpSocket};
 use std::sync::{Mutex, Arc};
+use std::time::Instant;
 use std::{sync::mpsc::Receiver, time::Duration};
 use std::default::Default;
 use std::str;
 use std::path::Path;
+use std::fs::File;
 
 const PAYLOAD_MAX:     usize    = 1500;
 const RECV_TIMEOUT:    Duration = Duration::from_secs(2);
@@ -14,6 +17,7 @@ const OPCODE_LEN:      usize    = 2;
 const SEP_LEN:         usize    = 1;
 const REQUEST_MIN_LEN: usize    = OPCODE_LEN + SEP_LEN + 1 + SEP_LEN;
 const ENTRY_IDX:       usize    = OPCODE_LEN + SEP_LEN;
+const ACK_COUNT_LEN:   usize    = 2;
 
 #[derive(Debug)]
 struct MyError {
@@ -187,18 +191,90 @@ impl Connection {
         self.send_raw(&buf);
     }
 
+    fn wait_ack(&mut self, timeout: Duration) -> Result<(),()> {
+        let now = Instant::now();
+
+        loop {
+           if now.elapsed() > timeout {
+            break;
+           }
+
+            let data  = &self.recv.recv_timeout(timeout).unwrap()[..];
+
+            let opcode = match parse_opcode_raw(data) {
+                Some(val) => val,
+                None              => continue
+            };
+
+            if data.len() < (OPCODE_LEN + ACK_COUNT_LEN) {
+                continue;
+            }
+
+            match opcode {
+                Opcode::Ack => (),
+                _ => continue
+            };
+
+
+
+
+
+        }
+
+        while now.elapsed() < timeout {
+            
+        }
+
+        return Result::Err(());
+    }
+
     fn read(&mut self, filename: &str) {
         println!("read {}", filename);
 
         let base_path    = OsString::from(&self.root);
         let request_path = OsString::from(&filename);
-        let full_path  = Path::new(&base_path).join(request_path);
+        let full_path     = Path::new(&base_path).join(request_path);
 
-        self.send_error(TftpError::FileNotFound, None);
+        if !full_path.starts_with(base_path) {
+            self.send_error(TftpError::FileNotFound, None);
+            return;
+        }
 
-        // if !full_path.starts_with(base_path) {
-        //     return;
-        // }
+        let mut file = match File::open(&full_path) {
+            Err(_)      => return self.send_error(TftpError::NotDefined, None).to_owned(),
+            Ok(x) => x,
+        };
+
+        let mut filebuf: Vec<u8> = vec![];
+        let mut sendbuf: Vec<u8> = vec![];
+
+        file.read_to_end(&mut filebuf);
+
+        let mut i: usize = 0;
+
+        while i<filebuf.len() {
+            let remain = filebuf.len() - i;
+            let remain = if remain >= self.blocksize { self.blocksize } else {remain};
+
+            sendbuf.extend_from_slice(&raw_opcode(&Opcode::Data));
+            sendbuf.extend_from_slice(&filebuf[i..(i+remain)]);
+
+            //Send Frame
+            self.send_raw(&sendbuf);
+
+            //wait for ACK
+            match self.wait_ack(RECV_TIMEOUT) {
+                Ok(_) => (),
+                Error(_) => return
+            }
+        }
+        
+
+
+
+
+
+
     }
     fn write(&mut self, filename: &str) {
     
@@ -244,7 +320,5 @@ impl Connection {
         self.priv_run();
     }
 
-    fn recv(data: &[u8]) {
-
-    }
+    
 }
