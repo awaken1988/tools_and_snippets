@@ -11,13 +11,15 @@ use std::str;
 use std::path::Path;
 use std::fs::File;
 
-const PAYLOAD_MAX:     usize    = 1500;
-const RECV_TIMEOUT:    Duration = Duration::from_secs(2);
-const OPCODE_LEN:      usize    = 2;
-const SEP_LEN:         usize    = 1;
-const REQUEST_MIN_LEN: usize    = OPCODE_LEN + SEP_LEN + 1 + SEP_LEN;
-const ENTRY_IDX:       usize    = OPCODE_LEN + SEP_LEN;
-const ACK_COUNT_LEN:   usize    = 2;
+const PAYLOAD_MAX:      usize    = 1500;
+const RECV_TIMEOUT:     Duration = Duration::from_secs(2);
+const OPCODE_LEN:       usize    = 2;
+const SEP_LEN:          usize    = 1;
+const REQUEST_MIN_LEN:  usize    = OPCODE_LEN + SEP_LEN + 1 + SEP_LEN;
+const ENTRY_IDX:        usize    = OPCODE_LEN + SEP_LEN;
+const ACK_LEN:          usize    = 4;
+const ACK_BLOCK_OFFSET: usize    = 2;
+
 
 #[derive(Debug)]
 struct MyError {
@@ -191,7 +193,7 @@ impl Connection {
         self.send_raw(&buf);
     }
 
-    fn wait_ack(&mut self, timeout: Duration) -> Result<(),()> {
+    fn wait_ack(&mut self, timeout: Duration, blocknr: u16) -> Result<(),()> {
         let now = Instant::now();
 
         loop {
@@ -199,14 +201,14 @@ impl Connection {
             break;
            }
 
-            let data  = &self.recv.recv_timeout(timeout).unwrap()[..];
+            let data  = &self.recv.recv_timeout(Duration::from_secs(100)).unwrap()[..];
 
             let opcode = match parse_opcode_raw(data) {
                 Some(val) => val,
                 None              => continue
             };
 
-            if data.len() < (OPCODE_LEN + ACK_COUNT_LEN) {
+            if data.len() != ACK_LEN {
                 continue;
             }
 
@@ -215,14 +217,13 @@ impl Connection {
                 _ => continue
             };
 
-
-
-
-
-        }
-
-        while now.elapsed() < timeout {
+            let (_,recv_blocknr) = data.split_at(ACK_BLOCK_OFFSET);
             
+            let recv_blocknr = ((recv_blocknr[0] as u16) << 8) + ((recv_blocknr[1] as u16) >>0);
+
+            if recv_blocknr == blocknr {
+                return Ok(());
+            }
         }
 
         return Result::Err(());
@@ -247,33 +248,40 @@ impl Connection {
 
         let mut filebuf: Vec<u8> = vec![];
         let mut sendbuf: Vec<u8> = vec![];
+        let mut blocknr: u16     = 1;
 
-        file.read_to_end(&mut filebuf);
-
-        let mut i: usize = 0;
-
-        while i<filebuf.len() {
-            let remain = filebuf.len() - i;
-            let remain = if remain >= self.blocksize { self.blocksize } else {remain};
-
-            sendbuf.extend_from_slice(&raw_opcode(&Opcode::Data));
-            sendbuf.extend_from_slice(&filebuf[i..(i+remain)]);
-
-            //Send Frame
-            self.send_raw(&sendbuf);
-
-            //wait for ACK
-            match self.wait_ack(RECV_TIMEOUT) {
-                Ok(_) => (),
-                Error(_) => return
-            }
-        }
+        filebuf.resize(self.blocksize,0);
         
 
+        loop {
+            let payload_len = match file.read(&mut filebuf[0..self.blocksize]) {
+                Ok(len) => len,
+                Error=> return,
+            };
+            
+            sendbuf.resize(0, 0);
+            sendbuf.extend_from_slice(&raw_opcode(&Opcode::Data));
+            sendbuf.push( (blocknr>>8) as u8 );
+            sendbuf.push( (blocknr>>0) as u8 );
 
+            if payload_len > 0 {
+                sendbuf.extend_from_slice(&filebuf[0..payload_len]);
+            }
 
+            self.socket.send_to(&sendbuf, self.remote);
 
+            //wait for ACK
+            match self.wait_ack(RECV_TIMEOUT, blocknr) {
+                Ok(_) => (),
+                Error => return
+            };
 
+            blocknr = blocknr.overflowing_add(1).0;
+
+            if payload_len < self.blocksize {
+                break;
+            }
+        }       
 
     }
     fn write(&mut self, filename: &str) {
