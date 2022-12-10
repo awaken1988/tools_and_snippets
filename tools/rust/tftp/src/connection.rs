@@ -1,9 +1,6 @@
-use std::error::Error;
 use std::ffi::OsString;
-use std::fmt;
 use std::io::Read;
 use std::net::{SocketAddr, UdpSocket};
-use std::sync::{Mutex, Arc};
 use std::time::Instant;
 use std::{sync::mpsc::Receiver, time::Duration};
 use std::default::Default;
@@ -11,32 +8,10 @@ use std::str;
 use std::path::Path;
 use std::fs::File;
 
-const PAYLOAD_MAX:      usize    = 1500;
 const RECV_TIMEOUT:     Duration = Duration::from_secs(2);
 const OPCODE_LEN:       usize    = 2;
-const SEP_LEN:          usize    = 1;
-const REQUEST_MIN_LEN:  usize    = OPCODE_LEN + SEP_LEN + 1 + SEP_LEN;
-const ENTRY_IDX:        usize    = OPCODE_LEN + SEP_LEN;
 const ACK_LEN:          usize    = 4;
 const ACK_BLOCK_OFFSET: usize    = 2;
-
-
-#[derive(Debug)]
-struct MyError {
-    details: String
-}
-
-impl MyError {
-    fn new(msg: &str) -> MyError {
-        MyError{details: msg.to_string()}
-    }
-}
-
-impl fmt::Display for MyError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,"{}",self.details)
-    }
-}
 
 #[derive(Clone,Copy,Debug)]
 enum Opcode {
@@ -47,6 +22,7 @@ enum Opcode {
     Error = 5,
 }
 
+#[allow(dead_code)]
 #[derive(Clone,Copy,Debug)]
 enum TftpError {
     NotDefined           = 0,
@@ -59,18 +35,9 @@ enum TftpError {
     NoSuchUser           = 7,
 }
 
-enum State {
-    WAIT_REQUEST,
-}
-
 fn raw_opcode(opcode: &Opcode) -> [u8;OPCODE_LEN] {
     let raw = *opcode as u16;
     return [(raw>>8) as u8, *opcode as u8];
-}
-
-struct Request {
-    opcode:   Opcode,
-    filename: String,
 }
 
 fn raw_to_num<T: Copy + From<u8> + core::ops::BitOrAssign + core::ops::Shl<usize,Output=T>+Default>(data: &[u8]) -> Option<T> {
@@ -89,7 +56,7 @@ fn raw_to_num<T: Copy + From<u8> + core::ops::BitOrAssign + core::ops::Shl<usize
 }
 
 fn parse_opcode(raw: u16) -> Option<Opcode> {
-    match (raw) {
+    match raw {
         x if x == Opcode::Read  as u16 => Some(Opcode::Read),
         x if x == Opcode::Write as u16 => Some(Opcode::Write),
         x if x == Opcode::Data  as u16 => Some(Opcode::Data),
@@ -134,12 +101,7 @@ fn parse_entries(data: &[u8]) -> Option<Vec<Vec<u8>>> {
     return Some(ret);
 }
 
-enum HandshakeState {
-    None,
-}
-
 pub struct Connection {
-    state:      State,
     recv:       Receiver<Vec<u8>>,
     blocksize:  usize,
     root:       String,
@@ -150,7 +112,6 @@ pub struct Connection {
 impl Connection {
     pub fn new(recva: Receiver<Vec<u8>>, roota: String, remotea: SocketAddr, socketa: UdpSocket) -> Connection {
         return Connection{
-            state: State::WAIT_REQUEST, 
             recv: recva,
             blocksize: 512,
             root: roota,
@@ -218,8 +179,7 @@ impl Connection {
             };
 
             let (_,recv_blocknr) = data.split_at(ACK_BLOCK_OFFSET);
-            
-            let recv_blocknr = ((recv_blocknr[0] as u16) << 8) + ((recv_blocknr[1] as u16) >>0);
+            let recv_blocknr       = raw_to_num::<u16>(recv_blocknr).unwrap();
 
             if recv_blocknr == blocknr {
                 return Ok(());
@@ -256,7 +216,7 @@ impl Connection {
         loop {
             let payload_len = match file.read(&mut filebuf[0..self.blocksize]) {
                 Ok(len) => len,
-                Error=> return,
+                _ => return,
             };
             
             sendbuf.resize(0, 0);
@@ -268,12 +228,12 @@ impl Connection {
                 sendbuf.extend_from_slice(&filebuf[0..payload_len]);
             }
 
-            self.socket.send_to(&sendbuf, self.remote);
+            let _ = self.socket.send_to(&sendbuf, self.remote);
 
             //wait for ACK
             match self.wait_ack(RECV_TIMEOUT, blocknr) {
                 Ok(_) => (),
-                Error => return
+                _ => return
             };
 
             blocknr = blocknr.overflowing_add(1).0;
@@ -282,12 +242,7 @@ impl Connection {
                 break;
             }
         }       
-
     }
-    fn write(&mut self, filename: &str) {
-    
-    }
-
 
     fn priv_run(&mut self)  {
         let data  = &self.recv.recv_timeout(RECV_TIMEOUT).unwrap()[..];
@@ -319,7 +274,7 @@ impl Connection {
 
         match opcode {
             Opcode::Read  => self.read(filename),
-            Opcode::Write => self.write(filename),
+            //Opcode::Write => self.write(filename),
             _             => return 
         }
     }

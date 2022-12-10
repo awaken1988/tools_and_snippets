@@ -1,18 +1,17 @@
 use std::{
     net::{UdpSocket, SocketAddr}, 
     collections::HashMap, 
-    sync::{mpsc::{Sender, Receiver, channel}, Arc, Mutex},
-    thread, time::Duration, cell::RefCell};
+    sync::{mpsc::{Sender, channel}},
+    thread};
 
 
 
-mod Connection;
+mod connection;
 
 fn main() {
     let mut connections = HashMap::<SocketAddr,Sender<Vec<u8>>>::new();
 
     let root = "C:/tftp".to_string();
-    let port: u16 = 69;
 
     let socket = UdpSocket::bind("127.0.0.1:69").unwrap();
 
@@ -27,26 +26,26 @@ fn main() {
         buf.resize(amt, 0);
 
         if connections.contains_key(&src) {
-            connections.get(&src).unwrap().send(buf);
+            let _ = connections.get(&src).unwrap().send(buf);
         }
         else {
             let (sender, receiver) = channel();
 
             connections.insert(src,sender);
 
-            let mut remote = src;
+            let remote = src;
             //remote.set_port(port);
 
             let root = root.clone();
             let socket = socket.try_clone().unwrap();
             thread::spawn(move|| {
-                Connection::Connection::new(
+                connection::Connection::new(
                     receiver, 
                     root.clone(), 
                     remote,
                     socket).run();
             });
-            connections.get(&src).unwrap().send(buf);
+            let _ = connections.get(&src).unwrap().send(buf);
         }
 
     }
