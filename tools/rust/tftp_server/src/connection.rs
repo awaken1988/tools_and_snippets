@@ -2,6 +2,7 @@ use std::ffi::OsString;
 use std::io::Read;
 use std::net::{SocketAddr, UdpSocket};
 use std::sync::Arc;
+use std::sync::mpsc::Sender;
 use std::time::Instant;
 use std::{sync::mpsc::Receiver, time::Duration};
 use std::default::Default;
@@ -108,18 +109,16 @@ pub struct Connection {
     root:       String,
     remote:     SocketAddr,
     socket:     UdpSocket,
-    running:    Arc<usize>,
 }
 
 impl Connection {
-    pub fn new(recva: Receiver<Vec<u8>>, roota: String, remotea: SocketAddr, socketa: UdpSocket, runninga: Arc<usize>) -> Connection {
+    pub fn new(recva: Receiver<Vec<u8>>, roota: String, remotea: SocketAddr, socketa: UdpSocket) -> Connection {
         return Connection{
             recv: recva,
             blocksize: 512,
             root: roota,
             remote: remotea,
             socket: socketa,
-            running: runninga,
         };
     }
 
@@ -253,6 +252,8 @@ impl Connection {
             Some(val) => val,
             None              => return
         };
+
+        println!("{:?}", data);
 
         let entries = match parse_entries(data) {
             Some(x) => x,
