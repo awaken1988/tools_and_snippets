@@ -1,15 +1,19 @@
 use std::{
     net::{UdpSocket, SocketAddr}, 
     collections::HashMap, 
-    sync::{mpsc::{Sender, channel}},
+    sync::{mpsc::{Sender, channel}, Arc},
     thread};
 
 
 
 mod connection;
+mod mydef;
+mod Connection;
+
+use mydef::ClientState;
 
 fn main() {
-    let mut connections = HashMap::<SocketAddr,Sender<Vec<u8>>>::new();
+    let mut connections = HashMap::<SocketAddr,ClientState>::new();
 
     let root = "C:/tftp".to_string();
 
@@ -26,16 +30,22 @@ fn main() {
         buf.resize(amt, 0);
 
         if connections.contains_key(&src) {
-            let _ = connections.get(&src).unwrap().send(buf);
+            let _ = connections.get(&src).unwrap().tx.send(buf);
         }
         else {
             let (sender, receiver) = channel();
 
-            connections.insert(src,sender);
+            let running: Arc<usize> = Arc::new(0);
+
+            let client_state = ClientState {
+                running: running.clone() ,
+                tx: sender
+            };
+
+            connections.insert(src,client_state);
 
             let remote = src;
-            //remote.set_port(port);
-
+            
             let root = root.clone();
             let socket = socket.try_clone().unwrap();
             thread::spawn(move|| {
@@ -43,10 +53,14 @@ fn main() {
                     receiver, 
                     root.clone(), 
                     remote,
-                    socket).run();
+                    socket,
+                    running.clone()).run();
             });
-            let _ = connections.get(&src).unwrap().send(buf);
+            let _ = connections.get(&src).unwrap().tx.send(buf);
         }
+
+        //cleanup
+        
 
     }
 

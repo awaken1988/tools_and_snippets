@@ -1,6 +1,7 @@
 use std::ffi::OsString;
 use std::io::Read;
 use std::net::{SocketAddr, UdpSocket};
+use std::sync::Arc;
 use std::time::Instant;
 use std::{sync::mpsc::Receiver, time::Duration};
 use std::default::Default;
@@ -107,16 +108,18 @@ pub struct Connection {
     root:       String,
     remote:     SocketAddr,
     socket:     UdpSocket,
+    running:    Arc<usize>,
 }
 
 impl Connection {
-    pub fn new(recva: Receiver<Vec<u8>>, roota: String, remotea: SocketAddr, socketa: UdpSocket) -> Connection {
+    pub fn new(recva: Receiver<Vec<u8>>, roota: String, remotea: SocketAddr, socketa: UdpSocket, runninga: Arc<usize>) -> Connection {
         return Connection{
             recv: recva,
             blocksize: 512,
             root: roota,
             remote: remotea,
             socket: socketa,
+            running: runninga,
         };
     }
 
@@ -190,8 +193,6 @@ impl Connection {
     }
 
     fn read(&mut self, filename: &str) {
-        println!("read {}", filename);
-
         let base_path    = OsString::from(&self.root);
         let request_path = OsString::from(&filename);
         let full_path     = Path::new(&base_path).join(request_path);
@@ -219,6 +220,7 @@ impl Connection {
                 _ => return,
             };
             
+            //send data
             sendbuf.resize(0, 0);
             sendbuf.extend_from_slice(&raw_opcode(&Opcode::Data));
             sendbuf.push( (blocknr>>8) as u8 );
@@ -236,25 +238,21 @@ impl Connection {
                 _ => return
             };
 
-            blocknr = blocknr.overflowing_add(1).0;
-
+            //break condition
             if payload_len < self.blocksize {
                 break;
             }
+
+            blocknr = blocknr.overflowing_add(1).0;
         }       
     }
 
     fn priv_run(&mut self)  {
-        let data  = &self.recv.recv_timeout(RECV_TIMEOUT).unwrap()[..];
-
-        println!("recv {:?}", data);
-
+        let data   = &self.recv.recv_timeout(RECV_TIMEOUT).unwrap()[..];
         let opcode = match parse_opcode_raw(data) {
             Some(val) => val,
             None              => return
         };
-
-        println!("opcode {:?}", opcode);
 
         let entries = match parse_entries(data) {
             Some(x) => x,
@@ -270,7 +268,7 @@ impl Connection {
             Err(_) => return
         };
 
-        println!("filename {}", filename);
+        println!("Connection from {:?}; {:?} {}", self.remote, opcode, filename);
 
         match opcode {
             Opcode::Read  => self.read(filename),
