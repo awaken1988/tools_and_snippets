@@ -9,6 +9,7 @@ use std::default::Default;
 use std::str;
 use std::path::Path;
 use std::fs::File;
+use byteorder::{LittleEndian,BigEndian, ByteOrder};
 
 
 pub const RECV_TIMEOUT:     Duration = Duration::from_secs(2);
@@ -39,10 +40,6 @@ pub enum TftpError {
     NoSuchUser           = 7,
 }
 
-pub fn raw_opcode(opcode: &Opcode) -> [u8;OPCODE_LEN] {
-    let raw = *opcode as u16;
-    return [(raw>>8) as u8, *opcode as u8];
-}
 
 pub fn raw_to_num<T: Copy + From<u8> + core::ops::BitOrAssign + core::ops::Shl<usize,Output=T>+Default>(data: &[u8]) -> Option<T> {
     let outlen = std::mem::size_of::<T>();
@@ -59,19 +56,42 @@ pub fn raw_to_num<T: Copy + From<u8> + core::ops::BitOrAssign + core::ops::Shl<u
     return Some(out);
 }
 
-pub fn num_to_raw<T>(number: T) -> Vec<u8>
-    where 
-        T: Copy + std::ops::Shr<usize,Output = T> + Into<u8>,
-{
-    let len = std::mem::size_of::<T>();
+//pub fn num_to_raw<T>(number: T) -> Vec<u8>
+//    where 
+//        T: Copy + std::ops::Shr<usize,Output = T> + Into<u8>,
+//{
+//    let len = std::mem::size_of::<T>();
+//
+//    let mut ret: Vec<u8> = Vec::new();
+//    for i in 0..len {
+//        let val_shifted = number>>(i*8);
+//        ret.push(Into::<u8>::into(val_shifted));
+//    }
+//
+//    return ret;
+//}
 
-    let mut ret: Vec<u8> = Vec::new();
-    for i in 0..len {
-        let val_shifted = number>>(i*8);
-        ret.push(Into::<u8>::into(val_shifted));
+macro_rules! num_to_raw {
+    ($num:expr) => {{
+        let mut ret = [0; std::mem::size_of_val($expr)];
+        BigEndian::read_u32(&mut ret, $num);
+        ret
+    }};
+}
+
+
+impl Opcode {
+    pub fn raw(self) -> [u8; OPCODE_LEN] {
+        let mut buf = [0; OPCODE_LEN];
+        BigEndian::write_u16(&mut buf, self as u16);
+        return buf;
     }
+}
 
-    return ret;
+impl From<Opcode> for u16 {
+    fn from(value: Opcode) -> Self {
+        return value as u16;
+    }
 }
 
 pub fn parse_opcode(raw: u16) -> Option<Opcode> {
@@ -86,7 +106,7 @@ pub fn parse_opcode(raw: u16) -> Option<Opcode> {
 }
 
 pub fn parse_opcode_raw(data: &[u8]) -> Option<Opcode> {
-    let num = match raw_to_num::<u16>(data) {
+    let num =   match raw_to_num::<u16>(data) {
         Some(num) => num,
         None          => return None
     };

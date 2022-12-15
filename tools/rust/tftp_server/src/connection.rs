@@ -10,6 +10,9 @@ use std::{str, num};
 use std::path::{Path, PathBuf};
 use std::fs::File;
 
+use byteorder::BigEndian;
+
+#[macro_use]
 use crate::protcol::*;
 
 pub struct Connection {
@@ -59,8 +62,10 @@ impl Connection {
     fn send_ack(&mut self, blocknr: u16) {
         let mut msg: Vec<u8> = vec![];
         
-        msg.extend_from_slice(&raw_opcode(&Opcode::Ack));
-        let x = num_to_raw(blocknr);
+        msg.extend_from_slice(&Opcode::Ack.raw());
+
+
+        let x = num_to_raw!(blocknr);
 
     }
 
@@ -89,7 +94,7 @@ impl Connection {
             };
 
             let (_,recv_blocknr) = data.split_at(ACK_BLOCK_OFFSET);
-            let recv_blocknr       = raw_to_num::<u16>(recv_blocknr).unwrap();
+            let recv_blocknr            = raw_to_num::<u16>(recv_blocknr).unwrap();
 
             if recv_blocknr == blocknr {
                 return Ok(());
@@ -140,7 +145,7 @@ impl Connection {
             
             //send data
             sendbuf.resize(0, 0);
-            sendbuf.extend_from_slice(&raw_opcode(&Opcode::Data));
+            sendbuf.extend_from_slice(&Opcode::Data.raw());
             sendbuf.push( (blocknr>>8) as u8 );
             sendbuf.push( (blocknr>>0) as u8 );
 

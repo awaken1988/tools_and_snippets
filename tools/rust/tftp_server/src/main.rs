@@ -74,6 +74,8 @@ fn main() {
         //cleanup
         cleanup_connections(&mut connections, &mut cleanpup_stopwatch);
 
+        let value = u32::from_le_bytes([0x78, 0x56, 0x34, 0x12]);
+
     }
 }
 
