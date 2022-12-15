@@ -6,102 +6,11 @@ use std::sync::mpsc::Sender;
 use std::time::Instant;
 use std::{sync::mpsc::Receiver, time::Duration};
 use std::default::Default;
-use std::str;
-use std::path::Path;
+use std::{str, num};
+use std::path::{Path, PathBuf};
 use std::fs::File;
 
-const RECV_TIMEOUT:     Duration = Duration::from_secs(2);
-const OPCODE_LEN:       usize    = 2;
-const ACK_LEN:          usize    = 4;
-const ACK_BLOCK_OFFSET: usize    = 2;
-
-#[derive(Clone,Copy,Debug)]
-enum Opcode {
-    Read  = 1,
-    Write = 2,
-    Data  = 3,
-    Ack   = 4,
-    Error = 5,
-}
-
-#[allow(dead_code)]
-#[derive(Clone,Copy,Debug)]
-enum TftpError {
-    NotDefined           = 0,
-    FileNotFound         = 1,
-    AccessViolation      = 2,
-    DiskFull             = 3,
-    IllegalOperation     = 4,
-    UnknownTransferID    = 5,
-    FileAlreadyExists    = 6,
-    NoSuchUser           = 7,
-}
-
-fn raw_opcode(opcode: &Opcode) -> [u8;OPCODE_LEN] {
-    let raw = *opcode as u16;
-    return [(raw>>8) as u8, *opcode as u8];
-}
-
-fn raw_to_num<T: Copy + From<u8> + core::ops::BitOrAssign + core::ops::Shl<usize,Output=T>+Default>(data: &[u8]) -> Option<T> {
-    let outlen = std::mem::size_of::<T>();
-    if outlen > data.len() {
-        return None
-    }
-
-    let mut out: T = Default::default();
-    for i in 0..outlen {
-        let curr = T::from(data[i]);
-        out |= curr  << ((outlen-1-i)*8);
-    }
-
-    return Some(out);
-}
-
-fn parse_opcode(raw: u16) -> Option<Opcode> {
-    match raw {
-        x if x == Opcode::Read  as u16 => Some(Opcode::Read),
-        x if x == Opcode::Write as u16 => Some(Opcode::Write),
-        x if x == Opcode::Data  as u16 => Some(Opcode::Data),
-        x if x == Opcode::Ack   as u16 => Some(Opcode::Ack),
-        x if x == Opcode::Error as u16 => Some(Opcode::Error),
-        _ => None,
-    }
-}
-
-fn parse_opcode_raw(data: &[u8]) -> Option<Opcode> {
-    let num = match raw_to_num::<u16>(data) {
-        Some(num) => num,
-        None          => return None
-    };
-    return parse_opcode(num);
-}
-
-fn parse_entries(data: &[u8]) -> Option<Vec<Vec<u8>>> {
-    let mut ret: Vec<Vec<u8>> = vec![];
-
-    if data.len() <= (OPCODE_LEN+1) {
-        return None;
-    };
-
-    let entry_data = &data[OPCODE_LEN..];
-
-    let mut next: Vec<u8> = vec![];
-    for i in entry_data {
-        if *i == 0x00 {
-            ret.push(next.clone());
-            next.resize(0, 0);
-        }
-        else {
-            next.push(*i);
-        }
-    }
-
-    if !next.is_empty() {
-        return None;
-    }
-  
-    return Some(ret);
-}
+use crate::protcol::*;
 
 pub struct Connection {
     recv:       Receiver<Vec<u8>>,
@@ -112,15 +21,6 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(recva: Receiver<Vec<u8>>, roota: String, remotea: SocketAddr, socketa: UdpSocket) -> Connection {
-        return Connection{
-            recv: recva,
-            blocksize: 512,
-            root: roota,
-            remote: remotea,
-            socket: socketa,
-        };
-    }
 
     fn send_raw(&mut self, data: &[u8]) {
         self.socket.send_to(data, self.remote).unwrap();
@@ -154,6 +54,14 @@ impl Connection {
         buf.push(0);
 
         self.send_raw(&buf);
+    }
+
+    fn send_ack(&mut self, blocknr: u16) {
+        let mut msg: Vec<u8> = vec![];
+        
+        msg.extend_from_slice(&raw_opcode(&Opcode::Ack));
+        let x = num_to_raw(blocknr);
+
     }
 
     fn wait_ack(&mut self, timeout: Duration, blocknr: u16) -> Result<(),()> {
@@ -191,15 +99,26 @@ impl Connection {
         return Result::Err(());
     }
 
-    fn read(&mut self, filename: &str) {
+    fn get_file_path(&self, path_relative: &str) -> Result<PathBuf,TftpError> {
         let base_path    = OsString::from(&self.root);
-        let request_path = OsString::from(&filename);
+        let request_path = OsString::from(&path_relative);
         let full_path     = Path::new(&base_path).join(request_path);
 
         if !full_path.starts_with(base_path) {
-            self.send_error(TftpError::FileNotFound, None);
-            return;
+            return Err(TftpError::FileNotFound);
         }
+
+        return Ok(full_path.to_path_buf());
+    }
+
+    fn read(&mut self, filename: &str) {
+        let full_path     = match self.get_file_path(filename) {
+            Ok(full_path) => full_path,
+            Err(errno) => {
+                self.send_error(errno, Option::None);
+                return;
+            }
+        };
 
         let mut file = match File::open(&full_path) {
             Err(_)      => return self.send_error(TftpError::NotDefined, None).to_owned(),
@@ -246,7 +165,39 @@ impl Connection {
         }       
     }
 
-    fn priv_run(&mut self)  {
+    fn write(&mut self, filename: &str) {
+        let full_path     = match self.get_file_path(filename) {
+            Ok(full_path) => full_path,
+            Err(errno) => {
+                self.send_error(errno, Option::None);
+                return;
+            }
+        };
+
+        let mut file = match File::open(&full_path) {
+            Err(_)      => return self.send_error(TftpError::NotDefined, None).to_owned(),
+            Ok(x) => x,
+        };  
+
+      
+
+      
+
+
+
+    }
+
+    pub fn new(recva: Receiver<Vec<u8>>, roota: String, remotea: SocketAddr, socketa: UdpSocket) -> Connection {
+        return Connection{
+            recv: recva,
+            blocksize: 512,
+            root: roota,
+            remote: remotea,
+            socket: socketa,
+        };
+    }
+
+    pub fn run(&mut self)  {
         let data   = &self.recv.recv_timeout(RECV_TIMEOUT).unwrap()[..];
         let opcode = match parse_opcode_raw(data) {
             Some(val) => val,
@@ -273,14 +224,8 @@ impl Connection {
 
         match opcode {
             Opcode::Read  => self.read(filename),
-            //Opcode::Write => self.write(filename),
+            Opcode::Write => self.write(filename),
             _             => return 
         }
-    }
-
-    pub fn run(&mut self) {
-        self.priv_run();
-    }
-
-    
+    }    
 }

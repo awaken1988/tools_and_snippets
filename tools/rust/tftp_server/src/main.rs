@@ -8,6 +8,7 @@ use std::{
 
 mod connection;
 mod mydef;
+mod protcol;
 use mydef::ClientState;
 
 const CLEANUP_TIMEOUT: Duration = Duration::from_secs(10);
