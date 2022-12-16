@@ -12,7 +12,6 @@ use std::fs::File;
 
 use byteorder::BigEndian;
 
-#[macro_use]
 use crate::protcol::*;
 
 pub struct Connection {
@@ -63,10 +62,7 @@ impl Connection {
         let mut msg: Vec<u8> = vec![];
         
         msg.extend_from_slice(&Opcode::Ack.raw());
-
-
-        let x = num_to_raw!(blocknr);
-
+        msg.extend_from_slice(&blocknr.to_be_bytes());
     }
 
     fn wait_ack(&mut self, timeout: Duration, blocknr: u16) -> Result<(),()> {
