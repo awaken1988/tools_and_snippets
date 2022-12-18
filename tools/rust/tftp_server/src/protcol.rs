@@ -12,10 +12,17 @@ use std::fs::File;
 use byteorder::{ByteOrder, LittleEndian};
 
 
-pub const RECV_TIMEOUT:     Duration = Duration::from_secs(2);
-pub const OPCODE_LEN:       usize    = 2;
-pub const ACK_LEN:          usize    = 4;
-pub const ACK_BLOCK_OFFSET: usize    = 2;
+pub const DEFAULT_BLOCKSIZE: usize    = 512;
+
+pub const TFTP_VALUE_LEN:    usize    = 2;
+
+pub const RECV_TIMEOUT:      Duration = Duration::from_secs(2);
+pub const OPCODE_LEN:        usize    = 2;
+pub const ACK_LEN:           usize    = 4;
+pub const ACK_BLOCK_OFFSET:  usize    = 2;
+
+pub const DATA_BLOCK_OFFSET: usize    = 2;
+pub const DATA_OFFSET:       usize    = 4;
 
 
 #[derive(Clone,Copy,Debug)]

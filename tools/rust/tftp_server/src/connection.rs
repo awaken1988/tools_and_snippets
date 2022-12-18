@@ -1,6 +1,8 @@
 use std::ffi::OsString;
+use std::fmt::Write;
 use std::io::Read;
 use std::net::{SocketAddr, UdpSocket};
+use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::mpsc::Sender;
 use std::time::Instant;
@@ -9,17 +11,18 @@ use std::default::Default;
 use std::{str, num};
 use std::path::{Path, PathBuf};
 use std::fs::File;
+use std::path;
 
 use byteorder::BigEndian;
 
+use crate::mydef::{ServerSettings,WriteMode};
 use crate::protcol::*;
 
 pub struct Connection {
     recv:       Receiver<Vec<u8>>,
-    blocksize:  usize,
-    root:       String,
     remote:     SocketAddr,
     socket:     UdpSocket,
+    settings:   ServerSettings,
 }
 
 impl Connection {
@@ -100,8 +103,48 @@ impl Connection {
         return Result::Err(());
     }
 
+    fn wait_data(&mut self, timeout: Duration, blocknr: u16, out: &mut [u8]) -> Result<(),()> {
+        let now = Instant::now();
+
+        loop {
+           if now.elapsed() > timeout {
+            break;
+           }
+
+            let data  = &self.recv.recv_timeout(Duration::from_secs(100)).unwrap()[..];
+
+            let opcode = match parse_opcode_raw(data) {
+                Some(val) => val,
+                None              => continue
+            };
+
+            match opcode {
+                Opcode::Data => (),
+                _ => continue
+            };
+
+            if data.len() < (DATA_OFFSET+1) {
+                continue;
+            }
+
+            //TODO: save ranges in protol
+            let recv_blocknr = data[DATA_BLOCK_OFFSET..()]
+
+            let (recv_blocknr,data) = data[0..DATA_BLOCK_OFFSET].split_at(ACK_BLOCK_OFFSET);
+            
+
+
+
+            if recv_blocknr == blocknr {
+                return Ok(());
+            }
+        }
+
+        return Result::Err(());
+    }
+
     fn get_file_path(&self, path_relative: &str) -> Result<PathBuf,TftpError> {
-        let base_path    = OsString::from(&self.root);
+        let base_path    = OsString::from(&self.settings.root_dir);
         let request_path = OsString::from(&path_relative);
         let full_path     = Path::new(&base_path).join(request_path);
 
@@ -130,11 +173,11 @@ impl Connection {
         let mut sendbuf: Vec<u8> = vec![];
         let mut blocknr: u16     = 1;
 
-        filebuf.resize(self.blocksize,0);
+        filebuf.resize(self.settings.blocksize,0);
         
 
         loop {
-            let payload_len = match file.read(&mut filebuf[0..self.blocksize]) {
+            let payload_len = match file.read(&mut filebuf[0..self.settings.blocksize]) {
                 Ok(len) => len,
                 _ => return,
             };
@@ -158,7 +201,7 @@ impl Connection {
             };
 
             //break condition
-            if payload_len < self.blocksize {
+            if payload_len < self.settings.blocksize {
                 break;
             }
 
@@ -167,6 +210,11 @@ impl Connection {
     }
 
     fn write(&mut self, filename: &str) {
+        if self.settings.write_mode == WriteMode::DISABLED {
+            self.send_error(TftpError::AccessViolation, Option::None);
+            return;
+        }
+
         let full_path     = match self.get_file_path(filename) {
             Ok(full_path) => full_path,
             Err(errno) => {
@@ -175,10 +223,24 @@ impl Connection {
             }
         };
 
+        let is_file = path::Path::new(full_path.as_os_str()).exists();
+        let is_overwrite = self.settings.write_mode == WriteMode::WRITE_OVERWRITE;
+
+        if is_file && !is_overwrite {
+            self.send_error(TftpError::FileAlreadyExists, Option::None);
+            return;
+        }
+
         let mut file = match File::open(&full_path) {
             Err(_)      => return self.send_error(TftpError::NotDefined, None).to_owned(),
             Ok(x) => x,
         };  
+
+        self.send_ack(0);
+
+
+
+
 
       
 
@@ -188,13 +250,12 @@ impl Connection {
 
     }
 
-    pub fn new(recva: Receiver<Vec<u8>>, roota: String, remotea: SocketAddr, socketa: UdpSocket) -> Connection {
+    pub fn new(recv: Receiver<Vec<u8>>, remote: SocketAddr, socket: UdpSocket, settings: ServerSettings) -> Connection {
         return Connection{
-            recv: recva,
-            blocksize: 512,
-            root: roota,
-            remote: remotea,
-            socket: socketa,
+            recv:      recv,
+            remote:    remote,
+            socket:    socket,
+            settings:  settings,
         };
     }
 
