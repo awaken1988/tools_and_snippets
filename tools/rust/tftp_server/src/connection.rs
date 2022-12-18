@@ -1,6 +1,5 @@
 use std::ffi::OsString;
-use std::fmt::Write;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::net::{SocketAddr, UdpSocket};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -66,6 +65,8 @@ impl Connection {
         
         msg.extend_from_slice(&Opcode::Ack.raw());
         msg.extend_from_slice(&blocknr.to_be_bytes());
+
+        self.send_raw(&msg);
     }
 
     fn wait_ack(&mut self, timeout: Duration, blocknr: u16) -> Result<(),()> {
@@ -103,7 +104,7 @@ impl Connection {
         return Result::Err(());
     }
 
-    fn wait_data(&mut self, timeout: Duration, blocknr: u16, out: &mut [u8]) -> Result<(),()> {
+    fn wait_data(&mut self, timeout: Duration, blocknr: u16, out: &mut Vec<u8>) -> Result<(),()> {
         let now = Instant::now();
 
         loop {
@@ -117,7 +118,7 @@ impl Connection {
                 Some(val) => val,
                 None              => continue
             };
-
+        
             match opcode {
                 Opcode::Data => (),
                 _ => continue
@@ -128,16 +129,22 @@ impl Connection {
             }
 
             //TODO: save ranges in protol
-            let recv_blocknr = data[DATA_BLOCK_OFFSET..()]
+            let recv_blocknr = &data[DATA_BLOCK_NUM];
+            let recv_blocknr = if let Some(nr) = raw_to_num::<u16>(recv_blocknr) {
+                nr
+            } else {
+                continue;
+            };
 
-            let (recv_blocknr,data) = data[0..DATA_BLOCK_OFFSET].split_at(ACK_BLOCK_OFFSET);
-            
-
-
-
-            if recv_blocknr == blocknr {
-                return Ok(());
+            if blocknr != recv_blocknr {
+                continue;
             }
+            
+            let recv_data    = &data[DATA_OFFSET..];
+            println!("rx block={}; len={}", recv_blocknr, recv_data.len());
+            out.clear();
+            out.extend_from_slice(recv_data);
+            return Ok(());
         }
 
         return Result::Err(());
@@ -231,23 +238,32 @@ impl Connection {
             return;
         }
 
-        let mut file = match File::open(&full_path) {
+        let mut file = match File::create(&full_path) {
             Err(_)      => return self.send_error(TftpError::NotDefined, None).to_owned(),
             Ok(x) => x,
         };  
 
-        self.send_ack(0);
+        let mut block_num = 0u16;
+        let mut data: Vec<u8> = vec![];
+        self.send_ack(block_num);
+        loop {
+            block_num = block_num.wrapping_add(1);
+            
+            match self.wait_data(RECV_TIMEOUT, block_num, &mut data) {
+                Ok(_) => {},
+                Err(_) => {
+                    self.send_error(TftpError::NotDefined, Some("write timeout"));
+                    break;
+                }
+            };
 
+            file.write(&data); 
+            self.send_ack(block_num);
 
-
-
-
-      
-
-      
-
-
-
+            if data.len() < self.settings.blocksize {
+                break;
+            }
+        }
     }
 
     pub fn new(recv: Receiver<Vec<u8>>, remote: SocketAddr, socket: UdpSocket, settings: ServerSettings) -> Connection {

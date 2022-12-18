@@ -1,6 +1,7 @@
 use std::ffi::OsString;
 use std::io::Read;
 use std::net::{SocketAddr, UdpSocket};
+use std::ops::Range;
 use std::sync::Arc;
 use std::sync::mpsc::Sender;
 use std::time::Instant;
@@ -21,8 +22,11 @@ pub const OPCODE_LEN:        usize    = 2;
 pub const ACK_LEN:           usize    = 4;
 pub const ACK_BLOCK_OFFSET:  usize    = 2;
 
-pub const DATA_BLOCK_OFFSET: usize    = 2;
-pub const DATA_OFFSET:       usize    = 4;
+
+pub const DATA_OFFSET:       usize        = 4;
+pub const DATA_BLOCK_NUM:    Range<usize> = 2..4;
+
+
 
 
 #[derive(Clone,Copy,Debug)]

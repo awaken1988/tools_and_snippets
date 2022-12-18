@@ -15,8 +15,8 @@ const CLEANUP_TIMEOUT: Duration = Duration::from_secs(10);
 
 fn main() {
     let mut connections = HashMap::<SocketAddr,ClientState>::new();
-    //let root = "C:/tftp".to_string();
-    //let root = "/home/martin/src/".to_string();
+    let root_dir = "C:/tftp".to_string();
+    //let root_dir = "/home/martin/src/".to_string();
 
     let mut cleanpup_stopwatch = Instant::now();
 
@@ -26,7 +26,7 @@ fn main() {
 
     let (ctrl_sender, ctrl_recv) = channel::<SocketAddr>();
 
-    let settings = ServerSettings::new("/home/martin/src/".to_string());
+    let settings = ServerSettings::new(root_dir.to_string());
 
     loop {
         let mut buf = Vec::<u8>::new();
