@@ -1,32 +1,42 @@
 use std::{
     net::{UdpSocket, SocketAddr}, 
     collections::HashMap, 
-    sync::{mpsc::{Sender, channel}, Arc, Mutex},
+    sync::mpsc::channel,
     thread, time::{Duration, Instant}};
-
-
+use clap::{Command, Arg};
 
 mod connection;
-mod mydef;
+mod defs;
 mod protcol;
-use mydef::{ClientState, ServerSettings};
+use defs::{ClientState, ServerSettings};
+
 
 const CLEANUP_TIMEOUT: Duration = Duration::from_secs(10);
 
-fn main() {
-    let mut connections = HashMap::<SocketAddr,ClientState>::new();
-    let root_dir = "C:/tftp".to_string();
-    //let root_dir = "/home/martin/src/".to_string();
 
+
+
+fn main()  {
+    let args = Command::new("tftpserver")
+        .arg(Arg::new("rootdir")
+            .long("rootdir")
+            .required(true)
+            .help("base dir of the server"))
+        .get_matches();
+
+    let rootdir = args.get_one::<String>("rootdir").unwrap();
+
+    if !std::path::Path::new(rootdir).is_dir(){
+        panic!("rootdir = \"{}\" does not exists", rootdir);
+    }
+
+    let mut connections = HashMap::<SocketAddr,ClientState>::new();
     let mut cleanpup_stopwatch = Instant::now();
 
 
     let socket = UdpSocket::bind("127.0.0.1:69").unwrap();
-    socket.set_read_timeout(Some(Duration::from_secs(1)));
-
-    let (ctrl_sender, ctrl_recv) = channel::<SocketAddr>();
-
-    let settings = ServerSettings::new(root_dir.to_string());
+    let _ = socket.set_read_timeout(Some(Duration::from_secs(1)));  //TODO: check for error
+    let settings = ServerSettings::new(rootdir.clone());
 
     loop {
         let mut buf = Vec::<u8>::new();
@@ -34,7 +44,7 @@ fn main() {
 
         let (amt, src) = match socket.recv_from(&mut buf) {
             Ok((size,socket)) => (size,socket),
-            Error => {
+            Err(_) => {
                 cleanup_connections(&mut connections, &mut cleanpup_stopwatch);
                 continue;
             }
@@ -48,15 +58,12 @@ fn main() {
         else {
             let (sender, receiver) = channel();
 
-            let running: Arc<usize> = Arc::new(0);
-
             let mut client_state = ClientState {
                 tx: sender,
                 join_handle: Option::None,
             };
 
             let remote = src;
-            let ctrl_sender = ctrl_sender.clone();
             
             let socket = socket.try_clone().unwrap();
             let settings = settings.clone();
@@ -75,9 +82,6 @@ fn main() {
 
         //cleanup
         cleanup_connections(&mut connections, &mut cleanpup_stopwatch);
-
-        let value = u32::from_le_bytes([0x78, 0x56, 0x34, 0x12]);
-
     }
 }
 
@@ -95,7 +99,7 @@ fn cleanup_connections(connections: &mut HashMap::<SocketAddr,ClientState>, stop
     for i_con in todo_delete {
         let state = connections.remove(&i_con).unwrap();
         println!("Cleanput connection={:?}", i_con);
-        state.join_handle.unwrap().join();
+        let _ = state.join_handle.unwrap().join();
     }
 
 

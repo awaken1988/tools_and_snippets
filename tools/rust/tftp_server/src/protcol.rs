@@ -1,21 +1,8 @@
-use std::ffi::OsString;
-use std::io::Read;
-use std::net::{SocketAddr, UdpSocket};
 use std::ops::Range;
-use std::sync::Arc;
-use std::sync::mpsc::Sender;
-use std::time::Instant;
-use std::{sync::mpsc::Receiver, time::Duration};
+use std::time::Duration;
 use std::default::Default;
-use std::str;
-use std::path::Path;
-use std::fs::File;
-use byteorder::{ByteOrder, LittleEndian};
-
 
 pub const DEFAULT_BLOCKSIZE: usize    = 512;
-
-pub const TFTP_VALUE_LEN:    usize    = 2;
 
 pub const RECV_TIMEOUT:      Duration = Duration::from_secs(2);
 pub const OPCODE_LEN:        usize    = 2;
@@ -83,12 +70,12 @@ impl ToString for ErrorResponse {
 }
 
 impl  ErrorResponse {
-    pub fn new(number: ErrorNumber) -> ErrorResponse {
-        ErrorResponse {
-            number: number,
-            msg: None
-        }
-    }
+    // pub fn new(number: ErrorNumber) -> ErrorResponse {
+    //     ErrorResponse {
+    //         number: number,
+    //         msg: None
+    //     }
+    // }
 
     pub fn new_custom(msg: String) -> ErrorResponse {
         ErrorResponse {

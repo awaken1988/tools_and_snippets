@@ -1,20 +1,14 @@
 use std::ffi::OsString;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, UdpSocket};
-use std::str::FromStr;
-use std::sync::Arc;
-use std::sync::mpsc::Sender;
 use std::time::Instant;
 use std::{sync::mpsc::Receiver, time::Duration};
-use std::default::Default;
-use std::{str, num};
+use std::str;
 use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::path;
 
-use byteorder::BigEndian;
-
-use crate::mydef::{ServerSettings,WriteMode};
+use crate::defs::{ServerSettings,WriteMode};
 use crate::protcol::*;
 
 pub struct Connection {
@@ -33,7 +27,7 @@ impl Connection {
     }
 
     fn send_error(&mut self, error: &ErrorResponse) {
-        let mut outmsg = error.to_string();
+        let outmsg = error.to_string();
 
         let opcode_raw = Opcode::Error as u16;
         let error_raw = error.number as u16;
@@ -165,7 +159,6 @@ impl Connection {
 
         filebuf.resize(self.settings.blocksize,0);
         
-
         loop {
             let payload_len = match file.read(&mut filebuf[0..self.settings.blocksize]) {
                 Ok(len) => len,
@@ -199,14 +192,14 @@ impl Connection {
     }
 
     fn write(&mut self, filename: &str) -> Result<()> {
-        if self.settings.write_mode == WriteMode::DISABLED {
+        if self.settings.write_mode == WriteMode::Disabled {
             return Err(ErrorNumber::AccessViolation.into());
         }
 
         let full_path     = self.get_file_path(filename)?;
 
         let is_file = path::Path::new(full_path.as_os_str()).exists();
-        let is_overwrite = self.settings.write_mode == WriteMode::WRITE_OVERWRITE;
+        let is_overwrite = self.settings.write_mode == WriteMode::WriteOverwrite;
 
         if is_file && !is_overwrite {
             return Err(ErrorNumber::FileAlreadyExists.into());
@@ -225,7 +218,11 @@ impl Connection {
             
             self.wait_data(RECV_TIMEOUT, block_num, &mut data)?;
 
-            file.write(&data); 
+            match file.write(&data) {
+                Err(_) => return Err(ErrorResponse::new_custom("write to file error".to_string())),
+                Ok(_) => {},
+            }
+            
             self.send_ack(block_num);
 
             if data.len() < self.settings.blocksize {

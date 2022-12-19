@@ -1,12 +1,12 @@
-use std::{sync::{Arc, mpsc::Sender}, thread::JoinHandle, fmt::Write};
+use std::{sync::{mpsc::Sender}, thread::JoinHandle};
 
 use crate::protcol;
 
 #[derive(Clone,PartialEq)]
 pub enum WriteMode {
-    DISABLED,
-    WRITE_NEW,
-    WRITE_OVERWRITE,
+    Disabled,
+    WriteNew,
+    WriteOverwrite,
 }
 
 #[derive(Clone)]
@@ -19,7 +19,7 @@ pub struct ServerSettings {
 impl ServerSettings {
     pub fn new(root_dir: String) -> ServerSettings {
         ServerSettings {
-            write_mode: WriteMode::WRITE_NEW,
+            write_mode: WriteMode::WriteNew,
             root_dir: root_dir,
             blocksize: protcol::DEFAULT_BLOCKSIZE,
         }
