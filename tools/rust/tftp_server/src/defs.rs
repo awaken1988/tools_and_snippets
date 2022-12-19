@@ -24,6 +24,11 @@ impl ServerSettings {
             blocksize: protcol::DEFAULT_BLOCKSIZE,
         }
     }
+
+    pub fn set_write_mode(mut self, mode: WriteMode) -> Self {
+        self.write_mode = mode;
+        return self;
+    }
 }
 
 

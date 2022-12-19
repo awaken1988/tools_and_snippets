@@ -16,6 +16,8 @@ pub struct Connection {
     remote:     SocketAddr,
     socket:     UdpSocket,
     settings:   ServerSettings,
+    start:      Instant,
+    bytecount:  usize,
 }
 
 type Result<T> = std::result::Result<T,ErrorResponse>;
@@ -124,7 +126,6 @@ impl Connection {
             }
             
             let recv_data    = &data[DATA_OFFSET..];
-            println!("rx block={}; len={}", recv_blocknr, recv_data.len());
             out.clear();
             out.extend_from_slice(recv_data);
             return Ok(());
@@ -146,6 +147,8 @@ impl Connection {
     }
 
     fn read(&mut self, filename: &str) -> Result<()> {
+        println!("INFO: {:?} Read file {}", self.remote, filename);
+
         let full_path     = self.get_file_path(filename)?;
 
         let mut file = match File::open(&full_path) {
@@ -170,6 +173,7 @@ impl Connection {
             sendbuf.extend_from_slice(&Opcode::Data.raw());
             sendbuf.push( (blocknr>>8) as u8 );
             sendbuf.push( (blocknr>>0) as u8 );
+            self.bytecount += payload_len;
 
             if payload_len > 0 {
                 sendbuf.extend_from_slice(&filebuf[0..payload_len]);
@@ -192,6 +196,8 @@ impl Connection {
     }
 
     fn write(&mut self, filename: &str) -> Result<()> {
+        println!("INFO: {:?} Write file {}", self.remote, filename);
+
         if self.settings.write_mode == WriteMode::Disabled {
             return Err(ErrorNumber::AccessViolation.into());
         }
@@ -218,6 +224,8 @@ impl Connection {
             
             self.wait_data(RECV_TIMEOUT, block_num, &mut data)?;
 
+            self.bytecount += data.len();
+
             match file.write(&data) {
                 Err(_) => return Err(ErrorResponse::new_custom("write to file error".to_string())),
                 Ok(_) => {},
@@ -239,6 +247,8 @@ impl Connection {
             remote:    remote,
             socket:    socket,
             settings:  settings,
+            start:     Instant::now(),
+            bytecount: 0,
         };
     }
 
@@ -248,8 +258,6 @@ impl Connection {
             Some(val) => val,
             None              => return
         };
-
-        println!("{:?}", data);
 
         let entries = match parse_entries(data) {
             Some(x) => x,
@@ -265,7 +273,7 @@ impl Connection {
             Err(_) => return
         };
 
-        println!("Connection from {:?}; {:?} {}", self.remote, opcode, filename);
+        println!("INFO: {:?}; {:?} {}", self.remote, opcode, filename);
 
         let result = match opcode {
             Opcode::Read  => self.read(filename),
@@ -274,8 +282,17 @@ impl Connection {
         };
 
         match result {
-            Err(err) => self.send_error(&err),
+            Err(err) => {
+                println!("ERR:  {:?} {}", self.remote, err.to_string());
+                self.send_error(&err);
+            },
             _ => {},
         }
+
+        //statistics
+        let runtime = self.start.elapsed().as_secs_f32();
+        let mib_s      = ((self.bytecount as f32) / runtime) / 1000000.0;
+        println!("INFO: {:?} {:?} runtime = {}s; speed = {}MiB/s", self.remote, opcode, runtime, mib_s );
+
     }    
 }

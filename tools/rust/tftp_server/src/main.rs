@@ -3,17 +3,18 @@ use std::{
     collections::HashMap, 
     sync::mpsc::channel,
     thread, time::{Duration, Instant}};
-use clap::{Command, Arg};
+use clap::{Command, Arg, builder::PossibleValue};
 
 mod connection;
 mod defs;
 mod protcol;
-use defs::{ClientState, ServerSettings};
+use defs::{ClientState, ServerSettings, WriteMode};
 
 
-const CLEANUP_TIMEOUT: Duration = Duration::from_secs(10);
+const CLEANUP_TIMEOUT: Duration = Duration::from_secs(3);
 
-
+//TODO:
+//  - when in overwrite mode lock one instance
 
 
 fn main()  {
@@ -21,8 +22,26 @@ fn main()  {
         .arg(Arg::new("rootdir")
             .long("rootdir")
             .required(true)
-            .help("base dir of the server"))
+            .help("base dir of the server")
+        )
+        .arg(Arg::new("writemode")
+            .long("writemode")
+            .required(false)
+            .value_parser([PossibleValue::new("Disabled"), PossibleValue::new("New"), PossibleValue::new("Overwrite")])
+            .default_value("New")
+            .help("Disabled: write not possible; New: New files can be uploaded; Overwrite: overwrite existing files allowed")
+        )
         .get_matches();
+
+    //TODO: there is a more elegant way with clap; but for now simple redundant strings used
+    let writemode = args.get_one::<String>("writemode").unwrap();
+    let writemode = match writemode.as_str() {
+        "Disabled" => WriteMode::Disabled,
+        "New" => WriteMode::WriteNew,
+        "Overwrite" => WriteMode::WriteOverwrite,
+        other => panic!("writemode {} does not exist", other),
+    };
+   
 
     let rootdir = args.get_one::<String>("rootdir").unwrap();
 
@@ -33,10 +52,10 @@ fn main()  {
     let mut connections = HashMap::<SocketAddr,ClientState>::new();
     let mut cleanpup_stopwatch = Instant::now();
 
-
     let socket = UdpSocket::bind("127.0.0.1:69").unwrap();
     let _ = socket.set_read_timeout(Some(Duration::from_secs(1)));  //TODO: check for error
-    let settings = ServerSettings::new(rootdir.clone());
+    let settings = ServerSettings::new(rootdir.clone())
+        .set_write_mode(writemode);
 
     loop {
         let mut buf = Vec::<u8>::new();
@@ -98,7 +117,7 @@ fn cleanup_connections(connections: &mut HashMap::<SocketAddr,ClientState>, stop
     }
     for i_con in todo_delete {
         let state = connections.remove(&i_con).unwrap();
-        println!("Cleanput connection={:?}", i_con);
+        println!("INFO: {:?} quit", i_con);
         let _ = state.join_handle.unwrap().join();
     }
 
