@@ -24,30 +24,19 @@ pub struct Connection {
     settings:   ServerSettings,
 }
 
+type Result<T> = std::result::Result<T,ErrorResponse>;
+
 impl Connection {
 
     fn send_raw(&mut self, data: &[u8]) {
         self.socket.send_to(data, self.remote).unwrap();
     }
 
-    fn send_error(&mut self, error: TftpError, msg: Option<&str>) {
-        let mut outmsg = match error {
-            TftpError::NotDefined          => "Not defined",
-            TftpError::FileNotFound        => "File not found.",
-            TftpError::AccessViolation     => "Access violation.",
-            TftpError::DiskFull            => "Disk full or allocation exceeded.",
-            TftpError::IllegalOperation    => "Illegal TFTP operation.",
-            TftpError::UnknownTransferID   => "Unknown transfer ID.",
-            TftpError::FileAlreadyExists   => "File already exists.",
-            TftpError::NoSuchUser          => "No such user.",
-        };
-
-        if let Some(x) = msg {
-            outmsg = x; 
-        }
+    fn send_error(&mut self, error: &ErrorResponse) {
+        let mut outmsg = error.to_string();
 
         let opcode_raw = Opcode::Error as u16;
-        let error_raw = error as u16;
+        let error_raw = error.number as u16;
         let mut buf = vec![
             (opcode_raw>>8) as u8, 
             (opcode_raw>>0) as u8 ,
@@ -69,7 +58,7 @@ impl Connection {
         self.send_raw(&msg);
     }
 
-    fn wait_ack(&mut self, timeout: Duration, blocknr: u16) -> Result<(),()> {
+    fn wait_ack(&mut self, timeout: Duration, blocknr: u16) -> Result<()> {
         let now = Instant::now();
 
         loop {
@@ -101,10 +90,10 @@ impl Connection {
             }
         }
 
-        return Result::Err(());
+        return Result::Err(ErrorResponse::new_custom("timeout wait ACK".to_string()));
     }
 
-    fn wait_data(&mut self, timeout: Duration, blocknr: u16, out: &mut Vec<u8>) -> Result<(),()> {
+    fn wait_data(&mut self, timeout: Duration, blocknr: u16, out: &mut Vec<u8>) -> Result<()> {
         let now = Instant::now();
 
         loop {
@@ -147,16 +136,16 @@ impl Connection {
             return Ok(());
         }
 
-        return Result::Err(());
+        return Result::Err(ErrorResponse::new_custom("timeout wait DATA".to_string()));
     }
 
-    fn get_file_path(&self, path_relative: &str) -> Result<PathBuf,TftpError> {
+    fn get_file_path(&self, path_relative: &str) -> Result<PathBuf> {
         let base_path    = OsString::from(&self.settings.root_dir);
         let request_path = OsString::from(&path_relative);
         let full_path     = Path::new(&base_path).join(request_path);
 
         if !full_path.starts_with(base_path) {
-            return Err(TftpError::FileNotFound);
+            return Err(ErrorNumber::FileNotFound.into());
         }
 
         return Ok(full_path.to_path_buf());
@@ -165,14 +154,14 @@ impl Connection {
     fn read(&mut self, filename: &str) {
         let full_path     = match self.get_file_path(filename) {
             Ok(full_path) => full_path,
-            Err(errno) => {
-                self.send_error(errno, Option::None);
+            Err(err) => {
+                self.send_error(&err);
                 return;
             }
         };
 
         let mut file = match File::open(&full_path) {
-            Err(_)      => return self.send_error(TftpError::NotDefined, None).to_owned(),
+            Err(_)      => return self.send_error(&ErrorNumber::NotDefined.into()).to_owned(),
             Ok(x) => x,
         };
 
@@ -218,14 +207,14 @@ impl Connection {
 
     fn write(&mut self, filename: &str) {
         if self.settings.write_mode == WriteMode::DISABLED {
-            self.send_error(TftpError::AccessViolation, Option::None);
+            self.send_error(&ErrorNumber::AccessViolation.into());
             return;
         }
 
         let full_path     = match self.get_file_path(filename) {
             Ok(full_path) => full_path,
             Err(errno) => {
-                self.send_error(errno, Option::None);
+                self.send_error(&errno.into());
                 return;
             }
         };
@@ -234,12 +223,12 @@ impl Connection {
         let is_overwrite = self.settings.write_mode == WriteMode::WRITE_OVERWRITE;
 
         if is_file && !is_overwrite {
-            self.send_error(TftpError::FileAlreadyExists, Option::None);
+            self.send_error(&ErrorNumber::FileAlreadyExists.into());
             return;
         }
 
         let mut file = match File::create(&full_path) {
-            Err(_)      => return self.send_error(TftpError::NotDefined, None).to_owned(),
+            Err(_)      => return self.send_error(&ErrorNumber::NotDefined.into()).to_owned(),
             Ok(x) => x,
         };  
 
@@ -252,7 +241,7 @@ impl Connection {
             match self.wait_data(RECV_TIMEOUT, block_num, &mut data) {
                 Ok(_) => {},
                 Err(_) => {
-                    self.send_error(TftpError::NotDefined, Some("write timeout"));
+                    self.send_error(&ErrorResponse::new_custom("write timeout".to_string()));
                     break;
                 }
             };

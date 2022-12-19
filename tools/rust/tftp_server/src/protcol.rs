@@ -40,7 +40,7 @@ pub enum Opcode {
 
 #[allow(dead_code)]
 #[derive(Clone,Copy,Debug)]
-pub enum TftpError {
+pub enum ErrorNumber {
     NotDefined           = 0,
     FileNotFound         = 1,
     AccessViolation      = 2,
@@ -50,6 +50,62 @@ pub enum TftpError {
     FileAlreadyExists    = 6,
     NoSuchUser           = 7,
 }
+
+pub struct ErrorResponse {
+    pub number: ErrorNumber,
+    pub msg:    Option<String>,
+}
+
+impl ToString for ErrorNumber {
+    fn to_string(&self) -> String {
+        return match *self {
+            ErrorNumber::NotDefined          => "Not defined".to_string(),
+            ErrorNumber::FileNotFound        => "File not found.".to_string(),
+            ErrorNumber::AccessViolation     => "Access violation.".to_string(),
+            ErrorNumber::DiskFull            => "Disk full or allocation exceeded.".to_string(),
+            ErrorNumber::IllegalOperation    => "Illegal TFTP operation.".to_string(),
+            ErrorNumber::UnknownTransferID   => "Unknown transfer ID.".to_string(),
+            ErrorNumber::FileAlreadyExists   => "File already exists.".to_string(),
+            ErrorNumber::NoSuchUser          => "No such user.".to_string(),
+        };    
+    }
+}
+
+impl ToString for ErrorResponse {
+    fn to_string(&self) -> String {
+        if let Some(msg) = &self.msg {
+            msg.clone()
+        }
+        else {
+           self.number.to_string() 
+        }
+    }
+}
+
+impl  ErrorResponse {
+    pub fn new(number: ErrorNumber) -> ErrorResponse {
+        ErrorResponse {
+            number: number,
+            msg: None
+        }
+    }
+
+    pub fn new_custom(msg: String) -> ErrorResponse {
+        ErrorResponse {
+            number: ErrorNumber::NotDefined,
+            msg: Some(msg)
+        }
+    }
+}
+
+
+
+impl From<ErrorNumber> for ErrorResponse {
+    fn from(number: ErrorNumber) -> Self {
+        ErrorResponse { number: number, msg: Option::None }
+    }
+}
+
 
 
 pub fn raw_to_num<T: Copy + From<u8> + core::ops::BitOrAssign + core::ops::Shl<usize,Output=T>+Default>(data: &[u8]) -> Option<T> {
