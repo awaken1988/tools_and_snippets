@@ -151,17 +151,11 @@ impl Connection {
         return Ok(full_path.to_path_buf());
     }
 
-    fn read(&mut self, filename: &str) {
-        let full_path     = match self.get_file_path(filename) {
-            Ok(full_path) => full_path,
-            Err(err) => {
-                self.send_error(&err);
-                return;
-            }
-        };
+    fn read(&mut self, filename: &str) -> Result<()> {
+        let full_path     = self.get_file_path(filename)?;
 
         let mut file = match File::open(&full_path) {
-            Err(_)      => return self.send_error(&ErrorNumber::NotDefined.into()).to_owned(),
+            Err(_)      => return Err(ErrorNumber::NotDefined.into()),
             Ok(x) => x,
         };
 
@@ -175,7 +169,7 @@ impl Connection {
         loop {
             let payload_len = match file.read(&mut filebuf[0..self.settings.blocksize]) {
                 Ok(len) => len,
-                _ => return,
+                _ => return Err(ErrorResponse::new_custom("cannot read file".to_string())),
             };
             
             //send data
@@ -191,10 +185,7 @@ impl Connection {
             let _ = self.socket.send_to(&sendbuf, self.remote);
 
             //wait for ACK
-            match self.wait_ack(RECV_TIMEOUT, blocknr) {
-                Ok(_) => (),
-                _ => return
-            };
+            self.wait_ack(RECV_TIMEOUT, blocknr)?;
 
             //break condition
             if payload_len < self.settings.blocksize {
@@ -203,32 +194,26 @@ impl Connection {
 
             blocknr = blocknr.overflowing_add(1).0;
         }       
+
+        return Ok(());
     }
 
-    fn write(&mut self, filename: &str) {
+    fn write(&mut self, filename: &str) -> Result<()> {
         if self.settings.write_mode == WriteMode::DISABLED {
-            self.send_error(&ErrorNumber::AccessViolation.into());
-            return;
+            return Err(ErrorNumber::AccessViolation.into());
         }
 
-        let full_path     = match self.get_file_path(filename) {
-            Ok(full_path) => full_path,
-            Err(errno) => {
-                self.send_error(&errno.into());
-                return;
-            }
-        };
+        let full_path     = self.get_file_path(filename)?;
 
         let is_file = path::Path::new(full_path.as_os_str()).exists();
         let is_overwrite = self.settings.write_mode == WriteMode::WRITE_OVERWRITE;
 
         if is_file && !is_overwrite {
-            self.send_error(&ErrorNumber::FileAlreadyExists.into());
-            return;
+            return Err(ErrorNumber::FileAlreadyExists.into());
         }
 
         let mut file = match File::create(&full_path) {
-            Err(_)      => return self.send_error(&ErrorNumber::NotDefined.into()).to_owned(),
+            Err(_)      => return Err(ErrorNumber::NotDefined.into()),
             Ok(x) => x,
         };  
 
@@ -238,13 +223,7 @@ impl Connection {
         loop {
             block_num = block_num.wrapping_add(1);
             
-            match self.wait_data(RECV_TIMEOUT, block_num, &mut data) {
-                Ok(_) => {},
-                Err(_) => {
-                    self.send_error(&ErrorResponse::new_custom("write timeout".to_string()));
-                    break;
-                }
-            };
+            self.wait_data(RECV_TIMEOUT, block_num, &mut data)?;
 
             file.write(&data); 
             self.send_ack(block_num);
@@ -253,6 +232,8 @@ impl Connection {
                 break;
             }
         }
+
+        return Ok(());
     }
 
     pub fn new(recv: Receiver<Vec<u8>>, remote: SocketAddr, socket: UdpSocket, settings: ServerSettings) -> Connection {
@@ -289,10 +270,15 @@ impl Connection {
 
         println!("Connection from {:?}; {:?} {}", self.remote, opcode, filename);
 
-        match opcode {
+        let result = match opcode {
             Opcode::Read  => self.read(filename),
             Opcode::Write => self.write(filename),
             _             => return 
+        };
+
+        match result {
+            Err(err) => self.send_error(&err),
+            _ => {},
         }
     }    
 }
