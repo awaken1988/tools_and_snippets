@@ -27,8 +27,8 @@ fn main()  {
         .arg(Arg::new("writemode")
             .long("writemode")
             .required(false)
-            .value_parser([PossibleValue::new("Disabled"), PossibleValue::new("New"), PossibleValue::new("Overwrite")])
-            .default_value("New")
+            .value_parser([PossibleValue::new("disabled"), PossibleValue::new("new"), PossibleValue::new("overwrite")])
+            .default_value("new")
             .help("Disabled: write not possible; New: New files can be uploaded; Overwrite: overwrite existing files allowed")
         )
         .get_matches();
@@ -36,9 +36,9 @@ fn main()  {
     //TODO: there is a more elegant way with clap; but for now simple redundant strings used
     let writemode = args.get_one::<String>("writemode").unwrap();
     let writemode = match writemode.as_str() {
-        "Disabled" => WriteMode::Disabled,
-        "New" => WriteMode::WriteNew,
-        "Overwrite" => WriteMode::WriteOverwrite,
+        "disabled" => WriteMode::Disabled,
+        "new" => WriteMode::WriteNew,
+        "overwrite" => WriteMode::WriteOverwrite,
         other => panic!("writemode {} does not exist", other),
     };
    
