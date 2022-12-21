@@ -1,14 +1,17 @@
 use std::{
     net::{UdpSocket, SocketAddr}, 
-    collections::HashMap, 
-    sync::mpsc::channel,
-    thread, time::{Duration, Instant}};
+    collections::{HashMap, HashSet}, 
+    sync::{mpsc::channel, Mutex, Arc},
+    thread, time::{Duration, Instant}, path::PathBuf};
 use clap::{Command, Arg, builder::PossibleValue};
 
 mod connection;
 mod defs;
 mod protcol;
-use defs::{ClientState, ServerSettings, WriteMode};
+use defs::{ClientState, ServerSettings, WriteMode, FileLockMode};
+
+#[macro_use(defer)] 
+extern crate scopeguard;
 
 
 const CLEANUP_TIMEOUT: Duration = Duration::from_secs(3);
@@ -48,14 +51,21 @@ fn main()  {
     if !std::path::Path::new(rootdir).is_dir(){
         panic!("rootdir = \"{}\" does not exists", rootdir);
     }
+ 
+    let settings = ServerSettings::new(rootdir.clone())
+        .set_write_mode(writemode);
 
+    run_server(settings);
+}
+
+fn run_server(settings: ServerSettings) {
+    let socket = UdpSocket::bind("127.0.0.1:69").unwrap();
+    let _ = socket.set_read_timeout(Some(Duration::from_secs(1)));  //TODO: check for error
     let mut connections = HashMap::<SocketAddr,ClientState>::new();
     let mut cleanpup_stopwatch = Instant::now();
 
-    let socket = UdpSocket::bind("127.0.0.1:69").unwrap();
-    let _ = socket.set_read_timeout(Some(Duration::from_secs(1)));  //TODO: check for error
-    let settings = ServerSettings::new(rootdir.clone())
-        .set_write_mode(writemode);
+    let files_locked = Arc::new(Mutex::new(HashMap::<PathBuf,FileLockMode>::new()));
+
 
     loop {
         let mut buf = Vec::<u8>::new();
@@ -86,12 +96,14 @@ fn main()  {
             
             let socket = socket.try_clone().unwrap();
             let settings = settings.clone();
+            let files_locked = files_locked.clone();
             client_state.join_handle = Some(thread::spawn(move|| {
                 connection::Connection::new(
                     receiver, 
                     remote,
                     socket,
-                    settings).run();
+                    settings,
+                    files_locked).run();
             }));
 
 

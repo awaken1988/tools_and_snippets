@@ -1,6 +1,7 @@
 use std::ffi::OsString;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, UdpSocket};
+use std::ops::DerefMut;
 use std::time::Instant;
 use std::{sync::mpsc::Receiver, time::Duration};
 use std::str;
@@ -8,16 +9,20 @@ use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::path;
 
-use crate::defs::{ServerSettings,WriteMode};
+
+use crate::defs::{ServerSettings,WriteMode,FileLockMap, FileLockMode};
 use crate::protcol::*;
 
 pub struct Connection {
-    recv:       Receiver<Vec<u8>>,
-    remote:     SocketAddr,
-    socket:     UdpSocket,
-    settings:   ServerSettings,
-    start:      Instant,
-    bytecount:  usize,
+    recv:         Receiver<Vec<u8>>,
+    remote:       SocketAddr,
+    socket:       UdpSocket,
+    settings:     ServerSettings,
+    start:        Instant,
+    bytecount:    usize,
+    lockmap:      FileLockMap,
+    locked:       Option<PathBuf>,
+
 }
 
 type Result<T> = std::result::Result<T,ErrorResponse>;
@@ -146,10 +151,55 @@ impl Connection {
         return Ok(full_path.to_path_buf());
     }
 
+    fn check_lock_file(&mut self, path: &Path, mode: FileLockMode) -> bool {
+        let mut lockset = self.lockmap.lock().unwrap();
+        let lockset = lockset.deref_mut();
+
+        if let Some(curr) = lockset.get_mut(path) {
+            let entry = match (mode,curr) {
+               (FileLockMode::Read(mode), FileLockMode::Read(curr))   => {
+                    *curr += 1; 
+                    self.locked = Some(path.to_path_buf());
+                    return true;
+                },    
+              _ => {return false;},    
+            };
+        }
+        else {
+            lockset.insert(path.to_path_buf(), mode);
+            return true;
+        }
+    }
+
+    fn unlock_file(&mut self, path: &Path) {
+        let mut lockset = self.lockmap.lock().unwrap();
+        let lockset = lockset.deref_mut();
+
+        if lockset.contains_key(path) {
+            let mut is_remove = false;
+            if let Some(FileLockMode::Read(x)) = lockset.get_mut(path) {
+                *x -= 1;
+                if *x == 0 {is_remove = true;}
+            }
+            else if let Some(FileLockMode::Write) = lockset.get(path) {
+                is_remove = true;
+            }
+
+            lockset.remove(path);
+        }
+        else {
+            println!("WARN: {:?} double unlock file = {:?}", self.remote, path);
+        }
+    }
+
     fn read(&mut self, filename: &str) -> Result<()> {
         println!("INFO: {:?} Read file {}", self.remote, filename);
 
         let full_path     = self.get_file_path(filename)?;
+
+        if !self.check_lock_file(&full_path, FileLockMode::Read(1)) {
+            return Err(ErrorResponse::new_custom("file is locked".to_string()));
+        }
 
         let mut file = match File::open(&full_path) {
             Err(_)      => return Err(ErrorNumber::NotDefined.into()),
@@ -211,6 +261,10 @@ impl Connection {
             return Err(ErrorNumber::FileAlreadyExists.into());
         }
 
+        if !self.check_lock_file(&full_path, FileLockMode::Write) {
+            return Err(ErrorResponse::new_custom("file is locked".to_string()));
+        }
+
         let mut file = match File::create(&full_path) {
             Err(_)      => return Err(ErrorNumber::NotDefined.into()),
             Ok(x) => x,
@@ -241,14 +295,16 @@ impl Connection {
         return Ok(());
     }
 
-    pub fn new(recv: Receiver<Vec<u8>>, remote: SocketAddr, socket: UdpSocket, settings: ServerSettings) -> Connection {
+    pub fn new(recv: Receiver<Vec<u8>>, remote: SocketAddr, socket: UdpSocket, settings: ServerSettings, lockmap: FileLockMap) -> Connection {
         return Connection{
-            recv:      recv,
-            remote:    remote,
-            socket:    socket,
-            settings:  settings,
-            start:     Instant::now(),
-            bytecount: 0,
+            recv:         recv,
+            remote:       remote,
+            socket:       socket,
+            settings:     settings,
+            start:        Instant::now(),
+            bytecount:    0,
+            lockmap,
+            locked:       Option::None,
         };
     }
 
@@ -287,6 +343,11 @@ impl Connection {
                 self.send_error(&err);
             },
             _ => {},
+        }
+
+        //cleanup locks
+        if let Some(ref locked) = self.locked.clone() {
+            self.unlock_file(&locked);
         }
 
         //statistics

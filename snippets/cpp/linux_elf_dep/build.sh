@@ -1,0 +1,1 @@
+gcc main.c -static -o build/main

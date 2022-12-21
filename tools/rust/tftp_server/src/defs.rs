@@ -1,4 +1,4 @@
-use std::{sync::{mpsc::Sender}, thread::JoinHandle};
+use std::{sync::{mpsc::Sender, Arc, Mutex}, thread::JoinHandle, collections::{HashSet, HashMap}, path::PathBuf};
 
 use crate::protcol;
 
@@ -31,9 +31,14 @@ impl ServerSettings {
     }
 }
 
-
 pub struct ClientState {
     pub tx: Sender<Vec<u8>>,
     pub join_handle: Option<JoinHandle<()>>,
 }
 
+pub enum FileLockMode {
+    Read(usize),
+    Write,
+}
+
+pub type FileLockMap = Arc<Mutex<HashMap<PathBuf,FileLockMode>>>;
