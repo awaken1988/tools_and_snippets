@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::ffi::OsString;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, UdpSocket};
@@ -22,6 +23,7 @@ pub struct Connection {
     bytecount:    usize,
     lockmap:      FileLockMap,
     locked:       Option<PathBuf>,
+    //buf:          Option<Vec<u8>>,
 
 }
 
@@ -51,7 +53,9 @@ impl Connection {
     }
 
     fn send_ack(&mut self, blocknr: u16) {
-        let mut msg: Vec<u8> = vec![];
+        let mut msg = vec![];
+
+        msg.resize(0,0);
         
         msg.extend_from_slice(&Opcode::Ack.raw());
         msg.extend_from_slice(&blocknr.to_be_bytes());
@@ -305,6 +309,7 @@ impl Connection {
             bytecount:    0,
             lockmap,
             locked:       Option::None,
+            //buf:          Option::Some(Vec::new()),
         };
     }
 

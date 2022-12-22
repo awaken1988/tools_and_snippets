@@ -2,7 +2,7 @@ use std::{
     net::{UdpSocket, SocketAddr}, 
     collections::{HashMap, HashSet}, 
     sync::{mpsc::channel, Mutex, Arc},
-    thread, time::{Duration, Instant}, path::PathBuf};
+    thread, time::{Duration, Instant}, path::PathBuf, fmt::write};
 use clap::{Command, Arg, builder::PossibleValue};
 
 mod connection;
@@ -15,10 +15,6 @@ extern crate scopeguard;
 
 
 const CLEANUP_TIMEOUT: Duration = Duration::from_secs(3);
-
-//TODO:
-//  - when in overwrite mode lock one instance
-
 
 fn main()  {
     let args = Command::new("tftpserver")
@@ -34,6 +30,13 @@ fn main()  {
             .default_value("new")
             .help("Disabled: write not possible; New: New files can be uploaded; Overwrite: overwrite existing files allowed")
         )
+        .arg(Arg::new("verbose")
+            .long("verbose")
+            .short('v')
+            .required(false)
+            .help("print verbose messages")
+            .default_value("false")
+        )
         .get_matches();
 
     //TODO: there is a more elegant way with clap; but for now simple redundant strings used
@@ -44,6 +47,8 @@ fn main()  {
         "overwrite" => WriteMode::WriteOverwrite,
         other => panic!("writemode {} does not exist", other),
     };
+
+    //TODO: let verbose = args.get_one::<bool>("verbose").unwrap();
    
 
     let rootdir = args.get_one::<String>("rootdir").unwrap();
@@ -52,8 +57,12 @@ fn main()  {
         panic!("rootdir = \"{}\" does not exists", rootdir);
     }
  
-    let settings = ServerSettings::new(rootdir.clone())
-        .set_write_mode(writemode);
+    let settings = ServerSettings {
+        write_mode: writemode,
+        root_dir:   rootdir.clone(),
+        blocksize:  protcol::DEFAULT_BLOCKSIZE,
+        verbose:    true, 
+    };
 
     run_server(settings);
 }
@@ -66,10 +75,10 @@ fn run_server(settings: ServerSettings) {
 
     let files_locked = Arc::new(Mutex::new(HashMap::<PathBuf,FileLockMode>::new()));
 
+    let mut buf = Vec::<u8>::new();
 
     loop {
-        let mut buf = Vec::<u8>::new();
-        buf.resize(4096, 0);
+        buf.resize(protcol::MAX_PACKET_SIZE, 0);
 
         let (amt, src) = match socket.recv_from(&mut buf) {
             Ok((size,socket)) => (size,socket),
@@ -82,7 +91,7 @@ fn run_server(settings: ServerSettings) {
         buf.resize(amt, 0);
     
         if connections.contains_key(&src) {
-            let _ = connections.get(&src).unwrap().tx.send(buf);
+            let _ = connections.get(&src).unwrap().tx.send(buf.clone());
         }
         else {
             let (sender, receiver) = channel();
@@ -108,7 +117,7 @@ fn run_server(settings: ServerSettings) {
 
 
             connections.insert(src,client_state);
-            let _ = connections.get(&src).unwrap().tx.send(buf);
+            let _ = connections.get(&src).unwrap().tx.send(buf.clone());
         }
 
         //cleanup

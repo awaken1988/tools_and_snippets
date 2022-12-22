@@ -14,21 +14,7 @@ pub struct ServerSettings {
     pub write_mode: WriteMode,
     pub root_dir:   String,
     pub blocksize:  usize,
-}
-
-impl ServerSettings {
-    pub fn new(root_dir: String) -> ServerSettings {
-        ServerSettings {
-            write_mode: WriteMode::WriteNew,
-            root_dir: root_dir,
-            blocksize: protcol::DEFAULT_BLOCKSIZE,
-        }
-    }
-
-    pub fn set_write_mode(mut self, mode: WriteMode) -> Self {
-        self.write_mode = mode;
-        return self;
-    }
+    pub verbose:    bool,
 }
 
 pub struct ClientState {

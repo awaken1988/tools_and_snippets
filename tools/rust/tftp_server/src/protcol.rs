@@ -3,6 +3,9 @@ use std::time::Duration;
 use std::default::Default;
 
 pub const DEFAULT_BLOCKSIZE: usize    = 512;
+pub const MAX_BLOCKSIZE:     usize    = 1024;
+
+pub const MAX_PACKET_SIZE:   usize    = MAX_BLOCKSIZE + DATA_BLOCK_NUM.end;
 
 pub const RECV_TIMEOUT:      Duration = Duration::from_secs(2);
 pub const OPCODE_LEN:        usize    = 2;
