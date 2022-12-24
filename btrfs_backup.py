@@ -22,13 +22,15 @@ def makeAbsolute(aPath):
 
 def getOptions():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--src',  required=True,  help='source dir of the btrfs subvolume')
-    parser.add_argument('--dest', required=True,  help='destination dir to backup to. Note that in this dir a dir with SRC name is created')
+    parser.add_argument('--src',           required=True,  help='source dir of the btrfs subvolume')
+    parser.add_argument('--dest',          required=True,  help='destination dir to backup to. Note that in this dir a dir with SRC name is created')
+    parser.add_argument('--backup2backup', required=False, help='src by itself is a backup',  action='store_true')
     args = parser.parse_args()
 
     return {
-        "src":  makeAbsolute(args.src),
-        "dest": makeAbsolute(args.dest)
+        "src":           makeAbsolute(args.src),
+        "dest":          makeAbsolute(args.dest),
+        "backup2backup": args.backup2backup,
     }
 
 options = getOptions()
@@ -37,7 +39,12 @@ src       = options["src"]
 src_name  = path.basename(src)
 dest_base = options["dest"]
 dest      = path.join(dest_base, src_name)
-src_snaps = path.join(src, "../.snapshot_"+src_name)
+
+src_snaps = None
+if options["backup2backup"]:
+    src_snaps = src
+else:
+    src_snaps = path.join(src, "../.snapshot_"+src_name)
 
 if not path.isdir(dest):
     print("Destination dir {} does not exist".format(dest))
