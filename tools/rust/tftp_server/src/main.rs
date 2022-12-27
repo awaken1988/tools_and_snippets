@@ -1,15 +1,7 @@
-use std::{
-    net::{UdpSocket, SocketAddr}, 
-    collections::{HashMap, HashSet}, 
-    sync::{mpsc::channel, Mutex, Arc},
-    thread, time::{Duration, Instant}, path::PathBuf, fmt::write};
 use clap::{Command, Arg, builder::PossibleValue};
 
 mod server;
 mod protcol;
-
-#[macro_use(defer)] 
-extern crate scopeguard;
 
 fn main()  {
     let args = Command::new("tftpserver")

@@ -1,6 +1,4 @@
-use std::{sync::{mpsc::Sender, Arc, Mutex}, thread::JoinHandle, collections::{HashSet, HashMap}, path::PathBuf, time::Duration};
-
-use crate::protcol;
+use std::{sync::{mpsc::Sender, Arc, Mutex}, thread::JoinHandle, collections::{HashMap}, path::PathBuf, time::Duration};
 
 pub const CLEANUP_TIMEOUT: Duration = Duration::from_secs(3);
 

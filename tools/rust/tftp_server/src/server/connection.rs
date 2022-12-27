@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::ffi::OsString;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, UdpSocket};
@@ -160,8 +159,8 @@ impl Connection {
         let lockset = lockset.deref_mut();
 
         if let Some(curr) = lockset.get_mut(path) {
-            let entry = match (mode,curr) {
-               (FileLockMode::Read(mode), FileLockMode::Read(curr))   => {
+            let _ = match (mode,curr) {
+               (FileLockMode::Read(_mode), FileLockMode::Read(curr))   => {
                     *curr += 1; 
                     self.locked = Some(path.to_path_buf());
                     return true;
@@ -189,7 +188,9 @@ impl Connection {
                 is_remove = true;
             }
 
-            lockset.remove(path);
+            if is_remove {
+                lockset.remove(path);
+            }
         }
         else {
             println!("WARN: {:?} double unlock file = {:?}", self.remote, path);
