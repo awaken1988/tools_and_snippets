@@ -11,7 +11,7 @@ use std::fs::File;
 use std::path;
 
 
-use crate::defs::{ServerSettings,WriteMode,FileLockMap, FileLockMode};
+use crate::server::defs::{ServerSettings,WriteMode,FileLockMap, FileLockMode};
 use crate::protcol::*;
 
 pub struct Connection {

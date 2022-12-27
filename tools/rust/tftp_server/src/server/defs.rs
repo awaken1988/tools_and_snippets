@@ -1,6 +1,8 @@
-use std::{sync::{mpsc::Sender, Arc, Mutex}, thread::JoinHandle, collections::{HashSet, HashMap}, path::PathBuf};
+use std::{sync::{mpsc::Sender, Arc, Mutex}, thread::JoinHandle, collections::{HashSet, HashMap}, path::PathBuf, time::Duration};
 
 use crate::protcol;
+
+pub const CLEANUP_TIMEOUT: Duration = Duration::from_secs(3);
 
 #[derive(Clone,PartialEq)]
 pub enum WriteMode {
@@ -28,3 +30,4 @@ pub enum FileLockMode {
 }
 
 pub type FileLockMap = Arc<Mutex<HashMap<PathBuf,FileLockMode>>>;
+
