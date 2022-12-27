@@ -9,7 +9,7 @@ use self::defs::{WriteMode, ServerSettings, FileLockMode, ClientState};
 mod connection;
 mod defs;
 
-pub fn server_main(args: ArgMatches) {
+pub fn server_main(args: &ArgMatches) {
     //TODO: there is a more elegant way with clap; but for now simple redundant strings used
     let writemode = args.get_one::<String>("writemode").unwrap();
     let writemode = match writemode.as_str() {

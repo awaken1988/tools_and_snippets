@@ -46,6 +46,81 @@ pub struct ErrorResponse {
     pub msg:    Option<String>,
 }
 
+#[derive(Clone,Copy,Debug)]
+pub enum TransferMode {
+    Netascii,
+    Octet,
+    Mail,
+}
+
+pub struct PacketBuilder<'a> {
+    buf: &'a mut Vec<u8>,
+}
+
+pub struct PacketParser<'a> {
+    buf:    &'a[u8],
+    pos:    usize,
+}
+
+impl<'a> PacketParser<'a> {
+    pub fn new(buf: &'a[u8]) -> Self {
+        PacketParser {
+            buf: buf,
+            pos: 0,
+        }
+    }
+
+    pub fn remaining_bytes(&self) -> &'a[u8] {
+        &self.buf[self.pos..]
+    }
+
+    pub fn opcode(&mut self) -> Option<Opcode> {
+        let result = parse_opcode_raw(self.remaining_bytes());
+      
+        self.pos += OPCODE_LEN;
+
+        return result;
+    }
+
+    pub fn separator(&mut self) -> bool {
+        let data = self.remaining_bytes();
+
+        if data.len() == 0 || data[0] != 0 {
+          false
+        }
+        else {
+            true
+        } 
+    }
+
+    pub fn str_with_sep(&mut self) -> Option<String> {
+        let data = self.remaining_bytes();
+        let mut sepos = Option::None;
+        
+        for (i, d) in data.iter().enumerate() {
+            if *d == 0 {
+                sepos = Some(i)
+            }
+        }
+
+        if sepos.is_none() {
+            return Option::None;
+        }
+
+        let raw = &data[..sepos.unwrap()];
+        let txt = String::from_utf8(raw.to_vec()).ok();
+
+        if let Some(_) = txt {
+            self.pos += raw.len();
+        }
+
+        return txt;
+    }
+
+}
+
+
+
 impl ToString for ErrorNumber {
     fn to_string(&self) -> String {
         return match *self {
@@ -125,6 +200,16 @@ impl From<Opcode> for u16 {
     }
 }
 
+impl ToString for TransferMode {
+    fn to_string(&self) -> String {
+       return match *self {
+        TransferMode::Netascii => "netascii".to_string(),
+        TransferMode::Octet    => "octet".to_string(),
+        TransferMode::Mail     => "mail".to_string(),
+        }
+    }
+}
+
 pub fn parse_opcode(raw: u16) -> Option<Opcode> {
     match raw {
         x if x == Opcode::Read  as u16 => Some(Opcode::Read),
@@ -169,6 +254,40 @@ pub fn parse_entries(data: &[u8]) -> Option<Vec<Vec<u8>>> {
     }
   
     return Some(ret);
+}
+
+
+impl<'a> PacketBuilder<'a> {
+    pub fn new(buf: &'a mut Vec<u8>) -> PacketBuilder {
+        buf.clear();
+        PacketBuilder {
+            buf: buf,
+        }
+    }
+
+    pub fn opcode(mut self, opcode: Opcode) -> Self {
+        self.buf.extend_from_slice(&Opcode::Ack.raw());
+        return self;
+    }
+
+    pub fn transfer_mode(mut self, mode: TransferMode) -> Self {
+        return self.str(&mode.to_string())   //Note: prevent create a String
+    }
+    
+    pub fn separator(mut self) -> Self {
+        self.buf.push(0);
+        return self;
+    }
+    
+    pub fn str(mut self, txt: &str) -> Self {
+        self.buf.extend_from_slice(txt.as_bytes());
+        return self;
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.buf
+    }
+
 }
 
 
