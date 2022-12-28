@@ -1,23 +1,17 @@
+use core::time;
 use std::ops::Range;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use std::default::Default;
 
 pub const DEFAULT_BLOCKSIZE: usize    = 512;
 pub const MAX_BLOCKSIZE:     usize    = 1024;
-
 pub const MAX_PACKET_SIZE:   usize    = MAX_BLOCKSIZE + DATA_BLOCK_NUM.end;
-
 pub const RECV_TIMEOUT:      Duration = Duration::from_secs(2);
 pub const OPCODE_LEN:        usize    = 2;
 pub const ACK_LEN:           usize    = 4;
 pub const ACK_BLOCK_OFFSET:  usize    = 2;
-
-
 pub const DATA_OFFSET:       usize        = 4;
 pub const DATA_BLOCK_NUM:    Range<usize> = 2..4;
-
-
-
 
 #[derive(Clone,Copy,Debug)]
 pub enum Opcode {
@@ -61,6 +55,54 @@ pub struct PacketParser<'a> {
     buf:    &'a[u8],
     pos:    usize,
 }
+
+pub type Reader     = fn(&mut Vec<u8>, timeout: Duration) -> bool;
+pub type Checker<R> = fn(&[u8]) -> Option<R>;
+
+pub fn poll<R>(buf: &mut Vec<u8>, reader: &mut Reader, checker: &mut Checker<R>, timeout: Duration) -> Option<R> {
+    let start = Instant::now();
+
+    loop {
+        let time_diff = timeout.checked_sub(start.elapsed()).unwrap_or(Duration::from_secs(0));
+
+        if time_diff.is_zero() {
+            break;
+        }
+        
+        buf.clear();
+        if !reader(buf, time_diff) {
+            continue;
+        }
+
+        if let Some(x) =checker(&buf) {
+            return Some(x);
+        }
+    }
+
+    return Option::None;
+}
+
+pub fn expect_block_data(data: &[u8]) -> Option<()> {
+    let opcode = if let Some(opcode) = PacketParser::new(data).opcode() {
+        match opcode {
+            Opcode::Data => opcode,
+            _            => return Option::None,
+        }
+    } else {return Option::None};
+
+
+
+
+
+}
+
+pub fn poll_block_ack(buf: &mut Vec<u8>, reader: Reader, timeout: Duration, block_number: u16) {
+    let checker = |data| {
+
+    }
+}
+
+
 
 impl<'a> PacketParser<'a> {
     pub fn new(buf: &'a[u8]) -> Self {

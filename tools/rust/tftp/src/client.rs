@@ -35,9 +35,4 @@ pub fn client_main(args: &ArgMatches) {
 fn wait_ack(socket: &mut UdpSocket) {
     let start_time = Instant::now();
 
-    while start_time.elapsed() < Duration::from_secs(3) {
-        socket.read_timeout(Duration::from_secs(1));
-
-        
-    }
 }
