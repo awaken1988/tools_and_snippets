@@ -56,10 +56,10 @@ pub struct PacketParser<'a> {
     pos:    usize,
 }
 
-pub type Reader     = fn(&mut Vec<u8>, timeout: Duration) -> bool;
-pub type Checker<R> = fn(&[u8]) -> Option<R>;
+pub type Reader       = fn(&mut Vec<u8>, timeout: Duration) -> bool;
+pub type Checker<T,R> = fn(&[u8],&T) -> Option<R>;
 
-pub fn poll<R>(buf: &mut Vec<u8>, reader: &mut Reader, checker: &mut Checker<R>, timeout: Duration) -> Option<R> {
+pub fn poll<T,R>(buf: &mut Vec<u8>, reader: &mut Reader, checker: &mut Checker<T,R>, timeout: Duration) -> Option<R> {
     let start = Instant::now();
 
     loop {
@@ -74,7 +74,7 @@ pub fn poll<R>(buf: &mut Vec<u8>, reader: &mut Reader, checker: &mut Checker<R>,
             continue;
         }
 
-        if let Some(x) =checker(&buf) {
+        if let Some(x) = checker(&buf) {
             return Some(x);
         }
     }
@@ -82,23 +82,34 @@ pub fn poll<R>(buf: &mut Vec<u8>, reader: &mut Reader, checker: &mut Checker<R>,
     return Option::None;
 }
 
-pub fn expect_block_data(data: &[u8]) -> Option<()> {
-    let opcode = if let Some(opcode) = PacketParser::new(data).opcode() {
+pub fn expect_block_data(data: &[u8], block_num: &u16) -> Option<()> {
+    let mut parser = PacketParser::new(data);
+
+    let opcode = if let Some(opcode) = parser.opcode() {
         match opcode {
             Opcode::Data => opcode,
             _            => return Option::None,
         }
     } else {return Option::None};
 
+    let num = if let Some(num) = parser.number16() {
+        num
+    } else {return Option::None;};
 
 
+    if num == *block_num {
+        return Some(())
+    }
 
-
+    return Option::None;
 }
 
-pub fn poll_block_ack(buf: &mut Vec<u8>, reader: Reader, timeout: Duration, block_number: u16) {
-    let checker = |data| {
-
+pub fn poll_block_ack(buf: &mut Vec<u8>, reader: &mut Reader, timeout: Duration, block_number: u16) -> bool {
+    if let Some(_) = poll::<u16,()>(buf, &mut reader, &mut expect_block_data, timeout) {
+        return true;
+    }
+    else {
+        return false;
     }
 }
 
@@ -157,6 +168,16 @@ impl<'a> PacketParser<'a> {
         }
 
         return txt;
+    }
+
+    pub fn number16(&mut self) -> Option<u16> {
+        let data = self.remaining_bytes();
+
+        if let Some(num) = raw_to_num::<u16>(data) {
+            return Some(num);
+        } else { 
+            return Option::None; 
+        };
     }
 
 }
