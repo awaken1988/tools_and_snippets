@@ -13,7 +13,7 @@ pub const ACK_BLOCK_OFFSET:  usize    = 2;
 pub const DATA_OFFSET:       usize        = 4;
 pub const DATA_BLOCK_NUM:    Range<usize> = 2..4;
 
-#[derive(Clone,Copy,Debug)]
+#[derive(Clone,Copy,Debug,PartialEq)]
 pub enum Opcode {
     Read  = 1,
     Write = 2,
@@ -57,61 +57,105 @@ pub struct PacketParser<'a> {
 }
 
 pub type Reader       = fn(&mut Vec<u8>, timeout: Duration) -> bool;
-pub type Checker<T,R> = fn(&[u8],&T) -> Option<R>;
 
-pub fn poll<T,R>(buf: &mut Vec<u8>, reader: &mut Reader, checker: &mut Checker<T,R>, timeout: Duration) -> Option<R> {
-    let start = Instant::now();
+pub struct Timeout {
+    start:   Option<Instant>,
+    timeout: Duration,
+}
 
-    loop {
-        let time_diff = timeout.checked_sub(start.elapsed()).unwrap_or(Duration::from_secs(0));
+impl Timeout {
+    pub fn new(timeout: Duration) -> Self {
+        Timeout { start: Option::None, timeout: timeout }
+    }
 
-        if time_diff.is_zero() {
-            break;
+    pub fn is_timeout(&mut self) -> bool {
+        if let Some(start) = self.start {
+            if start.elapsed() < self.timeout {
+                return false;
+            } else {
+                return true;
+            }
         }
         
-        buf.clear();
-        if !reader(buf, time_diff) {
-            continue;
-        }
-
-        if let Some(x) = checker(&buf) {
-            return Some(x);
-        }
-    }
-
-    return Option::None;
-}
-
-pub fn expect_block_data(data: &[u8], block_num: &u16) -> Option<()> {
-    let mut parser = PacketParser::new(data);
-
-    let opcode = if let Some(opcode) = parser.opcode() {
-        match opcode {
-            Opcode::Data => opcode,
-            _            => return Option::None,
-        }
-    } else {return Option::None};
-
-    let num = if let Some(num) = parser.number16() {
-        num
-    } else {return Option::None;};
-
-
-    if num == *block_num {
-        return Some(())
-    }
-
-    return Option::None;
-}
-
-pub fn poll_block_ack(buf: &mut Vec<u8>, reader: &mut Reader, timeout: Duration, block_number: u16) -> bool {
-    if let Some(_) = poll::<u16,()>(buf, &mut reader, &mut expect_block_data, timeout) {
-        return true;
-    }
-    else {
+        self.start = Some(Instant::now());
         return false;
     }
 }
+
+pub fn check_datablock(data: &[u8], expected: u16) -> bool {
+    let mut parser = PacketParser::new(data);
+
+    if !parser.opcode_expect(Opcode::Data) {
+        return false;
+    }
+
+    let block_num = if let Some(block_num) = parser.number16() {
+        block_num
+    } else { return false; };
+
+    if expected == block_num {
+        return true;
+    }
+    
+    return false;
+}
+
+// 
+// pub type Checker<T,R> = fn(&[u8],&T) -> Option<R>;
+
+// pub fn poll<T,R>(buf: &mut Vec<u8>, reader: &mut Reader, checker: &mut Checker<T,R>, timeout: Duration) -> Option<R> {
+//     let start = Instant::now();
+
+//     loop {
+//         let time_diff = timeout.checked_sub(start.elapsed()).unwrap_or(Duration::from_secs(0));
+
+//         if time_diff.is_zero() {
+//             break;
+//         }
+        
+//         buf.clear();
+//         if !reader(buf, time_diff) {
+//             continue;
+//         }
+
+//         if let Some(x) = checker(&buf) {
+//             return Some(x);
+//         }
+//     }
+
+//     return Option::None;
+// }
+
+// pub fn expect_block_data(data: &[u8], block_num: &u16) -> Option<()> {
+//     let mut parser = PacketParser::new(data);
+
+//     let opcode = if let Some(opcode) = parser.opcode() {
+//         match opcode {
+//             Opcode::Data => opcode,
+//             _            => return Option::None,
+//         }
+//     } else {return Option::None};
+
+//     let num = if let Some(num) = parser.number16() {
+//         num
+//     } else {return Option::None;};
+
+
+//     if num == *block_num {
+//         return Some(())
+//     }
+
+//     return Option::None;
+// }
+
+// pub fn poll_block_ack(buf: &mut Vec<u8>, reader: &mut Reader, timeout: Duration, block_number: u16) -> bool {
+//     if let Some(_) = poll::<u16,()>(buf, &mut reader, &mut expect_block_data, timeout) {
+//         return true;
+//     }
+//     else {
+//         return false;
+//     }
+// }
 
 
 
@@ -130,10 +174,20 @@ impl<'a> PacketParser<'a> {
     pub fn opcode(&mut self) -> Option<Opcode> {
         let result = parse_opcode_raw(self.remaining_bytes());
       
-        self.pos += OPCODE_LEN;
-
+        if result.is_some() {
+            self.pos += OPCODE_LEN;
+        }
+        
         return result;
     }
+
+    pub fn opcode_expect(&mut self, opcode: Opcode) -> bool {
+        if let Some(parsed) = self.opcode() {
+            return parsed == opcode;
+        }
+
+        return false;
+    } 
 
     pub fn separator(&mut self) -> bool {
         let data = self.remaining_bytes();
@@ -344,6 +398,11 @@ impl<'a> PacketBuilder<'a> {
     
     pub fn str(mut self, txt: &str) -> Self {
         self.buf.extend_from_slice(txt.as_bytes());
+        return self;
+    }
+
+    pub fn number16(mut self, num: u16) -> Self {
+        self.buf.extend_from_slice(&num.to_be_bytes());
         return self;
     }
 
