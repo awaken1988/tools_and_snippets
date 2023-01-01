@@ -12,6 +12,7 @@ pub const ACK_LEN:           usize    = 4;
 pub const ACK_BLOCK_OFFSET:  usize    = 2;
 pub const DATA_OFFSET:       usize        = 4;
 pub const DATA_BLOCK_NUM:    Range<usize> = 2..4;
+pub const PACKET_SIZE_MAX:   usize    = 4096;
 
 #[derive(Clone,Copy,Debug,PartialEq)]
 pub enum Opcode {
@@ -68,6 +69,10 @@ impl Timeout {
         Timeout { start: Option::None, timeout: timeout }
     }
 
+    pub fn reset(&mut self) {
+        self.start = Option::None;
+    }
+
     pub fn is_timeout(&mut self) -> bool {
         if let Some(start) = self.start {
             if start.elapsed() < self.timeout {
@@ -88,14 +93,17 @@ pub fn check_datablock(data: &[u8], expected: u16) -> bool {
     if !parser.opcode_expect(Opcode::Data) {
         return false;
     }
-
+    
     let block_num = if let Some(block_num) = parser.number16() {
         block_num
-    } else { return false; };
+    } else { 
+        return false; 
+    };
 
     if expected == block_num {
         return true;
     }
+    
     
     return false;
 }
@@ -383,7 +391,7 @@ impl<'a> PacketBuilder<'a> {
     }
 
     pub fn opcode(mut self, opcode: Opcode) -> Self {
-        self.buf.extend_from_slice(&Opcode::Ack.raw());
+        self.buf.extend_from_slice(&opcode.raw());
         return self;
     }
 
