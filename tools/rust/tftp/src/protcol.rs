@@ -236,10 +236,19 @@ impl<'a> PacketParser<'a> {
         let data = self.remaining_bytes();
 
         if let Some(num) = raw_to_num::<u16>(data) {
+            self.pos += 2;
             return Some(num);
         } else { 
             return Option::None; 
         };
+    }
+
+    pub fn number16_expected(&mut self, num: u16) -> bool {
+        if let Some(x) = self.number16() {
+            return x == num;
+        }
+        
+        return false;
     }
 
 }
