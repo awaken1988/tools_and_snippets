@@ -1,4 +1,4 @@
-use clap::{Command, Arg, builder::PossibleValue};
+use clap::{Command, Arg, builder::PossibleValue, ArgAction};
 
 mod server;
 mod client;
@@ -26,6 +26,11 @@ fn main()  {
                     .required(false)
                     .help("print verbose messages")
                     .default_value("false")
+                )
+                .arg(Arg::new("exit-with-client")
+                    .long("exit-with-client")
+                    .action(ArgAction::SetTrue)
+                    .help("exit server after client disconnects")
                 )
         )
         .subcommand(Command::new("client")

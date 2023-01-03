@@ -29,10 +29,11 @@ pub fn server_main(args: &ArgMatches) {
     }
     
     let settings = ServerSettings {
-        write_mode: writemode,
-        root_dir:   rootdir.clone(),
-        blocksize:  protcol::DEFAULT_BLOCKSIZE,
-        verbose:    true, 
+        write_mode:        writemode,
+        root_dir:          rootdir.clone(),
+        blocksize:         protcol::DEFAULT_BLOCKSIZE,
+        verbose:           true, 
+        exit_with_client:  *args.get_one::<bool>("exit-with-client").unwrap()
     };
 
     run_server(settings);
@@ -92,13 +93,17 @@ pub fn run_server(settings: ServerSettings) {
         }
 
         //cleanup
-        cleanup_connections(&mut connections, &mut cleanpup_stopwatch);
+        let mut cleaned = cleanup_connections(&mut connections, &mut cleanpup_stopwatch);
+
+        if settings.exit_with_client && cleaned {
+            break;
+        }
     }
 }
 
-fn cleanup_connections(connections: &mut HashMap::<SocketAddr,ClientState>, stopwatch: &mut Instant) {
+fn cleanup_connections(connections: &mut HashMap::<SocketAddr,ClientState>, stopwatch: &mut Instant) -> bool {
     if stopwatch.elapsed() < defs::CLEANUP_TIMEOUT {
-        return;
+        return false; 
     }
 
     let mut todo_delete: Vec<SocketAddr> = vec![];
@@ -107,7 +112,7 @@ fn cleanup_connections(connections: &mut HashMap::<SocketAddr,ClientState>, stop
             todo_delete.push(*i_con.0);
         }
     }
-    for i_con in todo_delete {
+    for i_con in todo_delete.iter() {
         let state = connections.remove(&i_con).unwrap();
         println!("INFO: {:?} quit", i_con);
         let _ = state.join_handle.unwrap().join();
@@ -115,4 +120,6 @@ fn cleanup_connections(connections: &mut HashMap::<SocketAddr,ClientState>, stop
 
 
     *stopwatch = Instant::now();
+
+    return if todo_delete.len() > 0 {true} else {false};
 }
