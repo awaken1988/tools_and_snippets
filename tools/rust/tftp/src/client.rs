@@ -1,5 +1,4 @@
-use core::time;
-use std::{fmt::write, time::{Instant, Duration}, fs::File, ffi::OsString, io::{Write, Read}, path::Path};
+use std::{time::{Duration}, fs::File, ffi::OsString, io::{Write, Read}, path::Path};
 
 use clap::ArgMatches;
 use std::net::UdpSocket;
@@ -73,12 +72,14 @@ fn read_action(socket: &mut UdpSocket, file: &mut File) {
 
         buf.resize(PACKET_SIZE_MAX, 0);
         let _                       = socket.set_read_timeout(Some(Duration::from_secs(1))); 
-        let (amt, src) = match socket.recv_from(&mut buf) {
+        let (amt, _src) = match socket.recv_from(&mut buf) {
             Ok((size,socket)) => (size,socket),
             Err(_) => {
                continue;
             }
         };
+
+        buf.resize(amt, 0);
 
         if !check_datablock(&buf, expected_block) {
             continue;
@@ -125,12 +126,14 @@ fn write_action(socket: &mut UdpSocket, file: &mut File) {
         {
             buf.resize(PACKET_SIZE_MAX, 0);
             let _                       = socket.set_read_timeout(Some(Duration::from_secs(1))); 
-            let (amt, src) = match socket.recv_from(&mut buf) {
+            let (amt, _src) = match socket.recv_from(&mut buf) {
                 Ok((size,socket)) => (size,socket),
                 Err(_) => {
                    continue;
                 }
             };
+
+            buf.resize(amt, 0);
 
             let mut pp = PacketParser::new(&mut buf);
 

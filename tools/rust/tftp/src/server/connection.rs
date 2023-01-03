@@ -22,76 +22,64 @@ pub struct Connection {
     bytecount:    usize,
     lockmap:      FileLockMap,
     locked:       Option<PathBuf>,
-    //buf:          Option<Vec<u8>>,
+    buf:          Option<Vec<u8>>,
 
 }
 
 type Result<T> = std::result::Result<T,ErrorResponse>;
 
 impl Connection {
-
-    fn send_raw(&mut self, data: &[u8]) {
-        self.socket.send_to(data, self.remote).unwrap();
+    fn send_raw_release(&mut self, buf: Vec<u8>) {
+        self.socket.send_to(&buf, self.remote).unwrap();
+        self.buf = Some(buf);
     }
 
     fn send_error(&mut self, error: &ErrorResponse) {
-        let outmsg = error.to_string();
-
-        let opcode_raw = Opcode::Error as u16;
-        let error_raw = error.number as u16;
-        let mut buf = vec![
-            (opcode_raw>>8) as u8, 
-            (opcode_raw>>0) as u8 ,
-            (error_raw>>8)  as u8, 
-            (error_raw>>0)  as u8,];
-
-        buf.extend_from_slice(outmsg.as_bytes());
-        buf.push(0);
-
-        self.send_raw(&buf);
+        let mut buf = self.buf.take().unwrap();
+        
+        //TODO: to many allocations
+        let err_str = if let Some(x) = error.msg.as_ref() {
+            x.clone()
+        } else {
+            "unknown".to_string()
+        };
+        
+        let _ = PacketBuilder::new(&mut buf)
+            .opcode(Opcode::Error)
+            .number16(error.number as u16)
+            .str(&err_str)
+            .separator()
+            .as_bytes();
+        self.send_raw_release(buf);
     }
 
     fn send_ack(&mut self, blocknr: u16) {
-        let mut msg = vec![];
+        let mut buf = self.buf.take().unwrap();
+        let _ = PacketBuilder::new(&mut buf)
+            .opcode(Opcode::Ack)
+            .number16(blocknr)
+            .as_bytes();
 
-        msg.resize(0,0);
-        
-        msg.extend_from_slice(&Opcode::Ack.raw());
-        msg.extend_from_slice(&blocknr.to_be_bytes());
-
-        self.send_raw(&msg);
+        self.send_raw_release(buf);
     }
 
     fn wait_ack(&mut self, timeout: Duration, blocknr: u16) -> Result<()> {
-        let now = Instant::now();
+        let mut timeout = Timeout::new(timeout);
 
         loop {
-           if now.elapsed() > timeout {
-            break;
-           }
-
-            let data  = &self.recv.recv_timeout(Duration::from_secs(100)).unwrap()[..];
-
-            let opcode = match parse_opcode_raw(data) {
-                Some(val) => val,
-                None              => continue
-            };
-
-            if data.len() != ACK_LEN {
-                continue;
+            if timeout.is_timeout() {
+                break;
             }
 
-            match opcode {
-                Opcode::Ack => (),
-                _ => continue
-            };
+            let     data      = &self.recv.recv_timeout(Duration::from_secs(100)).unwrap()[..];
+            let mut pp = PacketParser::new(&data);
 
-            let (_,recv_blocknr) = data.split_at(ACK_BLOCK_OFFSET);
-            let recv_blocknr            = raw_to_num::<u16>(recv_blocknr).unwrap();
-
-            if recv_blocknr == blocknr {
+            if data.len() != ACK_LEN || !pp.opcode_expect(Opcode::Ack) || !pp.number16_expected(blocknr)  {
+                continue;
+            } else {
                 return Ok(());
             }
+            
         }
 
         return Result::Err(ErrorResponse::new_custom("timeout wait ACK".to_string()));
@@ -105,34 +93,14 @@ impl Connection {
             break;
            }
 
-            let data  = &self.recv.recv_timeout(Duration::from_secs(100)).unwrap()[..];
+            let     data      = &self.recv.recv_timeout(Duration::from_secs(100)).unwrap()[..];
+            let mut pp = PacketParser::new(&data);
 
-            let opcode = match parse_opcode_raw(data) {
-                Some(val) => val,
-                None              => continue
-            };
-        
-            match opcode {
-                Opcode::Data => (),
-                _ => continue
-            };
-
-            if data.len() < (DATA_OFFSET+1) {
+            if !pp.opcode_expect(Opcode::Data) || !pp.number16_expected(blocknr) {
                 continue;
             }
 
-            //TODO: save ranges in protol
-            let recv_blocknr = &data[DATA_BLOCK_NUM];
-            let recv_blocknr = if let Some(nr) = raw_to_num::<u16>(recv_blocknr) {
-                nr
-            } else {
-                continue;
-            };
 
-            if blocknr != recv_blocknr {
-                continue;
-            }
-            
             let recv_data    = &data[DATA_OFFSET..];
             out.clear();
             out.extend_from_slice(recv_data);
@@ -310,7 +278,7 @@ impl Connection {
             bytecount:    0,
             lockmap,
             locked:       Option::None,
-            //buf:          Option::Some(Vec::new()),
+            buf:          Some(Vec::new()),
         };
     }
 

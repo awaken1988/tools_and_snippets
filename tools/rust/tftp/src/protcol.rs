@@ -1,4 +1,3 @@
-use core::time;
 use std::ops::Range;
 use std::time::{Duration, Instant};
 use std::default::Default;
@@ -9,7 +8,6 @@ pub const MAX_PACKET_SIZE:   usize    = MAX_BLOCKSIZE + DATA_BLOCK_NUM.end;
 pub const RECV_TIMEOUT:      Duration = Duration::from_secs(2);
 pub const OPCODE_LEN:        usize    = 2;
 pub const ACK_LEN:           usize    = 4;
-pub const ACK_BLOCK_OFFSET:  usize    = 2;
 pub const DATA_OFFSET:       usize        = 4;
 pub const DATA_BLOCK_NUM:    Range<usize> = 2..4;
 pub const PACKET_SIZE_MAX:   usize    = 4096;
@@ -41,6 +39,7 @@ pub struct ErrorResponse {
     pub msg:    Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Clone,Copy,Debug)]
 pub enum TransferMode {
     Netascii,
@@ -56,8 +55,6 @@ pub struct PacketParser<'a> {
     buf:    &'a[u8],
     pos:    usize,
 }
-
-pub type Reader       = fn(&mut Vec<u8>, timeout: Duration) -> bool;
 
 pub struct Timeout {
     start:   Option<Instant>,
@@ -197,40 +194,40 @@ impl<'a> PacketParser<'a> {
         return false;
     } 
 
-    pub fn separator(&mut self) -> bool {
-        let data = self.remaining_bytes();
+    // pub fn separator(&mut self) -> bool {
+    //     let data = self.remaining_bytes();
 
-        if data.len() == 0 || data[0] != 0 {
-          false
-        }
-        else {
-            true
-        } 
-    }
+    //     if data.len() == 0 || data[0] != 0 {
+    //       false
+    //     }
+    //     else {
+    //         true
+    //     } 
+    // }
 
-    pub fn str_with_sep(&mut self) -> Option<String> {
-        let data = self.remaining_bytes();
-        let mut sepos = Option::None;
+    // pub fn str_with_sep(&mut self) -> Option<String> {
+    //     let data = self.remaining_bytes();
+    //     let mut sepos = Option::None;
         
-        for (i, d) in data.iter().enumerate() {
-            if *d == 0 {
-                sepos = Some(i)
-            }
-        }
+    //     for (i, d) in data.iter().enumerate() {
+    //         if *d == 0 {
+    //             sepos = Some(i)
+    //         }
+    //     }
 
-        if sepos.is_none() {
-            return Option::None;
-        }
+    //     if sepos.is_none() {
+    //         return Option::None;
+    //     }
 
-        let raw = &data[..sepos.unwrap()];
-        let txt = String::from_utf8(raw.to_vec()).ok();
+    //     let raw = &data[..sepos.unwrap()];
+    //     let txt = String::from_utf8(raw.to_vec()).ok();
 
-        if let Some(_) = txt {
-            self.pos += raw.len();
-        }
+    //     if let Some(_) = txt {
+    //         self.pos += raw.len();
+    //     }
 
-        return txt;
-    }
+    //     return txt;
+    // }
 
     pub fn number16(&mut self) -> Option<u16> {
         let data = self.remaining_bytes();
@@ -399,26 +396,26 @@ impl<'a> PacketBuilder<'a> {
         }
     }
 
-    pub fn opcode(mut self, opcode: Opcode) -> Self {
+    pub fn opcode(self, opcode: Opcode) -> Self {
         self.buf.extend_from_slice(&opcode.raw());
         return self;
     }
 
-    pub fn transfer_mode(mut self, mode: TransferMode) -> Self {
+    pub fn transfer_mode(self, mode: TransferMode) -> Self {
         return self.str(&mode.to_string())   //Note: prevent create a String
     }
     
-    pub fn separator(mut self) -> Self {
+    pub fn separator(self) -> Self {
         self.buf.push(0);
         return self;
     }
     
-    pub fn str(mut self, txt: &str) -> Self {
+    pub fn str(self, txt: &str) -> Self {
         self.buf.extend_from_slice(txt.as_bytes());
         return self;
     }
 
-    pub fn number16(mut self, num: u16) -> Self {
+    pub fn number16(self, num: u16) -> Self {
         self.buf.extend_from_slice(&num.to_be_bytes());
         return self;
     }
@@ -426,7 +423,6 @@ impl<'a> PacketBuilder<'a> {
     pub fn as_bytes(&self) -> &[u8] {
         &self.buf
     }
-
 }
 
 
