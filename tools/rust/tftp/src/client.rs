@@ -44,11 +44,13 @@ pub fn client_main(args: &ArgMatches) {
                 let path: OsString = args.get_one::<String>("read").unwrap().into();
                 let mut file = File::create(path).expect("Cannot write file");
                 read_action(&mut socket, &mut file);
+                break;
             }
             Opcode::Write => {
                 let path: OsString = args.get_one::<String>("write").unwrap().into();
                 let mut file = File::open(path).expect("Cannot write file");
                 write_action(&mut socket, &mut file);
+                break;
             }
             _ => panic!("not yet implemented"),
         }
