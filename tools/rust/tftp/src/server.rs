@@ -50,12 +50,16 @@ pub fn run_server(settings: ServerSettings) {
     let mut buf = Vec::<u8>::new();
 
     loop {
+        //cleanup
+        if cleanup_connections(&mut connections, &mut cleanpup_stopwatch) && settings.exit_with_client {
+            break;
+        }
+    
         buf.resize(protcol::MAX_PACKET_SIZE, 0);
 
         let (amt, src) = match socket.recv_from(&mut buf) {
             Ok((size,socket)) => (size,socket),
             Err(_) => {
-                cleanup_connections(&mut connections, &mut cleanpup_stopwatch);
                 continue;
             }
         };
@@ -90,14 +94,7 @@ pub fn run_server(settings: ServerSettings) {
 
             connections.insert(src,client_state);
             let _ = connections.get(&src).unwrap().tx.send(buf.clone());
-        }
-
-        //cleanup
-        let mut cleaned = cleanup_connections(&mut connections, &mut cleanpup_stopwatch);
-
-        if settings.exit_with_client && cleaned {
-            break;
-        }
+        }       
     }
 }
 

@@ -63,8 +63,9 @@ fn read_action(socket: &mut UdpSocket, file: &mut File) {
     let mut timeout    =  Timeout::new(RECV_TIMEOUT);
     let mut expected_block = 1u16;
     let mut buf: Vec<u8>        = Vec::new();
+    let mut is_end        = false;
 
-    loop {
+    while !is_end {
         buf.resize(protcol::MAX_PACKET_SIZE, 0);
 
         if timeout.is_timeout() {
@@ -95,7 +96,7 @@ fn read_action(socket: &mut UdpSocket, file: &mut File) {
             let _ = file.write(recv_data).expect("cannot write file");
 
             if recv_data.len() < DEFAULT_BLOCKSIZE {
-                break;
+                is_end = true;
             }
         }
 

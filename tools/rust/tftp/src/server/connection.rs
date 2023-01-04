@@ -71,15 +71,14 @@ impl Connection {
                 break;
             }
 
-            let     data      = &self.recv.recv_timeout(Duration::from_secs(100)).unwrap()[..];
+            let     data      = &self.recv.recv_timeout(Duration::from_secs(4)).unwrap()[..];
             let mut pp = PacketParser::new(&data);
 
             if data.len() != ACK_LEN || !pp.opcode_expect(Opcode::Ack) || !pp.number16_expected(blocknr)  {
                 continue;
             } else {
                 return Ok(());
-            }
-            
+            }         
         }
 
         return Result::Err(ErrorResponse::new_custom("timeout wait ACK".to_string()));
