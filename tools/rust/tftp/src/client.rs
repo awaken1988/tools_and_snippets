@@ -1,4 +1,4 @@
-use std::{time::{Duration}, fs::File, ffi::OsString, io::{Write, Read}, path::Path};
+use std::{time::{Duration}, fs::File, ffi::OsString, io::{Write, Read}, path::{Path, PathBuf}, str::FromStr, env};
 
 use clap::ArgMatches;
 use std::net::UdpSocket;
@@ -6,17 +6,13 @@ use crate::protcol::{Opcode,PacketBuilder, TransferMode, Timeout, RECV_TIMEOUT, 
 
 
 pub fn client_main(args: &ArgMatches) {
-    
-    let read_filename  = args.get_one::<String>("read") ;
-    let write_filename = args.get_one::<String>("write") ;
-
-    let (path, opcode) = match (read_filename,write_filename) {
-        (Some(f), Option::None) => (f.clone(), Opcode::Read),
-        (Option::None, Some(f)) => (f.clone(), Opcode::Write),
-        _ => panic!("Only --read or --write allowed"),
+    let opcode = match (args.get_many::<String>("read"), args.get_many::<String>("write")) {
+        (Some(_), None) => Opcode::Read,
+        (None, Some(_)) => Opcode::Write,
+        _               => panic!("invalid client action; only --read or --write possible")
     };
 
-    let filename = Path::new(&OsString::from(path.clone())).file_name().expect("no filename avail").to_str().unwrap().to_string();
+    let paths = get_connection_paths(opcode, args);
 
     let mut buf = Vec::new();
 
@@ -26,7 +22,7 @@ pub fn client_main(args: &ArgMatches) {
     //send request
     socket.send(PacketBuilder::new(&mut buf)
         .opcode(opcode)
-        .str(&filename)
+        .str(paths.remote.clone().to_str().expect("invalid remote filepath"))
         .separator()
         .transfer_mode(TransferMode::Octet)
         .separator()
@@ -42,13 +38,13 @@ pub fn client_main(args: &ArgMatches) {
         match opcode {
             Opcode::Read => {
                 let path: OsString = args.get_one::<String>("read").unwrap().into();
-                let mut file = File::create(path).expect("Cannot write file");
+                let mut file = File::create(paths.local).expect("Cannot write file");
                 read_action(&mut socket, &mut file);
                 break;
             }
             Opcode::Write => {
                 let path: OsString = args.get_one::<String>("write").unwrap().into();
-                let mut file = File::open(path).expect("Cannot write file");
+                let mut file = File::open(paths.local).expect("Cannot write file");
                 write_action(&mut socket, &mut file);
                 break;
             }
@@ -57,6 +53,47 @@ pub fn client_main(args: &ArgMatches) {
     }
 
 
+}
+
+struct ClientFilePath {
+   local:  PathBuf,
+   remote: PathBuf,
+}
+
+fn get_connection_paths(opcode: Opcode, args: &ArgMatches) -> ClientFilePath {
+    let (values, remote_idx, local_idx) = match opcode {
+        Opcode::Read  => (args.get_many::<String>("read"),  1, 0),
+        Opcode::Write => (args.get_many::<String>("write"), 0, 1),
+        _             => panic!("Invalid Operation: only Read or Write allowed"),
+    };
+    let values: Vec<&String> = values.unwrap().collect();
+
+    //get from args
+    let mut localfile = if let Some(l) = values.get(local_idx) {
+        Some(PathBuf::from_str(l).unwrap().canonicalize().unwrap())
+    } else {
+        Option::None
+    };
+    let mut remote = if let Some(r) = values.get(remote_idx) {
+        Some(PathBuf::from_str(r).unwrap())
+    } else {
+        Option::None
+    };
+
+    //default missing
+    if localfile.is_none() {
+        localfile = Some(env::current_dir()
+            .expect("cannot get current working directory")
+            .join(remote.as_ref().unwrap().file_name().unwrap()))
+    };
+    if remote.is_none() {
+        remote = Some(localfile.as_ref().unwrap().file_name().unwrap().into());
+    };
+
+    ClientFilePath {
+        local:  localfile.unwrap(),
+        remote: remote.unwrap(),
+    }
 }
 
 fn read_action(socket: &mut UdpSocket, file: &mut File) {
