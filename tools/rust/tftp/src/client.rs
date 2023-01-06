@@ -38,6 +38,7 @@ pub fn client_main(args: &ArgMatches) {
         match opcode {
             Opcode::Read => {
                 let path: OsString = args.get_one::<String>("read").unwrap().into();
+                println!("local {:?}", &paths.local);
                 let mut file = File::create(paths.local).expect("Cannot write file");
                 read_action(&mut socket, &mut file);
                 break;
@@ -62,18 +63,19 @@ struct ClientFilePath {
 
 fn get_connection_paths(opcode: Opcode, args: &ArgMatches) -> ClientFilePath {
     let (values, remote_idx, local_idx) = match opcode {
-        Opcode::Read  => (args.get_many::<String>("read"),  1, 0),
-        Opcode::Write => (args.get_many::<String>("write"), 0, 1),
+        Opcode::Read  => (args.get_many::<String>("read"),  0, 1),
+        Opcode::Write => (args.get_many::<String>("write"), 1, 0),
         _             => panic!("Invalid Operation: only Read or Write allowed"),
     };
     let values: Vec<&String> = values.unwrap().collect();
 
     //get from args
     let mut localfile = if let Some(l) = values.get(local_idx) {
-        Some(PathBuf::from_str(l).unwrap().canonicalize().unwrap())
+        Some(PathBuf::from_str(l).unwrap())
     } else {
         Option::None
     };
+
     let mut remote = if let Some(r) = values.get(remote_idx) {
         Some(PathBuf::from_str(r).unwrap())
     } else {

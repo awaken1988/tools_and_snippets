@@ -3,13 +3,67 @@ use predicates::prelude::*; // Used for writing assertions
 use std::{process::Command, thread, time::Duration, fs::{File, self}, path::Path}; // Run programs
 use assert_fs::prelude::*;
 
-#[test]
-fn client_server_read() -> Result<(), Box<dyn std::error::Error>> {
-    let server_root = assert_fs::TempDir::new().unwrap();
-    let client_root = assert_fs::TempDir::new().unwrap();
 
-    let transfer_path = server_root.child("download.bin");    
-    transfer_path.write_binary(&[0,1,2,3]).unwrap();
+//FIXME:
+//  run these tests with: 
+//      cargo test -- --test-threads=1
+//  otherwise test will propably fail because there can only be on server on port 69
+//  -> use alternative ports for this scenario
+
+#[test]
+fn download_smaller_blocksize() -> Result<(), Box<dyn std::error::Error>> {
+    tftp_transfer(&[0,1,2,3], true)
+}
+
+#[test]
+fn download_exact_blocksize() -> Result<(), Box<dyn std::error::Error>> {
+    tftp_transfer(&generate_data(512), true)
+}
+
+#[test]
+fn download_mult_blocksize() -> Result<(), Box<dyn std::error::Error>> {
+    tftp_transfer(&generate_data(3*512), true)
+}
+
+#[test]
+fn upload_smaller_blocksize() -> Result<(), Box<dyn std::error::Error>> {
+    tftp_transfer(&[0,1,2,3], false)
+}
+
+#[test]
+fn upload_exact_blocksize() -> Result<(), Box<dyn std::error::Error>> {
+    tftp_transfer(&generate_data(512), false)
+}
+
+#[test]
+fn upload_mult_blocksize() -> Result<(), Box<dyn std::error::Error>> {
+    tftp_transfer(&generate_data(3*512), false)
+}
+
+fn generate_data(size: usize) -> Vec<u8> {
+    let mut buf:Vec<u8> = Vec::new();
+
+    for i in 0..size {
+        buf.push(i as u8);
+    }
+
+    buf
+}
+
+fn tftp_transfer(data: &[u8], is_read: bool) -> Result<(), Box<dyn std::error::Error>> {
+    let server_root = assert_fs::TempDir::new().unwrap().into_persistent();
+    let client_root = assert_fs::TempDir::new().unwrap().into_persistent();
+    let server_file_path = server_root.join("download.bin");
+    let client_file_path = client_root.join("download.bin");
+
+    let generated_file = if is_read {
+        &server_root
+    } else {
+        &client_root
+    };
+
+    let transfer_path = generated_file.child("download.bin");    
+    transfer_path.write_binary(data).unwrap();
 
     let mut cmd_path = Command::cargo_bin("tftp").unwrap().get_program().to_os_string();
 
@@ -31,34 +85,46 @@ fn client_server_read() -> Result<(), Box<dyn std::error::Error>> {
 
     let client_hndl = {
         let mut cmd_path = cmd_path.clone();
+        let client_file_path = client_file_path.clone();
+        let server_file_path = server_file_path.clone();
         thread::spawn(move || {    
             println!("client started");
-            std::process::Command::new(cmd_path)
-                .arg("client")
-                .arg("--remote").arg("127.0.0.1")
-                .arg("--read").arg("download.bin")
-                .output().unwrap();
+            let mut cmd = std::process::Command::new(cmd_path);
+            cmd.arg("client");
+            cmd.arg("--remote").arg("127.0.0.1");
+
+            if is_read {
+                cmd.arg("--read");
+                cmd.arg("download.bin");
+                cmd.arg(&*client_file_path.to_string_lossy());
+            } else {
+                cmd.arg("--write");
+                cmd.arg(&*client_file_path.to_string_lossy());
+                cmd.arg("download.bin");  
+            }
+            
+            
+            let output = cmd.output().unwrap();
+            println!("{:?}", output);
         })
     };
 
-    
     client_hndl.join();
     println!("client ready");
     
     server_hndl.join();
     println!("server ready");
 
-    let server_file_path = server_root.join("download.bin");
-    let client_file_path = client_root.join("download.bin");
-
     compare(&server_file_path, &client_file_path);
 
     Ok(())
 }
 
-fn compare(l: &Path, r: &Path) -> bool {
+fn compare(l: &Path, r: &Path) {
     let l = fs::read(l).unwrap();
-    let r = fs::read(r).unwrap();  
+    let r = fs::read(r).unwrap();
 
-    return l == r;
+    let mut is_same = *l == *r;
+
+    assert!(is_same);
 }

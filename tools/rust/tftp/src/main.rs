@@ -48,6 +48,7 @@ fn main()  {
             .arg(Arg::new("write")
                 .long("write")
                 .required(false)
+                .num_args(1..=2)
                 .help("write a file with the given name to the remote server")
             )
         )
