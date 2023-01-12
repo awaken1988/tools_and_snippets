@@ -16,6 +16,7 @@ pub struct ServerSettings {
     pub blocksize:        usize,
     pub verbose:          bool,
     pub exit_with_client: bool,
+    pub port:             u16,
 }
 
 pub struct ClientState {

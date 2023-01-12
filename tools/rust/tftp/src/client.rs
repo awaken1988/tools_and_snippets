@@ -14,10 +14,12 @@ pub fn client_main(args: &ArgMatches) {
 
     let paths = get_connection_paths(opcode, args);
 
+    let remote = (args.get_one::<String>("remote").expect("invalid remote")).clone();
+
     let mut buf = Vec::new();
 
     let mut socket = UdpSocket::bind("127.0.0.1:0").expect("Bind to interface failed");
-    socket.connect("127.0.0.1:69").expect("Connection failed");
+    socket.connect(remote).expect("Connection failed");
 
     //send request
     socket.send(PacketBuilder::new(&mut buf)

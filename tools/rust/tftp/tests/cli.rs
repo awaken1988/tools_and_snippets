@@ -12,32 +12,32 @@ use assert_fs::prelude::*;
 
 #[test]
 fn download_smaller_blocksize() -> Result<(), Box<dyn std::error::Error>> {
-    tftp_transfer(&[0,1,2,3], true)
+    tftp_transfer(&[0,1,2,3], true, 55001)
 }
 
 #[test]
 fn download_exact_blocksize() -> Result<(), Box<dyn std::error::Error>> {
-    tftp_transfer(&generate_data(512), true)
+    tftp_transfer(&generate_data(512), true, 55002)
 }
 
 #[test]
 fn download_mult_blocksize() -> Result<(), Box<dyn std::error::Error>> {
-    tftp_transfer(&generate_data(3*512), true)
+    tftp_transfer(&generate_data(3*512), true, 55003)
 }
 
 #[test]
 fn upload_smaller_blocksize() -> Result<(), Box<dyn std::error::Error>> {
-    tftp_transfer(&[0,1,2,3], false)
+    tftp_transfer(&[0,1,2,3], false, 55004)
 }
 
 #[test]
 fn upload_exact_blocksize() -> Result<(), Box<dyn std::error::Error>> {
-    tftp_transfer(&generate_data(512), false)
+    tftp_transfer(&generate_data(512), false, 55005)
 }
 
 #[test]
 fn upload_mult_blocksize() -> Result<(), Box<dyn std::error::Error>> {
-    tftp_transfer(&generate_data(3*512), false)
+    tftp_transfer(&generate_data(3*512), false, 55006)
 }
 
 fn generate_data(size: usize) -> Vec<u8> {
@@ -50,7 +50,7 @@ fn generate_data(size: usize) -> Vec<u8> {
     buf
 }
 
-fn tftp_transfer(data: &[u8], is_read: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn tftp_transfer(data: &[u8], is_read: bool, port: u16) -> Result<(), Box<dyn std::error::Error>> {
     let server_root = assert_fs::TempDir::new().unwrap().into_persistent();
     let client_root = assert_fs::TempDir::new().unwrap().into_persistent();
     let server_file_path = server_root.join("download.bin");
@@ -77,6 +77,7 @@ fn tftp_transfer(data: &[u8], is_read: bool) -> Result<(), Box<dyn std::error::E
                 .arg("server")
                 .arg("--rootdir").arg(server_root)
                 .arg("--exit-with-client")
+                .arg("--port").arg(format!("{}",port))
                 .output().unwrap();
         })
     };
@@ -91,7 +92,7 @@ fn tftp_transfer(data: &[u8], is_read: bool) -> Result<(), Box<dyn std::error::E
             println!("client started");
             let mut cmd = std::process::Command::new(cmd_path);
             cmd.arg("client");
-            cmd.arg("--remote").arg("127.0.0.1");
+            cmd.arg("--remote").arg(format!("127.0.0.1:{}",port));
 
             if is_read {
                 cmd.arg("--read");

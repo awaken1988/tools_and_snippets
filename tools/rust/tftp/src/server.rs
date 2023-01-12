@@ -27,20 +27,25 @@ pub fn server_main(args: &ArgMatches) {
     if !std::path::Path::new(rootdir).is_dir(){
         panic!("rootdir = \"{}\" does not exists", rootdir);
     }
-    
+
+    let port = args.get_one::<String>("port").unwrap_or(&"69".to_string()).clone();
+    let port     = u16::from_str_radix(&port, 10).expect("wrong port");
+
     let settings = ServerSettings {
         write_mode:        writemode,
         root_dir:          rootdir.clone(),
         blocksize:         protcol::DEFAULT_BLOCKSIZE,
         verbose:           true, 
-        exit_with_client:  *args.get_one::<bool>("exit-with-client").unwrap()
+        exit_with_client:  *args.get_one::<bool>("exit-with-client").unwrap(),
+        port:              port
+
     };
 
     run_server(settings);
 }
 
 pub fn run_server(settings: ServerSettings) {
-    let socket = UdpSocket::bind("127.0.0.1:69").unwrap();
+    let socket = UdpSocket::bind(format!("127.0.0.1:{}", settings.port)).unwrap();
     let _ = socket.set_read_timeout(Some(Duration::from_secs(1)));  //TODO: check for error
     let mut connections = HashMap::<SocketAddr,ClientState>::new();
     let mut cleanpup_stopwatch = Instant::now();
