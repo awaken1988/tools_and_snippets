@@ -1,0 +1,3 @@
+[submodule "tools/rust/tftp"]
+	path = tools/rust/tftp
+	url = https://github.com/awaken1988/tftp.git
