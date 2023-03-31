@@ -10,6 +10,7 @@
 #include <vector>
 #include <cstring>
 #include <string>
+#include <optional>
 
 using std::cout;
 using std::endl;
@@ -19,6 +20,11 @@ class Hello {
 public:
     static constexpr uint32_t WIDTH = 800;
     static constexpr uint32_t HEIGHT = 600;
+
+    struct QueueFamilyIndices {
+        std::optional<uint32_t> graphicsFamily = 0;
+    };
+
 
     void run() {
         initVulkan();
@@ -33,6 +39,7 @@ public:
     }
 
     void cleanup() {
+        vkDestroyDevice(device, nullptr);
         vkDestroyInstance(instance, nullptr);
         glfwDestroyWindow(this->window);
         glfwTerminate();
@@ -48,6 +55,7 @@ private:
         createInstance();
         //setupDebugMessenger();
         pickPhysicalDevice();
+        createLogicalDevice();
     }
 
     void createInstance() {
@@ -154,18 +162,77 @@ private:
         for(const auto& iDev: physicalDevices) {
             VkPhysicalDeviceProperties props;
             vkGetPhysicalDeviceProperties(iDev, &props);
-            cout << "   " << props.deviceName << "; " << props.apiVersion << endl;
+
+            string use;
+            if(physicalDevice == VK_NULL_HANDLE && isDeviceSuitable(iDev)) {
+                physicalDevice = iDev;
+                use = "USE";
+            }
+
+            cout << "   " << props.deviceName << "; " << use << endl;
         }
     }
 
     bool isDeviceSuitable(VkPhysicalDevice device) {
-        return true;
+        const auto indices = findQueueFamilies(device);
+        return indices.graphicsFamily.has_value();
+    }
+
+    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
+        QueueFamilyIndices indices;
+
+        uint32_t queueFamilyCount = 0;
+        std::vector<VkQueueFamilyProperties> queueProperties;
+
+        vkGetPhysicalDeviceQueueFamilyProperties(device,&queueFamilyCount,nullptr);
+        queueProperties.resize(queueFamilyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(device,&queueFamilyCount,queueProperties.data());
+        
+        int i = 0;
+        for(const auto& iProperty: queueProperties) {
+            if( iProperty.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                indices.graphicsFamily = i;
+                break;
+            }
+        }
+
+        return indices;
+    }
+
+    void createLogicalDevice() {
+        const auto queueIndices = findQueueFamilies(physicalDevice);
+        
+        const float queuePrio = 1.0;
+
+        VkPhysicalDeviceFeatures deviceFeatures{};
+
+        VkDeviceQueueCreateInfo queueInfo{};
+        queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueInfo.queueFamilyIndex = *queueIndices.graphicsFamily;
+        queueInfo.queueCount = 1;
+        queueInfo.pQueuePriorities = &queuePrio;
+
+        VkDeviceCreateInfo deviceInfo{};
+        deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        deviceInfo.queueCreateInfoCount = 1;
+        deviceInfo.pQueueCreateInfos = &queueInfo;
+        deviceInfo.pEnabledFeatures = &deviceFeatures;
+        deviceInfo.enabledExtensionCount = 0;
+        deviceInfo.enabledLayerCount = 0;
+
+        if(vkCreateDevice(physicalDevice, &deviceInfo, nullptr, &device)) {
+            throw string{"cannot create logicalDevice"};
+        }
+
+        vkGetDeviceQueue(device, queueIndices.graphicsFamily.value(), 0, &graphicsQueue);
     }
 
 private:
     GLFWwindow* window;
     VkInstance  instance;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+    VkDevice device;
+    VkQueue graphicsQueue;
 
     std::vector<VkExtensionProperties> extensions;
     std::vector<VkLayerProperties> layers;
