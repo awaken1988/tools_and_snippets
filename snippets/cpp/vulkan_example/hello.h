@@ -388,6 +388,9 @@ private:
         VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainDetails.presentModes);
         VkExtent2D extent = chooseSwapExtent(swapChainDetails.capabilities);
 
+        m_swapChainImageFormat = surfaceFormat.format;
+        m_swapChainExtent = extent;
+
         uint32_t imageCount = swapChainDetails.capabilities.minImageCount + 1;
 
         if (swapChainDetails.capabilities.maxImageCount > 0 && imageCount > swapChainDetails.capabilities.maxImageCount) {
@@ -428,7 +431,10 @@ private:
             throw string{ "cannot create swapchain" };
         }
 
-
+        uint32_t swapchainImageCount = 0;
+        vkGetSwapchainImagesKHR(m_device, m_swapChain, &swapchainImageCount, nullptr);
+        m_swapChainImages.resize(swapchainImageCount);
+        vkGetSwapchainImagesKHR(m_device, m_swapChain, &swapchainImageCount, m_swapChainImages.data());
     }
 
 
@@ -447,9 +453,13 @@ private:
     VkSwapchainKHR m_swapChain;
     VkQueue m_graphicsQueue;
     VkQueue m_presentQueue;
+    VkFormat m_swapChainImageFormat;
+    VkExtent2D m_swapChainExtent;
 
     std::vector<VkExtensionProperties> m_extensions;
     std::vector<const char*> m_extensionsUsed;
     std::vector<const char*> m_extensionsDeviceUsed;
     std::vector<VkLayerProperties> layers;
+
+    std::vector<VkImage> m_swapChainImages;
 };
