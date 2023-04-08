@@ -31,6 +31,10 @@ public:
         bool isComplete() const {
             return graphicsFamily.has_value() && presentationFamily.has_value();
         }
+
+        bool isDiff() const {
+            return graphicsFamily.value() != presentationFamily.value();
+        }
     };
 
     struct SwapChainSupportDetails {
@@ -53,6 +57,7 @@ public:
     }
 
     void cleanup() {
+        vkDestroySwapchainKHR(m_device, m_swapChain, nullptr);
         vkDestroyDevice(m_device, nullptr);
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
         vkDestroyInstance(m_instance, nullptr);
@@ -377,7 +382,53 @@ private:
     }
 
     void createSwapChain() {
-            
+        SwapChainSupportDetails swapChainDetails = querySwapChainSupport(m_physicalDevice);
+
+        VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainDetails.formats);
+        VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainDetails.presentModes);
+        VkExtent2D extent = chooseSwapExtent(swapChainDetails.capabilities);
+
+        uint32_t imageCount = swapChainDetails.capabilities.minImageCount + 1;
+
+        if (swapChainDetails.capabilities.maxImageCount > 0 && imageCount > swapChainDetails.capabilities.maxImageCount) {
+            imageCount = swapChainDetails.capabilities.maxImageCount;
+        }
+
+        VkSwapchainCreateInfoKHR createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        createInfo.surface = m_surface;
+        createInfo.minImageCount = imageCount;
+        createInfo.imageFormat = surfaceFormat.format;
+        createInfo.imageColorSpace = surfaceFormat.colorSpace;
+        createInfo.imageExtent = extent;
+        createInfo.imageArrayLayers = 1;
+        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+        QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
+        uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentationFamily.value() };
+
+        if (indices.isDiff()) {
+            createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+            createInfo.queueFamilyIndexCount = 2;
+            createInfo.pQueueFamilyIndices = queueFamilyIndices;
+        }
+        else {
+            createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            createInfo.queueFamilyIndexCount = 0;
+            createInfo.pQueueFamilyIndices = nullptr;
+        }
+
+        createInfo.preTransform = swapChainDetails.capabilities.currentTransform;
+        createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        createInfo.presentMode = presentMode;
+        createInfo.clipped;
+        createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+        if (vkCreateSwapchainKHR(m_device, &createInfo, nullptr, &m_swapChain)) {
+            throw string{ "cannot create swapchain" };
+        }
+
+
     }
 
 
@@ -393,6 +444,7 @@ private:
     VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
     VkDevice m_device;
     VkSurfaceKHR m_surface;
+    VkSwapchainKHR m_swapChain;
     VkQueue m_graphicsQueue;
     VkQueue m_presentQueue;
 
