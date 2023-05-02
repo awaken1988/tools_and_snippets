@@ -32,3 +32,5 @@ ELSE()
 ENDIF()
 
 target_link_libraries(hello PRIVATE glm)
+
+#glslc shader.vert -o vert.spv
