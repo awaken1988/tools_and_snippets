@@ -73,6 +73,8 @@ public:
             glfwPollEvents();
             drawFrame();
         }
+
+         vkDeviceWaitIdle(m_device);
     }
 
     void cleanup() {
@@ -561,7 +563,6 @@ private:
         dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
         dynamicState.pDynamicStates = dynamicStates.data();
         
-
         //vertex input
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -586,8 +587,16 @@ private:
 
         //scissor
         VkRect2D scissor{};
-        scissor.offset = {0, 0};
-        scissor.extent = m_swapChainExtent;
+        {
+            VkExtent2D scissor_size = m_swapChainExtent;
+            
+            //scissor_size.height = 100;
+            //scissor_size.width = 100;
+
+            scissor.offset = {0, 0};
+            scissor.extent = scissor_size;
+        }
+       
 
         //viewport
         //  VkPipelineViewportStateCreateInfo viewportState{};
@@ -807,8 +816,14 @@ private:
         vkCmdSetViewport(m_commandBuffer, 0, 1, &viewport);
 
         VkRect2D scissor{};
-        scissor.offset = {0, 0};
-        scissor.extent = m_swapChainExtent;
+        {
+            decltype(m_swapChainExtent) scissor_size = m_swapChainExtent;
+            //scissor_size.width /= 2;
+            //scissor_size.height /= 2;
+
+            scissor.offset = {0, 0};
+            scissor.extent = scissor_size;
+        }
         vkCmdSetScissor(m_commandBuffer, 0, 1, &scissor);
 
         vkCmdDraw(m_commandBuffer, 3, 1, 0, 0);
