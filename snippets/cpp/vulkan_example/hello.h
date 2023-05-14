@@ -3,7 +3,9 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <vulkan/vulkan.h>
 #include <iostream>
@@ -161,6 +163,7 @@ private:
         createSwapChain();
         createImageViews();
         createRenderPass();
+        createDescriptorSetLayout(); //right order???
         createGraphicsPipeline();
         createFramebuffers();
         createCommandPool();
@@ -898,6 +901,8 @@ private:
         vkResetCommandBuffer(m_commandBuffer, 0);
         recordCommandBuffer(m_commandBuffer, imageIndex);
 
+        updateUniformBuffer();
+
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -961,7 +966,7 @@ private:
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags flags, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
         VkBufferCreateInfo bufferInfo{};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = sizeof(m_vertices[0]) * m_vertices.size();
+		bufferInfo.size = size;
 		bufferInfo.usage = usage;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -970,7 +975,7 @@ private:
 		}
 
         VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(m_device, m_vertexBuffer, &memRequirements);
+        vkGetBufferMemoryRequirements(m_device, buffer, &memRequirements);
 
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -1034,6 +1039,8 @@ private:
         uboLayoutBinding.binding = 0;
         uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         uboLayoutBinding.descriptorCount = 1;
+        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
 
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -1049,6 +1056,19 @@ private:
         VkDeviceSize bufferSize = sizeof(UniformBufferObject);
         createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_uniformBuffers, m_uniformBuffersMemory);
         vkMapMemory(m_device, m_uniformBuffersMemory, 0, bufferSize, 0, &m_uniformBuffersMapped);
+    }
+
+    void updateUniformBuffer() {
+    	auto currentTime = std::chrono::steady_clock::now();
+    	float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - m_since_start).count() / 1.0f;
+
+    	UniformBufferObject ubo{};
+    	ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    	ubo.proj = glm::perspective(glm::radians(45.0f), m_swapChainExtent.width / (float) m_swapChainExtent.height, 0.1f, 10.0f);
+    	ubo.proj[1][1] *= -1;
+
+    	memcpy(m_uniformBuffersMapped, &ubo, sizeof(ubo));
     }
 
 private:
@@ -1112,4 +1132,6 @@ private:
     };
 
     fps_t m_fps;
+
+    std::chrono::steady_clock::time_point m_since_start;
 };
