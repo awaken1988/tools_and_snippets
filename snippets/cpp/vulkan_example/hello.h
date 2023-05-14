@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <fstream>
 #include <array>
+#include <chrono>
 
 using std::cout;
 using std::endl;
@@ -69,6 +70,11 @@ struct Vertex {
     }
 };
 
+struct UniformBufferObject {
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
+};
 
 class Hello {
 public:
@@ -112,6 +118,7 @@ public:
     }
 
     void cleanup() {
+    	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
         vkDestroySemaphore(m_device, m_imageAvailableSemaphore, nullptr);
         vkDestroySemaphore(m_device, m_renderFinishedSemaphore, nullptr);
         vkDestroyFence(m_device, m_inFlightFence, nullptr);
@@ -158,6 +165,7 @@ private:
         createFramebuffers();
         createCommandPool();
         createVertexBuffer();
+        createUniformBuffers();
         createCommandBuffer();
         createSyncObjects();
     }
@@ -696,8 +704,8 @@ private:
         
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 0; // Optional
-        pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
+        pipelineLayoutInfo.setLayoutCount = 1; // Optional
+        pipelineLayoutInfo.pSetLayouts = &m_descriptorSetLayout; // Optional
         pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
         pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
@@ -923,7 +931,7 @@ private:
         vkQueuePresentKHR(m_presentQueue, &presentInfo);
 
         m_drawCalls++;
-        cout << "drawcalls=" << m_drawCalls << endl;
+        m_fps.next();
     }
 
     void createSyncObjects() {
@@ -950,6 +958,32 @@ private:
         };
     }
     
+    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags flags, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
+        VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = sizeof(m_vertices[0]) * m_vertices.size();
+		bufferInfo.usage = usage;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		if (vkCreateBuffer(m_device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+			throw std::string("failed to create buffer!");
+		}
+
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements(m_device, m_vertexBuffer, &memRequirements);
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        if (vkAllocateMemory(m_device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+		   throw std::string("failed to allocate memory!");
+	   }
+
+       vkBindBufferMemory(m_device, buffer, bufferMemory, 0);
+    }
+
     void createVertexBuffer() {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -995,6 +1029,27 @@ private:
         throw string{"cannot find memory type"};
     }
 
+    void createDescriptorSetLayout() {
+        VkDescriptorSetLayoutBinding uboLayoutBinding{};
+        uboLayoutBinding.binding = 0;
+        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        uboLayoutBinding.descriptorCount = 1;
+
+        VkDescriptorSetLayoutCreateInfo layoutInfo{};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = 1;
+        layoutInfo.pBindings = &uboLayoutBinding;
+
+        if (vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &m_descriptorSetLayout) != VK_SUCCESS) {
+            throw string("failed to create descriptor set layout!");
+        }
+    }
+
+    void createUniformBuffers() {
+        VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+        createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_uniformBuffers, m_uniformBuffersMemory);
+        vkMapMemory(m_device, m_uniformBuffersMemory, 0, bufferSize, 0, &m_uniformBuffersMapped);
+    }
 
 private:
     GLFWwindow* m_window;
@@ -1008,11 +1063,16 @@ private:
     VkFormat m_swapChainImageFormat;
     VkExtent2D m_swapChainExtent;
     VkPipelineLayout m_pipelineLayout;
+    VkDescriptorSetLayout m_descriptorSetLayout;
     VkRenderPass m_renderPass;
     VkPipeline m_graphicsPipeline;
     std::vector<VkFramebuffer> m_swapChainFramebuffers;
     VkCommandPool m_commandPool;
     VkCommandBuffer m_commandBuffer;
+
+    VkBuffer m_uniformBuffers;
+    VkDeviceMemory m_uniformBuffersMemory;
+    void* m_uniformBuffersMapped;
 
     VkSemaphore m_imageAvailableSemaphore;
     VkSemaphore m_renderFinishedSemaphore;
@@ -1031,4 +1091,25 @@ private:
     VkDeviceMemory m_vertexBufferMemory;
 
     uint64_t m_drawCalls = 0;
+
+    struct fps_t {
+    	uint64_t frame_count = 0;
+    	std::chrono::steady_clock::time_point start;
+    	void next() {
+    		using namespace std::chrono;
+
+    		if(frame_count==0)
+    			start = steady_clock::now();
+    		frame_count++;
+
+
+
+    		if(duration_cast<milliseconds>(steady_clock::now()-start).count() > 1000) {
+    			std::cout << std::dec << "fps = " << frame_count << std::endl;
+    			frame_count = 0;
+    		}
+    	}
+    };
+
+    fps_t m_fps;
 };
