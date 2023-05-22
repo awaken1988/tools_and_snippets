@@ -7,47 +7,45 @@ use std::io::Write;
 use std::fs::File;
 use std::io::BufWriter;
 use std::time::{Duration, Instant};
-use clap::{App,Arg,Subcommand};
+use clap::{Command,Arg,Subcommand};
 use std::collections::HashMap;
+
+#[macro_use]
+extern crate lazy_static;
 
 mod generator; 
 
-fn main() -> std::io::Result<()> {
-    let generators = generator::get_all();
+lazy_static! {
+    static ref GENERATORS: HashMap<String,generator::defs::GeneratorBuilder> = generator::get_all();
+}
 
-    //create args for each generator
-    let mut arg_checker = clap::App::new("binary_generator")
+fn main() -> std::io::Result<()> {
+    //common generator args
+    let mut arg_checker = Command::new("binary_generator")
         .version("0.1")
         .author("Martin K.")
         .about("generate binary files")
-        .arg(clap::Arg::new("out")
+        .arg(Arg::new("out")
             .long("out")
-            //TODO .about("generated output file")
-            .takes_value(true)
             .required(true))
         .arg(clap::Arg::new("size")
             .long("size")
-            //TODO.about("size of the generated output")
-            .takes_value(true)
             .required(true)
-        );
+    );
 
-    for (iGenName, iGen) in generators.iter() {
-        let mut sub = App::new(iGenName);
-        
+    //subcommands for each generator
+    let ref generators = *GENERATORS;
+    for (iGenName, iGen) in generators {
+        let mut sub = Command::new(iGenName.as_str());
         for (iArgName, iArg) in iGen.arguments.iter() {
             sub = sub.arg(
               Arg::new(*iArgName)
               .long(*iArgName)
-              .takes_value(true)
-              .clone()
           );
         }
-
         arg_checker = arg_checker.subcommand(sub);
     }
         
-    
     let args = arg_checker.get_matches();
     
     //get the generator
@@ -60,7 +58,7 @@ fn main() -> std::io::Result<()> {
             if let Some(sub_args) = args.subcommand_matches(&generator_builder.name) {
                 for (iArgName, iArg) in &generator_builder.arguments {
     
-                    if let Some(arg) = sub_args.value_of(iArgName) {
+                    if let Some(arg) = sub_args.get_one::<String>(iArgName) {
                         println!("arg added {}", iArgName);
                         generator_arg.insert(iArgName.to_string(), arg.to_string());
                     }
@@ -75,10 +73,19 @@ fn main() -> std::io::Result<()> {
     };
     
     //out size
-    let out_size = (args.value_of("size").unwrap()).parse::<usize>().unwrap();
+    let out_size = {
+        let size_str = args.get_one::<String>("size")
+            .expect("no --size given")
+            .to_lowercase();
+        let radix_skip = {
+            if size_str.starts_with("0x") { (16, 2) }
+            else { (10,0) }
+        };
+        usize::from_str_radix(&size_str[radix_skip.1..], radix_skip.0).expect("cannot parse --size")
+    }; 
 
     //write to file
-    let file = File::create(args.value_of("out").unwrap())?;
+    let file = File::create(args.get_one::<String>("out").unwrap())?;
     let mut  buffered_file = BufWriter::new(file);
     
     let stopwatch = Instant::now();
