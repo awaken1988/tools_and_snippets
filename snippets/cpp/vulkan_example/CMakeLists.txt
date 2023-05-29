@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_executable(hello 
     main.cpp
     hello.h
+    extern/stb_image.h
 )
 
 IF(WIN32)
