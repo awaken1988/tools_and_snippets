@@ -12,10 +12,11 @@ int main() {
             hello.run();
         }
         else {
-            VulInstance::Settings settings;
-            settings.deviceIndex = 0;
-            settings.layer.insert("VK_LAYER_KHRONOS_validation");
-            VulInstance instance{settings};
+            vulk::Device::Settings settings = {
+            	.deviceIndex = 0,
+            	.layer = {"VK_LAYER_KHRONOS_validation"},
+            };
+            vulk::Device instance{settings};
         }
         
     }

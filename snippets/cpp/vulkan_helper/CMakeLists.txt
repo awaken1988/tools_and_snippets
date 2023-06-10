@@ -8,7 +8,8 @@ add_executable(hello
     main.cpp
     hello.h
     extern/stb_image.h
-    vul_instance.cpp
+    vul_instance.cpp  vul_instance.h
+    vul_base.cpp  vul_base.h
 )
 
 IF(WIN32)
@@ -36,3 +37,7 @@ ENDIF()
 target_link_libraries(hello PRIVATE glm)
 
 #glslc shader.vert -o vert.spv
+
+#Help:
+#   For eclipse:
+#       cmake -G "Eclipse CDT4 - Unix Makefiles" -B ../build_eclipse -DCMAKE_ECLIPSE_GENERATE_SOURCE_PROJECT=TRUE -DCMAKE_BUILD_TYPE=Debug
