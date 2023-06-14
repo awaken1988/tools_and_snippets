@@ -70,6 +70,7 @@ namespace vulk
 	bool getPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice device, uint32_t family_index, VkSurfaceKHR surface);
 	std::vector<VkSurfaceFormatKHR> getPhysicalDeviceSurfaceFormatsKHR(VkPhysicalDevice device, VkSurfaceKHR surface);
 	std::vector<VkPresentModeKHR> getPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice device, VkSurfaceKHR surface);
+	std::vector<VkImage> getSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain);
 
 	template<typename... ARGS>
 	void debug_print(std::string_view fmt, ARGS&&... args) {

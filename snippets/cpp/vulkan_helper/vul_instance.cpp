@@ -7,6 +7,8 @@ namespace vulk
     Device::Device(Settings settings)
         : m_settings{settings}, m_layers_used{settings.layer}
     {
+        m_device_extension_used.insert(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
         initGlfw();
         initGetExtension();
         initGetLayers();
@@ -14,6 +16,32 @@ namespace vulk
         initPhyDev();
         initLogicDev();
         initSwapchain();
+    }
+
+    VkImageView Device::createImageView(VkImage image, VkFormat format)
+    {
+        VkImageView ret;
+        VkImageViewCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        createInfo.image = image;
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = format;
+
+        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.baseArrayLayer = 0;
+        createInfo.subresourceRange.layerCount = 1;
+
+        if (vkCreateImageView(m_logical_device, &createInfo, nullptr, &ret))
+            throw string{"cannot create image views"};
+
+        return ret;
     }
 
     void Device::initGlfw() {
@@ -195,6 +223,83 @@ namespace vulk
     	m_swapchain.present_modes = vulk::getPhysicalDeviceSurfacePresentModesKHR(m_physical_device, m_surface);
     	dumpSwapchainInfo();
 
+        m_swapchain.used_surface_format = std::invoke([&] {
+            for (const auto iFormat : m_swapchain.surface_formats) {
+                const bool is_format = iFormat.format == VK_FORMAT_B8G8R8A8_SRGB;
+                const bool is_colorspace = iFormat.colorSpace == VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+                if (is_format && is_colorspace) {
+                    return iFormat;
+                }
+            }
+            throw std::string{"surface format not found"};
+        });
+
+        m_swapchain.used_present_mode = std::invoke([&] {
+            for (const auto& iPresent : m_swapchain.present_modes) {
+                if (iPresent == VK_PRESENT_MODE_FIFO_KHR) {
+                    return iPresent;
+                }
+            }
+            throw std::string{"present mode not found"};
+        });
+
+        m_swapchain.used_extent = std::invoke([&] {
+            return m_swapchain.surface_capabilities.currentExtent;
+        });
+
+        if (m_settings.swapchain_image_count != 1)
+        {
+            throw std::string{"swapchain image count not supported"};
+        }
+
+        m_swapchain.instance = std::invoke([&] {
+            VkSwapchainKHR ret;
+
+            VkSwapchainCreateInfoKHR createInfo{};
+            createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+            createInfo.surface = m_surface;
+            createInfo.minImageCount = m_settings.swapchain_image_count;
+            createInfo.imageFormat = m_swapchain.used_surface_format.format;
+            createInfo.imageColorSpace = m_swapchain.used_surface_format.colorSpace;
+            createInfo.imageExtent = m_swapchain.used_extent;
+            createInfo.imageArrayLayers = 1;
+            createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+            const uint32_t queueFamilyIndices[] = {
+               *m_queue_families.graphics,
+               *m_queue_families.presentation,
+            };
+
+            if (queueFamilyIndices[0] != queueFamilyIndices[1]) {
+                createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+                createInfo.queueFamilyIndexCount = 2;
+                createInfo.pQueueFamilyIndices = queueFamilyIndices;
+            }
+            else {
+                createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+                createInfo.queueFamilyIndexCount = 0;
+                createInfo.pQueueFamilyIndices = nullptr;
+            }
+
+            createInfo.preTransform = m_swapchain.surface_capabilities.currentTransform;
+            createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+            createInfo.presentMode = m_swapchain.used_present_mode;
+            //createInfo.clipped = VK_TRUE;
+            createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+            if (vkCreateSwapchainKHR(m_logical_device, &createInfo, nullptr, &ret)) {
+                throw string{ "cannot create swapchain" };
+            }
+
+            return ret;
+        });
+
+        m_swapchain.images = getSwapchainImagesKHR(m_logical_device, m_swapchain.instance);
+
+        for (size_t iImage = 0; iImage < m_swapchain.images.size(); iImage++) {
+            auto image_view = createImageView(m_swapchain.images[iImage], m_swapchain.used_surface_format.format);
+            m_swapchain.image_views.push_back(image_view);
+        }
     }
 
     void Device::dumbExtensions() {

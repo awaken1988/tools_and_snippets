@@ -45,5 +45,19 @@ namespace vulk
 		 return ret;
 	}
 
+	std::vector<VkImage> getSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain ) 
+	{
+		std::vector<VkImage> ret;
+		
+		uint32_t swapchainImageCount = 0;
+		vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, nullptr);
+		ret.resize(swapchainImageCount);
+		vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, ret.data());
+
+		return ret;
+	}
+
+
+
 
 }

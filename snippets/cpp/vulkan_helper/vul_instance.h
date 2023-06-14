@@ -13,10 +13,14 @@ namespace vulk
             uint32_t height=768;
             uint32_t deviceIndex=0;
             std::set<std::string> layer;
+            size_t swapchain_image_count = 1;
         };
 
     public:
         Device(Settings settings);
+        
+        VkImageView createImageView(VkImage image, VkFormat format);
+
     protected:
         void initGlfw();
         void initGetExtension();
@@ -66,6 +70,15 @@ namespace vulk
         	VkSurfaceCapabilitiesKHR surface_capabilities;
         	std::vector<VkSurfaceFormatKHR> surface_formats;
         	std::vector<VkPresentModeKHR> present_modes;
+
+            VkSurfaceFormatKHR used_surface_format;
+            VkPresentModeKHR used_present_mode;
+            VkExtent2D used_extent;
+            
+            VkSwapchainKHR instance;
+            std::vector<VkImage> images;
+            std::vector<VkImageView> image_views;
+
         } m_swapchain;
 
         Settings m_settings;

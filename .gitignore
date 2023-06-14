@@ -7,3 +7,5 @@ antlr-4.7-complete.jar
 rust_snippets/*/target
 
 /tools/rust/network_check/target/
+/snippets/cpp/vulkan_example/build
+/snippets/cpp/vulkan_helper/build
