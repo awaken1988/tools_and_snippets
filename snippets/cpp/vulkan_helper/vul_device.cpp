@@ -317,6 +317,53 @@ namespace vulk
         return ret;
     }
 
+    std::tuple<VkBuffer,VkDeviceMemory> Device::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags flags) 
+    {
+        VkBuffer buffer; 
+        VkDeviceMemory bufferMemory;
+
+        VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = size;
+		bufferInfo.usage = usage;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		if (vkCreateBuffer(m_logical_device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+			throw std::string("failed to create buffer!");
+		}
+
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements(m_logical_device, buffer, &memRequirements);
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        if (vkAllocateMemory(m_logical_device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+		   throw std::string("failed to allocate memory!");
+	   }
+
+       vkBindBufferMemory(m_logical_device, buffer, bufferMemory, 0);
+
+       return std::tuple<VkBuffer,VkDeviceMemory>{buffer, bufferMemory};
+    }
+
+    uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) 
+    {
+        VkPhysicalDeviceMemoryProperties memProperties;
+        vkGetPhysicalDeviceMemoryProperties(m_physical_device, &memProperties);
+
+        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+                return i;
+            }
+        }
+
+        throw string{"cannot find memory type"};
+    }
+
+
     VkShaderModule Device::loadShader(std::vector<uint8_t> bytecode)
     {
         std::vector<uint32_t> alignedBytecode;
