@@ -1,3 +1,5 @@
+#pragma once
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -8,16 +10,19 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
 
+#include <memory>
+#include <string>
+#include <format>
 #include <vector>
 #include <set>
-#include <string>
-#include <algorithm>
-#include <ranges>
-#include <functional>
-#include <format>
-#include <iostream>
 #include <optional>
+#include <algorithm>
+#include <functional>
+#include <iostream>
+#include <ranges>
 #include <format>
+#include <cstring>
+#include <fstream>
 
 namespace base
 {
@@ -62,6 +67,8 @@ namespace base
 		std::vector<std::string> m_strings;
 		std::vector<const char*> m_cstrings;
 	};
+
+	std::vector<uint8_t> readFile(const std::string& filename);
 }
 
 namespace vulk
@@ -77,5 +84,4 @@ namespace vulk
 		const auto str = std::vformat(fmt, std::make_format_args(args...));
 		std::cout << "[Vulkan] " << str << std::endl;
 	}
-
 }

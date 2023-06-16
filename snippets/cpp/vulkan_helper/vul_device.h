@@ -19,7 +19,14 @@ namespace vulk
     public:
         Device(Settings settings);
         
+        VkFormat swapchainImageFormat() const;
+        VkDevice logicalDevice() const;
+        VkExtent2D swapChainExtent() const;
+
+        //helper
         VkImageView createImageView(VkImage image, VkFormat format);
+        VkShaderModule loadShader(std::vector<uint8_t> bytecode);
+        VkShaderModule loadShaderFile(std::string path);
 
     protected:
         void initGlfw();

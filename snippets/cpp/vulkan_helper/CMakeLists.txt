@@ -8,7 +8,8 @@ add_executable(hello
     main.cpp
     hello.h
     extern/stb_image.h
-    vul_instance.cpp  vul_instance.h
+    vul_device.cpp  vul_device.h
+    vul_render.cpp vul_render.h
     vul_base.cpp  vul_base.h
 )
 

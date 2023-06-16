@@ -1,4 +1,4 @@
-#include "vul_instance.h"
+#include "vul_device.h"
 
 using string = std::string;
 
@@ -16,32 +16,6 @@ namespace vulk
         initPhyDev();
         initLogicDev();
         initSwapchain();
-    }
-
-    VkImageView Device::createImageView(VkImage image, VkFormat format)
-    {
-        VkImageView ret;
-        VkImageViewCreateInfo createInfo{};
-        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.image = image;
-        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format = format;
-
-        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        createInfo.subresourceRange.baseMipLevel = 0;
-        createInfo.subresourceRange.levelCount = 1;
-        createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.layerCount = 1;
-
-        if (vkCreateImageView(m_logical_device, &createInfo, nullptr, &ret))
-            throw string{"cannot create image views"};
-
-        return ret;
     }
 
     void Device::initGlfw() {
@@ -223,6 +197,11 @@ namespace vulk
     	m_swapchain.present_modes = vulk::getPhysicalDeviceSurfacePresentModesKHR(m_physical_device, m_surface);
     	dumpSwapchainInfo();
 
+        if(m_settings.swapchain_image_count < m_swapchain.surface_capabilities.minImageCount
+        	|| m_settings.swapchain_image_count > m_swapchain.surface_capabilities.maxImageCount ) {
+        	throw std::string{"swapchain image count doesn't fit"};
+        }
+
         m_swapchain.used_surface_format = std::invoke([&] {
             for (const auto iFormat : m_swapchain.surface_formats) {
                 const bool is_format = iFormat.format == VK_FORMAT_B8G8R8A8_SRGB;
@@ -246,11 +225,6 @@ namespace vulk
         m_swapchain.used_extent = std::invoke([&] {
             return m_swapchain.surface_capabilities.currentExtent;
         });
-
-        if (m_settings.swapchain_image_count != 1)
-        {
-            throw std::string{"swapchain image count not supported"};
-        }
 
         m_swapchain.instance = std::invoke([&] {
             VkSwapchainKHR ret;
@@ -301,6 +275,72 @@ namespace vulk
             m_swapchain.image_views.push_back(image_view);
         }
     }
+
+    VkFormat Device::swapchainImageFormat() const
+    {
+        return m_swapchain.used_surface_format.format;
+    }
+
+    VkDevice Device::logicalDevice() const
+    {
+        return m_logical_device;
+    }
+
+    VkExtent2D Device::swapChainExtent() const
+    {
+        return m_swapchain.used_extent;
+    }
+
+    VkImageView Device::createImageView(VkImage image, VkFormat format)
+    {
+        VkImageView ret;
+        VkImageViewCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        createInfo.image = image;
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = format;
+
+        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.baseArrayLayer = 0;
+        createInfo.subresourceRange.layerCount = 1;
+
+        if (vkCreateImageView(m_logical_device, &createInfo, nullptr, &ret))
+            throw std::string{"cannot create image views"};
+
+        return ret;
+    }
+
+    VkShaderModule Device::loadShader(std::vector<uint8_t> bytecode)
+    {
+        std::vector<uint32_t> alignedBytecode;
+        alignedBytecode.resize((bytecode.size()+3) / 4);
+        memcpy(alignedBytecode.data(), bytecode.data(), bytecode.size());
+
+        VkShaderModuleCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        createInfo.codeSize = alignedBytecode.size();
+        createInfo.pCode = reinterpret_cast<const uint32_t*>(alignedBytecode.data());
+        
+        VkShaderModule shaderModule;
+        if(vkCreateShaderModule(m_logical_device, &createInfo, nullptr, &shaderModule))
+            throw string{"create shader module failed"};
+
+        return shaderModule;
+    }
+
+    VkShaderModule Device::loadShaderFile(std::string path)
+    {
+        const auto bytecode = base::readFile(path);
+        return loadShader(bytecode);
+    }
+
 
     void Device::dumbExtensions() {
         debug_print("Extension:");

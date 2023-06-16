@@ -1,5 +1,5 @@
 #include "hello.h"
-#include "vul_instance.h"
+#include "vul_device.h"
 
 #include <string>
 
@@ -15,6 +15,7 @@ int main() {
             vulk::Device::Settings settings = {
             	.deviceIndex = 0,
             	.layer = {"VK_LAYER_KHRONOS_validation"},
+                .swapchain_image_count = 2,
             };
             vulk::Device instance{settings};
         }
