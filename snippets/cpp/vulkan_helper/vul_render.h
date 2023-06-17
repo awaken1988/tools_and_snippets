@@ -8,6 +8,11 @@ namespace vulk
     class Render
     {
     public:
+        struct Settings
+        {
+            uint32_t max_objects = 1;
+        };
+
         //we used a fixed UniformBufferObject for now
         struct UniformBufferObject
         {
@@ -22,7 +27,7 @@ namespace vulk
         };
 
     public:
-        Render(std::unique_ptr<Device> device);
+        Render(std::unique_ptr<Device> device, Settings settings);
 
     protected:
         std::unique_ptr<Device> m_device;
@@ -31,10 +36,17 @@ namespace vulk
         void initDescriptorSetLayout();
         void initPipeline();
 
+        Settings m_settings;
 
         VkRenderPass m_renderpass;
         VkDescriptorSetLayout m_descriptor_set_layout;
         VkPipelineLayout m_pipelineLayout;
         VkPipeline m_pipeline;
+        VkDescriptorPool m_descriptorPool;
+
+        struct DrawObject {
+
+        } 
+
     };
 }

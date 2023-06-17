@@ -4,10 +4,12 @@
 
 namespace vulk
 {
-    Render::Render(std::unique_ptr<Device> device)
-        : m_device{std::move(device)}
+    Render::Render(std::unique_ptr<Device> device, Settings settings)
+        : m_device{std::move(device)}, m_settings{settings}
     {
         initRenderpass();
+        initDescriptorSetLayout();
+        initPipeline();
     }
 
     void Render::initRenderpass()
@@ -55,29 +57,70 @@ namespace vulk
 
     void Render::initDescriptorSetLayout()
     {
-        VkDescriptorSetLayoutBinding uboLayoutBinding{};
-        uboLayoutBinding.binding = static_cast<uint32_t>(eDescriptorLayoutBinding::UBO);
-        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        uboLayoutBinding.descriptorCount = 1;
-        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+        std::vector<VkDescriptorSetLayoutBinding> layoutBidnings;
+        std::vector<VkDescriptorPoolSize> poolSizes;
 
-        VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-        samplerLayoutBinding.binding = static_cast<uint32_t>(eDescriptorLayoutBinding::TEXTURE);
-        samplerLayoutBinding.descriptorCount = 1;
-        samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        samplerLayoutBinding.pImmutableSamplers = nullptr;
-        samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        //UBO
+        {
+            const auto descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
-        std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
+            VkDescriptorSetLayoutBinding layout{};
+            layout.binding = static_cast<uint32_t>(eDescriptorLayoutBinding::UBO);
+            layout.descriptorType = descriptorType;
+            layout.descriptorCount = 1;
+            layout.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+            layout.pImmutableSamplers = nullptr; // Optional
 
-        VkDescriptorSetLayoutCreateInfo layoutInfo{};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = bindings.size();
-        layoutInfo.pBindings = bindings.data();
+            VkDescriptorPoolSize pool{};
+            pool.type = descriptorType;
+            pool.descriptorCount = 1;
 
-        if (vkCreateDescriptorSetLayout(m_device->logicalDevice(), &layoutInfo, nullptr, &m_descriptor_set_layout) != VK_SUCCESS) {
-            throw std::string("failed to create descriptor set layout!");
+            layoutBidnings.push_back(layout);
+            poolSizes.push_back(pool);
+        }
+
+        //Texture
+        {
+            const auto descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+            VkDescriptorSetLayoutBinding layout{};
+            layout.binding = static_cast<uint32_t>(eDescriptorLayoutBinding::TEXTURE);
+            layout.descriptorCount = 1;
+            layout.descriptorType = descriptorType;
+            layout.pImmutableSamplers = nullptr;
+            layout.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+            VkDescriptorPoolSize pool{};
+            pool.type = descriptorType;
+            pool.descriptorCount = 1;
+
+            layoutBidnings.push_back(layout);
+            poolSizes.push_back(pool);
+        }
+
+        // create layout
+        {
+            VkDescriptorSetLayoutCreateInfo layoutInfo{};
+            layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layoutInfo.bindingCount = layoutBidnings.size();
+            layoutInfo.pBindings = layoutBidnings.data();
+
+            if (vkCreateDescriptorSetLayout(m_device->logicalDevice(), &layoutInfo, nullptr, &m_descriptor_set_layout) != VK_SUCCESS) {
+                throw std::string("failed to create descriptor set layout!");
+            }
+        }
+
+        // create pool
+        {
+            VkDescriptorPoolCreateInfo poolInfo{};
+            poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+            poolInfo.poolSizeCount = poolSizes.size();
+            poolInfo.pPoolSizes = poolSizes.data();
+            poolInfo.maxSets = m_settings.max_descriptor_sets;
+
+            if (vkCreateDescriptorPool(m_device->logicalDevice(), &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS) {
+                throw std::string("failed to create descriptor pool!");
+            }
         }
     }
 
