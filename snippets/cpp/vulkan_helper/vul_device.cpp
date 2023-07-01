@@ -366,8 +366,11 @@ namespace vulk
 
     VkShaderModule Device::loadShader(std::vector<uint8_t> bytecode)
     {
+        constexpr size_t min_code_size = 4;
+
         std::vector<uint32_t> alignedBytecode;
-        alignedBytecode.resize((bytecode.size()+3) / 4);
+        alignedBytecode.resize(base::round_up(bytecode.size(), min_code_size));
+        memset(alignedBytecode.data(), 0, alignedBytecode.size());
         memcpy(alignedBytecode.data(), bytecode.data(), bytecode.size());
 
         VkShaderModuleCreateInfo createInfo{};
@@ -385,7 +388,9 @@ namespace vulk
     VkShaderModule Device::loadShaderFile(std::string path)
     {
         const auto bytecode = base::readFile(path);
-        return loadShader(bytecode);
+        auto shaderModule = loadShader(bytecode);
+
+        return shaderModule;
     }
 
 

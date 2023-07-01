@@ -7,9 +7,41 @@ namespace vulk
     Render::Render(std::unique_ptr<Device> device, Settings settings)
         : m_device{std::move(device)}, m_settings{settings}
     {
+        m_drawableObject.resize(m_settings.max_objects);
+
         initRenderpass();
         initDescriptorSetLayout();
         initPipeline();
+    }
+
+    Render::DrawableObjectHandle Render::allocateDrawableSlot()
+    {
+        const auto index = std::invoke([&]() -> size_t {
+            for(int iObj=0; iObj<m_drawableObject.size(); iObj++) {
+                if(m_drawableObject[iObj].mapped_ptr==nullptr)
+                    return iObj;
+            }
+            throw std::string{"no free drawable slot"};
+        });
+
+        DrawableObject& drawable = m_drawableObject[index];
+
+        //create UBO + map
+        {
+            const size_t uboSize = sizeof(UniformBufferObject);
+            auto [uboBuffer, uboMemory] = m_device->createBuffer(
+                uboSize, 
+                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            drawable.uboBuffer = uboBuffer;
+            drawable.uboMemory = uboMemory;
+
+            if(vkMapMemory(m_device->logicalDevice(), drawable.uboMemory, 0, uboSize, 0, &drawable.mapped_ptr)) {
+                throw std::string{"mapping ubo to memory failed"};
+            }
+        }
+    
+        return DrawableObjectHandle{.index = index};
     }
 
     void Render::initRenderpass()
@@ -80,7 +112,7 @@ namespace vulk
         }
 
         //Texture
-        {
+        if(false){
             const auto descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 
             VkDescriptorSetLayoutBinding layout{};
@@ -265,7 +297,7 @@ namespace vulk
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         pipelineInfo.stageCount = 2;
         pipelineInfo.pStages = shaderStages;
-        pipelineInfo.pVertexInputState = &vertexInputInfo;
+        pipelineInfo.pVertexInputState = nullptr;  //pipelineInfo.pVertexInputState = &vertexInputInfo;
         pipelineInfo.pInputAssemblyState = &inputAssembly;
         pipelineInfo.pViewportState = &viewportState;
         pipelineInfo.pRasterizationState = &rasterizer;

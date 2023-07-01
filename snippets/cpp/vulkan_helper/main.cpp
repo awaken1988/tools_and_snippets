@@ -1,7 +1,9 @@
 #include "hello.h"
 #include "vul_device.h"
+#include "vul_render.h"
 
 #include <string>
+#include <memory>
 
 int main() {
     const bool is_hello = false;
@@ -12,12 +14,19 @@ int main() {
             hello.run();
         }
         else {
-            vulk::Device::Settings settings = {
+            vulk::Device::Settings deviceSettings = {
             	.deviceIndex = 0,
             	.layer = {"VK_LAYER_KHRONOS_validation"},
                 .swapchain_image_count = 2,
             };
-            vulk::Device instance{settings};
+            vulk::Render::Settings rendererSettings{};
+
+            
+            auto device = std::make_unique<vulk::Device>(deviceSettings);
+            
+            vulk::Render renderer{
+                std::move(device), 
+                rendererSettings};
         }
         
     }

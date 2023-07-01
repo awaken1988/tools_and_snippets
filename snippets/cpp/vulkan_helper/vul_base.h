@@ -38,6 +38,11 @@ namespace base
 		return false;
 	}
 
+	template<typename T>
+	size_t round_up(const T& value, const T& align) {
+		return ((value+align-1)/align) * align;
+	}
+
 	//-----------------------------------------------------------
 	// convert string container to const char* container
 	//-----------------------------------------------------------
