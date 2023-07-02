@@ -13,6 +13,37 @@ namespace vulk
             uint32_t max_objects = 1;
 
             uint32_t max_descriptor_sets = 100;
+            uint32_t max_vertices_lists = 100;
+        };
+
+        //TODO: move vertex out of this class
+        struct Vertex {
+            glm::vec3 pos;
+            glm::vec3 color;
+
+            static VkVertexInputBindingDescription getBindingDescription() {
+                VkVertexInputBindingDescription bindingDescription{};
+                bindingDescription.binding = 0;
+                bindingDescription.stride = sizeof(Vertex);
+                bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+                return bindingDescription;
+            }
+
+            static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
+                std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+
+                attributeDescriptions[0].binding = 0;
+                attributeDescriptions[0].location = 0;
+                attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+                attributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+                attributeDescriptions[1].binding = 0;
+                attributeDescriptions[1].location = 1;
+                attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+                attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+                return attributeDescriptions;
+            }
         };
 
         //we used a fixed UniformBufferObject for now
@@ -30,7 +61,19 @@ namespace vulk
             VkDeviceMemory uboMemory;
         };
 
+        struct VerticeList
+        {
+            void* ptr = nullptr;    //TODO: if != nullptr pointer is not valid
+            VkBuffer buffer;
+            VkDeviceMemory memory;
+        };
+
         struct DrawableObjectHandle
+        {
+            size_t index;
+        };
+
+        struct VertexHandle
         {
             size_t index;
         };
@@ -43,8 +86,10 @@ namespace vulk
     public:
         Render(std::unique_ptr<Device> device, Settings settings);
 
+        VertexHandle addVertexList(std::vector<Vertex> vertices);     
+
     protected:
-        DrawableObjectHandle allocateDrawableSlot();        
+        DrawableObjectHandle allocateDrawableSlot(); 
 
     protected:
         std::unique_ptr<Device> m_device;
@@ -62,6 +107,7 @@ namespace vulk
         VkDescriptorPool m_descriptorPool;
 
         std::vector<DrawableObject> m_drawableObject;
+        std::vector<VerticeList> m_verticesOjects;
 
     };
 }

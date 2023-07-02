@@ -5,6 +5,17 @@
 #include <string>
 #include <memory>
 
+std::vector<vulk::Render::Vertex> semplate_vertices() 
+{
+    return {
+        {{-0.5f, -0.5f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, -0.5f, 1.0f},  {0.0f, 1.0f, 0.0f}},
+        {{0.5f, 0.5f, 1.0f},   {0.0f, 0.0f, 1.0f}},
+        {{-0.5f, 0.5f, 1.0f},  {1.0f, 1.0f, 1.0f}}      
+    };
+}   
+
+
 int main() {
     const bool is_hello = false;
 
@@ -17,7 +28,7 @@ int main() {
             vulk::Device::Settings deviceSettings = {
             	.deviceIndex = 0,
             	.layer = {"VK_LAYER_KHRONOS_validation"},
-                .swapchain_image_count = 2,
+                .swapchain_image_count = 3,
             };
             vulk::Render::Settings rendererSettings{};
 
@@ -27,6 +38,9 @@ int main() {
             vulk::Render renderer{
                 std::move(device), 
                 rendererSettings};
+
+            const auto vertHandle = renderer.addVertexList(semplate_vertices());
+            
         }
         
     }

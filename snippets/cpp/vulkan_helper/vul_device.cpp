@@ -197,10 +197,10 @@ namespace vulk
     	m_swapchain.present_modes = vulk::getPhysicalDeviceSurfacePresentModesKHR(m_physical_device, m_surface);
     	dumpSwapchainInfo();
 
-        if(m_settings.swapchain_image_count < m_swapchain.surface_capabilities.minImageCount
-        	|| m_settings.swapchain_image_count > m_swapchain.surface_capabilities.maxImageCount ) {
-        	throw std::string{"swapchain image count doesn't fit"};
-        }
+        //if(m_settings.swapchain_image_count <= m_swapchain.surface_capabilities.minImageCount
+        //	|| m_settings.swapchain_image_count > m_swapchain.surface_capabilities.maxImageCount ) {
+        //	throw std::string{"swapchain image count doesn't fit"};
+        //}
 
         m_swapchain.used_surface_format = std::invoke([&] {
             for (const auto iFormat : m_swapchain.surface_formats) {

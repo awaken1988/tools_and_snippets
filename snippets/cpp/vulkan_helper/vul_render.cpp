@@ -8,6 +8,7 @@ namespace vulk
         : m_device{std::move(device)}, m_settings{settings}
     {
         m_drawableObject.resize(m_settings.max_objects);
+        m_verticesOjects.resize(m_settings.max_vertices_lists);
 
         initRenderpass();
         initDescriptorSetLayout();
@@ -42,6 +43,31 @@ namespace vulk
         }
     
         return DrawableObjectHandle{.index = index};
+    }
+
+    Render::VertexHandle Render::addVertexList(std::vector<Vertex> vertices)
+    {
+         const auto index = std::invoke([&]() -> size_t {
+            for(int iObj=0; iObj<m_drawableObject.size(); iObj++) {
+                if(m_drawableObject[iObj].mapped_ptr==nullptr)
+                    return iObj;
+            }
+            throw std::string{"no free drawable slot"};
+        });
+
+        VerticeList& vertObject = m_verticesOjects[index];
+
+        const size_t verticesSize = sizeof(Vertex) * vertices.size();
+        auto [vertBuffer, vertMemory] = m_device->createBuffer(
+            verticesSize, 
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        vkMapMemory(m_device->logicalDevice(), vertMemory, 0, verticesSize, 0, &vertObject.ptr);
+        memcpy(vertObject.ptr, vertices.data(),verticesSize);
+        vkUnmapMemory(m_device->logicalDevice(), vertMemory);
+
+        return VertexHandle{.index = index};
     }
 
     void Render::initRenderpass()
@@ -158,8 +184,8 @@ namespace vulk
 
     void Render::initPipeline()
     {
-        VkShaderModule vertShaderModule = m_device->loadShaderFile("../shaders/vert.spv");
-        VkShaderModule fragShaderModule = m_device->loadShaderFile("../shaders/frag.spv");;
+        VkShaderModule vertShaderModule = m_device->loadShaderFile("../shaders2/vert.spv");
+        VkShaderModule fragShaderModule = m_device->loadShaderFile("../shaders2/frag.spv");;
 
         VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
         vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -187,15 +213,15 @@ namespace vulk
         dynamicState.pDynamicStates = dynamicStates.data();
         
         //vertex input
-        //TODO: auto bindingDescriptions = Vertex::getBindingDescription();
-        //TODO: auto attributeDescriptions = Vertex::getAttributeDescriptions();
+        auto bindingDescriptions = Vertex::getBindingDescription();
+        auto attributeDescriptions = Vertex::getAttributeDescriptions();
         
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
         vertexInputInfo.vertexBindingDescriptionCount = 1;
-        //TODO: vertexInputInfo.pVertexBindingDescriptions = &bindingDescriptions; // Optional
-        //TODO: vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-        //TODO: vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // Optional
+        vertexInputInfo.pVertexBindingDescriptions = &bindingDescriptions; // Optional
+        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+        vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // Optional
      
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
@@ -297,7 +323,7 @@ namespace vulk
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         pipelineInfo.stageCount = 2;
         pipelineInfo.pStages = shaderStages;
-        pipelineInfo.pVertexInputState = nullptr;  //pipelineInfo.pVertexInputState = &vertexInputInfo;
+        pipelineInfo.pVertexInputState = &vertexInputInfo;
         pipelineInfo.pInputAssemblyState = &inputAssembly;
         pipelineInfo.pViewportState = &viewportState;
         pipelineInfo.pRasterizationState = &rasterizer;
