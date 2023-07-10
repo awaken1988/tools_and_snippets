@@ -86,7 +86,9 @@ namespace vulk
     public:
         Render(std::unique_ptr<Device> device, Settings settings);
 
-        VertexHandle addVertexList(std::vector<Vertex> vertices);     
+        VertexHandle addVertexList(std::vector<Vertex> vertices);   
+
+        void draw();  
 
     protected:
         DrawableObjectHandle allocateDrawableSlot(); 

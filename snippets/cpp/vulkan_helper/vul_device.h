@@ -19,9 +19,19 @@ namespace vulk
     public:
         Device(Settings settings);
         
-        VkFormat swapchainImageFormat() const;
-        VkDevice logicalDevice() const;
-        VkExtent2D swapChainExtent() const;
+        VkFormat swapchainImageFormat();
+        VkDevice logicalDevice();
+        VkExtent2D swapChainExtent();
+        VkSwapchainKHR& swapChain();
+
+        VkSemaphore& imageAvailableSemaphore();
+        VkSemaphore& renderFinishedSemaphore();
+        VkFence& inFlightFence();
+
+        VkCommandBuffer commandBuffer();
+
+        VkQueue graphpicsQueue();
+        VkQueue presentQueue();
 
         //helper
         VkImageView createImageView(VkImage image, VkFormat format);
@@ -29,6 +39,9 @@ namespace vulk
         uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
         VkShaderModule loadShader(std::vector<uint8_t> bytecode);
         VkShaderModule loadShaderFile(std::string path);
+        
+      
+
         
 
     protected:
@@ -39,6 +52,8 @@ namespace vulk
         void initPhyDev();
         void initLogicDev();
         void initSwapchain();
+        void initSyncObjects();
+        void initCommandBuffers();
 
         void dumbExtensions();
         void dumpPhysicalDevice();
@@ -90,6 +105,18 @@ namespace vulk
             std::vector<VkImageView> image_views;
 
         } m_swapchain;
+
+        struct {
+            VkCommandPool pool;
+            VkCommandBuffer mainBuffer;
+        } m_command;
+
+        //we only support non parallel rendering for now
+        VkSemaphore m_imageAvailableSemaphore;
+        VkSemaphore m_renderFinishedSemaphore;
+        VkFence m_inFlightFence;
+
+        
 
         Settings m_settings;
     };

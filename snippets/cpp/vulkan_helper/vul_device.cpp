@@ -16,6 +16,8 @@ namespace vulk
         initPhyDev();
         initLogicDev();
         initSwapchain();
+        initSyncObjects();
+        initCommandBuffers();
     }
 
     void Device::initGlfw() {
@@ -276,19 +278,92 @@ namespace vulk
         }
     }
 
-    VkFormat Device::swapchainImageFormat() const
+    void Device::initSyncObjects() 
+    {
+        VkSemaphoreCreateInfo semaphoreInfo{};
+        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+        VkFenceCreateInfo fenceInfo{};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+        if (vkCreateSemaphore(m_logical_device, &semaphoreInfo, nullptr, &m_imageAvailableSemaphore) != VK_SUCCESS ||
+            vkCreateSemaphore(m_logical_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphore) != VK_SUCCESS ||
+            vkCreateFence(m_logical_device, &fenceInfo, nullptr, &m_inFlightFence) != VK_SUCCESS) 
+            {
+                throw string("failed to create semaphores!");
+            }
+    }
+
+    void Device::initCommandBuffers()
+    {
+        //create pool
+        VkCommandPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        poolInfo.queueFamilyIndex = *m_queue_families.graphics;
+
+        if (vkCreateCommandPool(m_logical_device, &poolInfo, nullptr, &m_command.pool) != VK_SUCCESS) {
+            throw string("failed to create command pool!");
+        }
+
+        //create main commandBuffer
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.commandPool = m_command.pool;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = 1;
+
+        if (vkAllocateCommandBuffers(m_logical_device, &allocInfo, &m_command.mainBuffer) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate command buffers!");
+        }
+    }
+
+    VkFormat Device::swapchainImageFormat()
     {
         return m_swapchain.used_surface_format.format;
     }
 
-    VkDevice Device::logicalDevice() const
+    VkDevice Device::logicalDevice()
     {
         return m_logical_device;
     }
 
-    VkExtent2D Device::swapChainExtent() const
+    VkExtent2D Device::swapChainExtent()
     {
         return m_swapchain.used_extent;
+    }
+
+    VkSwapchainKHR& Device::swapChain()
+    {
+        return m_swapchain.instance;
+    }
+
+    VkSemaphore& Device::imageAvailableSemaphore() {
+        return m_imageAvailableSemaphore;
+    }
+    
+    VkSemaphore& Device::renderFinishedSemaphore() {
+        return m_imageAvailableSemaphore;
+    } 
+
+    VkFence& Device::inFlightFence() {
+        return m_inFlightFence;
+    }
+
+    VkCommandBuffer Device::commandBuffer()
+    {
+        return m_command.mainBuffer;
+    }
+
+    VkQueue Device::graphpicsQueue()
+    {
+        return m_queue.graphics;
+    }
+
+    VkQueue Device::presentQueue()
+    {
+        return m_queue.presentation;
     }
 
     VkImageView Device::createImageView(VkImage image, VkFormat format)
@@ -392,7 +467,6 @@ namespace vulk
 
         return shaderModule;
     }
-
 
     void Device::dumbExtensions() {
         debug_print("Extension:");

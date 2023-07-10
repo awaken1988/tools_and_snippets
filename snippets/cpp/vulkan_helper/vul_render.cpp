@@ -70,6 +70,71 @@ namespace vulk
         return VertexHandle{.index = index};
     }
 
+    void Render::draw()
+    {
+        vkWaitForFences(m_device->logicalDevice(), 1, &m_device->inFlightFence(), VK_TRUE, UINT64_MAX);
+        vkResetFences(m_device->logicalDevice(), 1, &m_device->inFlightFence());
+
+        //wait until next image available
+        const uint32_t imageIndex = std::invoke([&](){
+            uint32_t ret;
+            vkAcquireNextImageKHR(
+                m_device->logicalDevice(), 
+                m_device->swapChain(),
+                UINT64_MAX,
+                m_device->imageAvailableSemaphore(),
+                VK_NULL_HANDLE, 
+                &ret);
+            return ret;
+        });
+
+        auto commandBuffer = m_device->commandBuffer();   
+        vkResetCommandBuffer(m_device->commandBuffer(), 0);
+        //recordCommandBuffer
+
+        //submit queue
+        {
+            VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.waitSemaphoreCount = 1;
+            submitInfo.pWaitSemaphores = &m_device->imageAvailableSemaphore();
+            
+            submitInfo.pWaitDstStageMask = waitStages;
+            
+            submitInfo.commandBufferCount = 1;
+
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores = &m_device->renderFinishedSemaphore();
+
+            if (vkQueueSubmit(m_device->graphpicsQueue(), 1, &submitInfo, m_device->inFlightFence()) != VK_SUCCESS) {
+                throw std::string("failed to submit draw command buffer!");
+            }
+        }
+
+        //present image
+        {
+            VkPresentInfoKHR presentInfo{};
+            presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+            presentInfo.waitSemaphoreCount = 1;
+            presentInfo.pWaitSemaphores = &m_device->renderFinishedSemaphore();
+
+            VkSwapchainKHR swapChains[] = {};
+            presentInfo.swapchainCount = 1;
+            presentInfo.pSwapchains = &m_device->swapChain();
+            presentInfo.pImageIndices = &imageIndex;
+            presentInfo.pResults = nullptr; // Optional
+
+            vkQueuePresentKHR(m_device->presentQueue(), &presentInfo);
+
+        }
+        
+
+
+
+    }
+
     void Render::initRenderpass()
     {
         VkSubpassDependency dependency{};
@@ -223,7 +288,6 @@ namespace vulk
         vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
         vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // Optional
      
-
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
         inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
