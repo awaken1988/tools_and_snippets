@@ -14,6 +14,7 @@
 #include <string>
 #include <format>
 #include <vector>
+#include <array>
 #include <set>
 #include <optional>
 #include <algorithm>

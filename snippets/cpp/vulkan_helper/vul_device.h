@@ -16,6 +16,12 @@ namespace vulk
             size_t swapchain_image_count = 1;
         };
 
+        struct SwapchainData {
+            VkImage image;
+            VkImageView imageView;
+            VkFramebuffer framebuffer;
+        };
+
     public:
         Device(Settings settings);
         
@@ -33,6 +39,9 @@ namespace vulk
         VkQueue graphpicsQueue();
         VkQueue presentQueue();
 
+        SwapchainData swapchainData(uint32_t index);
+        VkExtent2D swapchainExtent();
+
         //helper
         VkImageView createImageView(VkImage image, VkFormat format);
         std::tuple<VkBuffer,VkDeviceMemory> createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags flags);
@@ -40,7 +49,7 @@ namespace vulk
         VkShaderModule loadShader(std::vector<uint8_t> bytecode);
         VkShaderModule loadShaderFile(std::string path);
         
-      
+        void createFramebuffer();
 
         
 
@@ -54,6 +63,7 @@ namespace vulk
         void initSwapchain();
         void initSyncObjects();
         void initCommandBuffers();
+        void initRenderpass();
 
         void dumbExtensions();
         void dumpPhysicalDevice();
@@ -103,6 +113,7 @@ namespace vulk
             VkSwapchainKHR instance;
             std::vector<VkImage> images;
             std::vector<VkImageView> image_views;
+            std::vector<VkFramebuffer> framebuffers;
 
         } m_swapchain;
 
@@ -116,7 +127,7 @@ namespace vulk
         VkSemaphore m_renderFinishedSemaphore;
         VkFence m_inFlightFence;
 
-        
+        VkRenderPass m_renderpass;
 
         Settings m_settings;
     };

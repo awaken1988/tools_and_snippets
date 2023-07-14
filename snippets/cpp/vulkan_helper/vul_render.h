@@ -88,7 +88,7 @@ namespace vulk
 
         VertexHandle addVertexList(std::vector<Vertex> vertices);   
 
-        void draw();  
+        void draw();
 
     protected:
         DrawableObjectHandle allocateDrawableSlot(); 
@@ -96,9 +96,10 @@ namespace vulk
     protected:
         std::unique_ptr<Device> m_device;
 
-        void initRenderpass();
         void initDescriptorSetLayout();
         void initPipeline();
+
+        void recordDraw(uint32_t imageIndex);
 
         Settings m_settings;
 

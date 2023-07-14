@@ -18,6 +18,7 @@ namespace vulk
         initSwapchain();
         initSyncObjects();
         initCommandBuffers();
+        initRenderpass();
     }
 
     void Device::initGlfw() {
@@ -272,9 +273,15 @@ namespace vulk
 
         m_swapchain.images = getSwapchainImagesKHR(m_logical_device, m_swapchain.instance);
 
+        //image view
         for (size_t iImage = 0; iImage < m_swapchain.images.size(); iImage++) {
             auto image_view = createImageView(m_swapchain.images[iImage], m_swapchain.used_surface_format.format);
             m_swapchain.image_views.push_back(image_view);
+        }
+
+        //create framebuffer
+        for (size_t iFb = 0; iFb < m_swapchain.images.size(); iFb++) {
+
         }
     }
 
@@ -316,6 +323,49 @@ namespace vulk
 
         if (vkAllocateCommandBuffers(m_logical_device, &allocInfo, &m_command.mainBuffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to allocate command buffers!");
+        }
+    }
+
+    void Device::initRenderpass()
+    {
+        VkSubpassDependency dependency{};
+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass = 0;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = 0;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        VkAttachmentDescription colorAttachment{};
+        colorAttachment.format = swapchainImageFormat();
+        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        VkAttachmentReference colorAttachmentRef{};
+        colorAttachmentRef.attachment = 0;
+        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkSubpassDescription subpass{};
+        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = &colorAttachmentRef;
+
+        VkRenderPassCreateInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        renderPassInfo.attachmentCount = 1;
+        renderPassInfo.pAttachments = &colorAttachment;
+        renderPassInfo.subpassCount = 1;
+        renderPassInfo.pSubpasses = &subpass;
+        renderPassInfo.dependencyCount = 1;
+        renderPassInfo.pDependencies = &dependency;
+
+        if (vkCreateRenderPass(m_logical_device, &renderPassInfo, nullptr, &m_renderpass) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create render pass!");
         }
     }
 
@@ -364,6 +414,22 @@ namespace vulk
     VkQueue Device::presentQueue()
     {
         return m_queue.presentation;
+    }
+
+    Device::SwapchainData Device::swapchainData(uint32_t index)
+    {
+        SwapchainData data = {
+            .image = m_swapchain.images[index],
+            .imageView = m_swapchain.image_views[index],
+            .framebuffer = m_swapchain.framebuffers[index],
+        };
+
+        return data;
+    }
+
+    VkExtent2D Device::swapchainExtent()
+    {
+        return m_swapchain.used_extent;
     }
 
     VkImageView Device::createImageView(VkImage image, VkFormat format)
@@ -466,6 +532,32 @@ namespace vulk
         auto shaderModule = loadShader(bytecode);
 
         return shaderModule;
+    }
+
+    void Device::createFramebuffer()
+    {
+        const auto framebufferCount = m_swapchain.image_views.size();
+
+        m_swapchain.framebuffers.resize(framebufferCount);
+
+        for (size_t i = 0; i < framebufferCount; i++) {
+            VkImageView attachments[] = {
+                m_swapchain.image_views[i]
+            };
+
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = m_renderpass;
+            framebufferInfo.attachmentCount = 1;
+            framebufferInfo.pAttachments = attachments;
+            framebufferInfo.width = m_swapchain.used_extent.width;
+            framebufferInfo.height = m_swapchain.used_extent.height;
+            framebufferInfo.layers = 1;
+
+            if (vkCreateFramebuffer(m_logical_device, &framebufferInfo, nullptr, &m_swapchain.framebuffers[i]) != VK_SUCCESS) {
+                throw std::runtime_error("failed to create framebuffer!");
+            }
+        }
     }
 
     void Device::dumbExtensions() {

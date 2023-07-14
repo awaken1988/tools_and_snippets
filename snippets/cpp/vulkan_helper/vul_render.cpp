@@ -10,7 +10,6 @@ namespace vulk
         m_drawableObject.resize(m_settings.max_objects);
         m_verticesOjects.resize(m_settings.max_vertices_lists);
 
-        initRenderpass();
         initDescriptorSetLayout();
         initPipeline();
     }
@@ -70,6 +69,77 @@ namespace vulk
         return VertexHandle{.index = index};
     }
 
+    void Render::recordDraw(uint32_t imageIndex)
+    {
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = 0;
+        beginInfo.pInheritanceInfo = nullptr;
+
+        if (vkBeginCommandBuffer(m_device->commandBuffer(), &beginInfo))
+            throw std::string{"failed to begin recording command buffers"};
+
+        auto swapchainData = m_device->swapchainData(imageIndex);
+
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = m_renderpass;
+        renderPassInfo.framebuffer = swapchainData.framebuffer;
+        renderPassInfo.renderArea.offset = { 0,0 };
+        renderPassInfo.renderArea.extent = m_device->swapChainExtent();
+
+        VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
+        renderPassInfo.clearValueCount = 1;
+        renderPassInfo.pClearValues = &clearColor;
+
+        auto commandBuffer = m_device->commandBuffer();
+        const auto swapchainExtent = m_device->swapChainExtent();
+
+        vkCmdBeginRenderPass(commandBuffer, & renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
+
+        //dynamic viewport
+        {
+            VkViewport viewport{};
+            viewport.x = 0.0f;
+            viewport.y = 0.0f;
+            viewport.width = static_cast<float>(swapchainExtent.width);
+            viewport.height = static_cast<float>(swapchainExtent.height);
+            viewport.minDepth = 0.0f;
+            viewport.maxDepth = 1.0f;
+            vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+        }
+
+        //dynamic scissor
+        {
+            VkRect2D scissor{};
+            {
+                decltype(swapchainExtent) scissor_size = swapchainExtent;
+                //scissor_size.width /= 2;
+                //scissor_size.height /= 2;
+
+                scissor.offset = { 0, 0 };
+                scissor.extent = scissor_size;
+            }
+            vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+        }
+
+        //vertex & color buffer
+        VkBuffer vertexBuffers[] = { m_verticesOjects.at(0).buffer};
+        VkDeviceSize offsets[] = { 0 };
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
+        //vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, m_descriptorSets.data(), 0, nullptr);
+
+        //vkCmdDraw(m_commandBuffer, m_vertices.size(), 1, 0, 0);
+
+        //vkCmdEndRenderPass(m_commandBuffer);
+
+        //if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        //    throw string("failed to record command buffer!");
+        //}
+    }
+
     void Render::draw()
     {
         vkWaitForFences(m_device->logicalDevice(), 1, &m_device->inFlightFence(), VK_TRUE, UINT64_MAX);
@@ -120,61 +190,12 @@ namespace vulk
             presentInfo.waitSemaphoreCount = 1;
             presentInfo.pWaitSemaphores = &m_device->renderFinishedSemaphore();
 
-            VkSwapchainKHR swapChains[] = {};
             presentInfo.swapchainCount = 1;
             presentInfo.pSwapchains = &m_device->swapChain();
             presentInfo.pImageIndices = &imageIndex;
             presentInfo.pResults = nullptr; // Optional
 
             vkQueuePresentKHR(m_device->presentQueue(), &presentInfo);
-
-        }
-        
-
-
-
-    }
-
-    void Render::initRenderpass()
-    {
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        VkAttachmentDescription colorAttachment{};
-        colorAttachment.format = m_device->swapchainImageFormat();
-        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-        VkAttachmentReference colorAttachmentRef{};
-        colorAttachmentRef.attachment = 0;
-        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colorAttachmentRef;
-
-        VkRenderPassCreateInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount = 1;
-        renderPassInfo.pAttachments = &colorAttachment;
-        renderPassInfo.subpassCount = 1;
-        renderPassInfo.pSubpasses = &subpass;
-        renderPassInfo.dependencyCount = 1;
-        renderPassInfo.pDependencies = &dependency;
-
-        if (vkCreateRenderPass(m_device->logicalDevice(), &renderPassInfo, nullptr, &m_renderpass) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create render pass!");
         }
     }
 
