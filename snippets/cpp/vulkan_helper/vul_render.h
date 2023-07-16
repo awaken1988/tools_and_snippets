@@ -67,7 +67,7 @@ namespace vulk
             void* ptr = nullptr;    //TODO: if != nullptr pointer is not valid
             VkBuffer buffer;
             VkDeviceMemory memory;
-            std::vector<Vertex> vertices //original vertices
+            std::vector<Vertex> vertices; //original vertices
         };
 
         struct DrawableObjectHandle
@@ -98,6 +98,8 @@ namespace vulk
 
         void draw();
 
+        Device& device();
+
     protected:
         
 
@@ -111,7 +113,6 @@ namespace vulk
 
         Settings m_settings;
 
-        VkRenderPass m_renderpass;
         VkDescriptorSetLayout m_descriptor_set_layout;
         VkPipelineLayout m_pipelineLayout;
         VkPipeline m_pipeline;

@@ -58,7 +58,7 @@ namespace vulk
             bufferInfo.offset = 0;
             bufferInfo.range = sizeof(UniformBufferObject);
 
-            std::array<VkWriteDescriptorSet, 2> descriptorWrite{};
+            std::array<VkWriteDescriptorSet, 1> descriptorWrite{};
             descriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorWrite[0].dstSet = drawable.uboDescriptor;
             descriptorWrite[0].dstBinding = 0;
@@ -137,7 +137,7 @@ namespace vulk
 
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = m_renderpass;
+        renderPassInfo.renderPass = m_device->renderpass();
         renderPassInfo.framebuffer = swapchainData.framebuffer;
         renderPassInfo.renderArea.offset = { 0,0 };
         renderPassInfo.renderArea.extent = m_device->swapChainExtent();
@@ -183,9 +183,9 @@ namespace vulk
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, m_drawableObject[0].uboDescriptor, 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_drawableObject[0].uboDescriptor, 0, nullptr);
 
-        vkCmdDraw(commandBuffer, m_vertices.size(), 1, 0, 0);
+        vkCmdDraw(commandBuffer, m_verticesOjects.at(0).vertices.size(), 1, 0, 0);
 
         //vkCmdEndRenderPass(m_commandBuffer);
 
@@ -251,6 +251,11 @@ namespace vulk
 
             vkQueuePresentKHR(m_device->presentQueue(), &presentInfo);
         }
+    }
+
+    Device &Render::device()
+    {
+        return *m_device;
     }
 
     void Render::initDescriptorSetLayout()
@@ -471,7 +476,7 @@ namespace vulk
         pipelineInfo.pColorBlendState = &colorBlending;
         pipelineInfo.pDynamicState = &dynamicState;
         pipelineInfo.layout = m_pipelineLayout;
-        pipelineInfo.renderPass = m_renderpass;
+        pipelineInfo.renderPass = m_device->renderpass();
         pipelineInfo.subpass = 0;
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
         pipelineInfo.basePipelineIndex = -1; // Optional

@@ -19,6 +19,7 @@ namespace vulk
         initSyncObjects();
         initCommandBuffers();
         initRenderpass();
+        createFramebuffer();
     }
 
     void Device::initGlfw() {
@@ -430,6 +431,11 @@ namespace vulk
     VkExtent2D Device::swapchainExtent()
     {
         return m_swapchain.used_extent;
+    }
+
+    VkRenderPass Device::renderpass()
+    {
+        return m_renderpass;
     }
 
     VkImageView Device::createImageView(VkImage image, VkFormat format)

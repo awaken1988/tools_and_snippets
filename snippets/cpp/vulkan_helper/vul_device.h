@@ -42,6 +42,8 @@ namespace vulk
         SwapchainData swapchainData(uint32_t index);
         VkExtent2D swapchainExtent();
 
+        VkRenderPass renderpass();
+
         //helper
         VkImageView createImageView(VkImage image, VkFormat format);
         std::tuple<VkBuffer,VkDeviceMemory> createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags flags);

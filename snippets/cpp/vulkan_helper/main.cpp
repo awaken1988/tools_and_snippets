@@ -1,4 +1,5 @@
 #include "hello.h"
+#include "vul_base.h"
 #include "vul_device.h"
 #include "vul_render.h"
 
@@ -40,7 +41,24 @@ int main() {
                 rendererSettings};
 
             const auto vertHandle = renderer.addVertexList(semplate_vertices());
-            
+
+            const auto drawObject = renderer.addGameObject();
+            {
+                const auto swapChainExtents = renderer.device().swapChainExtent();
+
+                glm::mat4 model = glm::rotate(glm::mat4(1.0f), 1.0f * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+                glm::mat4 view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    	        glm::mat4 proj = glm::perspective(glm::radians(45.0f), swapChainExtents.width / (float) swapChainExtents.height, 0.1f, 10.0f);
+    	        proj[1][1] *= -1;
+
+                renderer.setView(view);
+                renderer.setProjection(proj);
+                renderer.setPosition(drawObject, model);
+            }
+          
+            while(1) {
+                renderer.draw();
+            }
         }
         
     }
