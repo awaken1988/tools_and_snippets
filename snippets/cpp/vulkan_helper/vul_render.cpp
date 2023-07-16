@@ -116,6 +116,9 @@ namespace vulk
             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
+        vertObject.buffer = vertBuffer;
+        vertObject.memory = vertMemory;
+
         vkMapMemory(m_device->logicalDevice(), vertMemory, 0, verticesSize, 0, &vertObject.ptr);
         memcpy(vertObject.ptr, vertices.data(),verticesSize);
         vkUnmapMemory(m_device->logicalDevice(), vertMemory);
@@ -187,11 +190,11 @@ namespace vulk
 
         vkCmdDraw(commandBuffer, m_verticesOjects.at(0).vertices.size(), 1, 0, 0);
 
-        //vkCmdEndRenderPass(m_commandBuffer);
+        vkCmdEndRenderPass(commandBuffer);
 
-        //if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-        //    throw string("failed to record command buffer!");
-        //}
+        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+            throw std::string("failed to record command buffer!");
+        }
     }
 
     void Render::draw()
@@ -228,6 +231,7 @@ namespace vulk
             submitInfo.pWaitDstStageMask = waitStages;
             
             submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &commandBuffer;
 
             submitInfo.signalSemaphoreCount = 1;
             submitInfo.pSignalSemaphores = &m_device->renderFinishedSemaphore();
