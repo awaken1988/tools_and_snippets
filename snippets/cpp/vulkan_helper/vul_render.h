@@ -59,6 +59,7 @@ namespace vulk
             void* mapped_ptr = nullptr;
             VkBuffer uboBuffer;
             VkDeviceMemory uboMemory;
+            VkDescriptorSet uboDescriptor;
         };
 
         struct VerticeList
@@ -66,6 +67,7 @@ namespace vulk
             void* ptr = nullptr;    //TODO: if != nullptr pointer is not valid
             VkBuffer buffer;
             VkDeviceMemory memory;
+            std::vector<Vertex> vertices //original vertices
         };
 
         struct DrawableObjectHandle
@@ -86,12 +88,18 @@ namespace vulk
     public:
         Render(std::unique_ptr<Device> device, Settings settings);
 
+
         VertexHandle addVertexList(std::vector<Vertex> vertices);   
+        DrawableObjectHandle addGameObject();
+
+        void setView(const glm::mat4& view);
+        void setProjection(const glm::mat4& projection);
+        void setPosition(DrawableObjectHandle handle, const glm::mat4& modelPosition);
 
         void draw();
 
     protected:
-        DrawableObjectHandle allocateDrawableSlot(); 
+        
 
     protected:
         std::unique_ptr<Device> m_device;
@@ -111,6 +119,9 @@ namespace vulk
 
         std::vector<DrawableObject> m_drawableObject;
         std::vector<VerticeList> m_verticesOjects;
+
+        glm::mat4 m_view;
+        glm::mat4 m_projection;
 
     };
 }

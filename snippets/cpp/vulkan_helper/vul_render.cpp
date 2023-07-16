@@ -14,7 +14,7 @@ namespace vulk
         initPipeline();
     }
 
-    Render::DrawableObjectHandle Render::allocateDrawableSlot()
+    Render::DrawableObjectHandle Render::addGameObject()
     {
         const auto index = std::invoke([&]() -> size_t {
             for(int iObj=0; iObj<m_drawableObject.size(); iObj++) {
@@ -40,8 +40,60 @@ namespace vulk
                 throw std::string{"mapping ubo to memory failed"};
             }
         }
+
+        //Write DescriptorSet
+        {
+            VkDescriptorSetAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            allocInfo.descriptorPool = m_descriptorPool;
+            allocInfo.descriptorSetCount = 1;
+            allocInfo.pSetLayouts = &m_descriptor_set_layout;
+
+            if (vkAllocateDescriptorSets(m_device->logicalDevice(), &allocInfo, &drawable.uboDescriptor) != VK_SUCCESS) {
+                throw std::string("failed to allocate descriptor sets!");
+            }
+
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = drawable.uboBuffer;
+            bufferInfo.offset = 0;
+            bufferInfo.range = sizeof(UniformBufferObject);
+
+            std::array<VkWriteDescriptorSet, 2> descriptorWrite{};
+            descriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite[0].dstSet = drawable.uboDescriptor;
+            descriptorWrite[0].dstBinding = 0;
+            descriptorWrite[0].dstArrayElement = 0;
+            descriptorWrite[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite[0].descriptorCount = 1;
+            descriptorWrite[0].pBufferInfo = &bufferInfo;
+            descriptorWrite[0].pImageInfo = nullptr; // Optional
+            descriptorWrite[0].pTexelBufferView = nullptr; // Optional
+
+            vkUpdateDescriptorSets(m_device->logicalDevice(), descriptorWrite.size(), descriptorWrite.data(), 0, nullptr);
+        }
+
     
         return DrawableObjectHandle{.index = index};
+    }
+
+    void Render::setView(const glm::mat4& view)
+    {
+        m_view = view;
+    }
+
+    void Render::setProjection(const glm::mat4& projection)
+    {
+        m_projection = projection;
+    }
+
+    void Render::setPosition(DrawableObjectHandle handle, const glm::mat4& modelPosition)
+    {
+        auto& gameObject = m_drawableObject[handle.index];
+
+        UniformBufferObject* ubo = reinterpret_cast<UniformBufferObject*>(gameObject.mapped_ptr);
+        ubo->model = modelPosition;
+        ubo->view = m_view;
+        ubo->proj = m_projection;
     }
 
     Render::VertexHandle Render::addVertexList(std::vector<Vertex> vertices)
@@ -55,6 +107,8 @@ namespace vulk
         });
 
         VerticeList& vertObject = m_verticesOjects[index];
+
+        vertObject.vertices = vertices;
 
         const size_t verticesSize = sizeof(Vertex) * vertices.size();
         auto [vertBuffer, vertMemory] = m_device->createBuffer(
@@ -129,9 +183,9 @@ namespace vulk
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-        //vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, m_descriptorSets.data(), 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, m_drawableObject[0].uboDescriptor, 0, nullptr);
 
-        //vkCmdDraw(m_commandBuffer, m_vertices.size(), 1, 0, 0);
+        vkCmdDraw(commandBuffer, m_vertices.size(), 1, 0, 0);
 
         //vkCmdEndRenderPass(m_commandBuffer);
 
@@ -160,7 +214,7 @@ namespace vulk
 
         auto commandBuffer = m_device->commandBuffer();   
         vkResetCommandBuffer(m_device->commandBuffer(), 0);
-        //recordCommandBuffer
+        recordDraw(imageIndex);
 
         //submit queue
         {
