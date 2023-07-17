@@ -54,12 +54,24 @@ namespace vulk
             glm::mat4 proj;
         };
 
-        struct DrawableObject
+        struct VertexHandle
         {
-            void* mapped_ptr = nullptr;
+            size_t index;
+        };
+
+        class DrawableObject
+        {
+            friend class Render;
+        public:
+           
+        private:
+            void* mapped_ptr = nullptr; //TODO: currently we use this value to differentiate between used/not used
             VkBuffer uboBuffer;
             VkDeviceMemory uboMemory;
             VkDescriptorSet uboDescriptor;
+            std::vector<VertexHandle> vertIndices;
+           
+            size_t index;
         };
 
         struct VerticeList
@@ -72,12 +84,13 @@ namespace vulk
 
         struct DrawableObjectHandle
         {
+            friend class Render;
+        public:
+            void setModelTransormation(const glm::mat4& model);
+            void addVertices(std::vector<Vertex> vertices);
+        private:
             size_t index;
-        };
-
-        struct VertexHandle
-        {
-            size_t index;
+            Render* renderer = nullptr; //TODO: use reference
         };
 
         enum class eDescriptorLayoutBinding: uint32_t {
@@ -88,20 +101,16 @@ namespace vulk
     public:
         Render(std::unique_ptr<Device> device, Settings settings);
 
-
-        VertexHandle addVertexList(std::vector<Vertex> vertices);   
         DrawableObjectHandle addGameObject();
 
-        void setView(const glm::mat4& view);
-        void setProjection(const glm::mat4& projection);
-        void setPosition(DrawableObjectHandle handle, const glm::mat4& modelPosition);
-
+        void setViewProjection(const glm::mat4& view, const glm::mat4& projection);
+    
         void draw();
 
         Device& device();
 
     protected:
-        
+         VertexHandle addVertexList(std::vector<Vertex> vertices);   
 
     protected:
         std::unique_ptr<Device> m_device;

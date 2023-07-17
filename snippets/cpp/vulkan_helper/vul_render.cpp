@@ -73,37 +73,33 @@ namespace vulk
         }
 
     
-        return DrawableObjectHandle{.index = index};
+        DrawableObjectHandle ret;
+        ret.index = index;
+        ret.renderer = this;
+
+        return ret;
     }
 
-    void Render::setView(const glm::mat4& view)
+    void Render::setViewProjection(const glm::mat4& view, const glm::mat4& projection)
     {
-        m_view = view;
-    }
+        for(const auto iDrawableObject: m_drawableObject) {
+            if(iDrawableObject.mapped_ptr == nullptr)
+                continue;
 
-    void Render::setProjection(const glm::mat4& projection)
-    {
-        m_projection = projection;
-    }
-
-    void Render::setPosition(DrawableObjectHandle handle, const glm::mat4& modelPosition)
-    {
-        auto& gameObject = m_drawableObject[handle.index];
-
-        UniformBufferObject* ubo = reinterpret_cast<UniformBufferObject*>(gameObject.mapped_ptr);
-        ubo->model = modelPosition;
-        ubo->view = m_view;
-        ubo->proj = m_projection;
+            UniformBufferObject* ubo = reinterpret_cast<UniformBufferObject*>(iDrawableObject.mapped_ptr);
+            ubo->proj = projection;
+            ubo->view = view;
+        }
     }
 
     Render::VertexHandle Render::addVertexList(std::vector<Vertex> vertices)
     {
          const auto index = std::invoke([&]() -> size_t {
-            for(int iObj=0; iObj<m_drawableObject.size(); iObj++) {
-                if(m_drawableObject[iObj].mapped_ptr==nullptr)
+            for(int iObj=0; iObj<m_verticesOjects.size(); iObj++) {
+                if(m_verticesOjects[iObj].ptr==nullptr)
                     return iObj;
             }
-            throw std::string{"no free drawable slot"};
+            throw std::string{"no free vertex slot"};
         });
 
         VerticeList& vertObject = m_verticesOjects[index];
@@ -182,13 +178,28 @@ namespace vulk
         }
 
         //vertex & color buffer
-        VkBuffer vertexBuffers[] = { m_verticesOjects.at(0).buffer};
+        
         VkDeviceSize offsets[] = { 0 };
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_drawableObject[0].uboDescriptor, 0, nullptr);
 
-        vkCmdDraw(commandBuffer, m_verticesOjects.at(0).vertices.size(), 1, 0, 0);
+        for(auto& iDrawableObj: m_drawableObject) {
+            if(iDrawableObj.mapped_ptr == nullptr)
+                continue;
+
+            //std::cout << "draw gameObject" << std::endl;
+
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &iDrawableObj.uboDescriptor, 0, nullptr);
+
+            for(auto iVerticeIndice: iDrawableObj.vertIndices) {
+                auto& vert = m_verticesOjects[iVerticeIndice.index];
+
+                VkBuffer vertexBuffers[] = { vert.buffer};
+
+                vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+                vkCmdDraw(commandBuffer, vert.vertices.size(), 1, 0, 0);
+            }
+
+        }
 
         vkCmdEndRenderPass(commandBuffer);
 
@@ -492,5 +503,23 @@ namespace vulk
         //end
         vkDestroyShaderModule(m_device->logicalDevice(), fragShaderModule, nullptr);
         vkDestroyShaderModule(m_device->logicalDevice(), vertShaderModule, nullptr);
+    }
+
+    void Render::DrawableObjectHandle::setModelTransormation(const glm::mat4 &model)
+    {
+        auto& drawableObject = renderer->m_drawableObject[index];
+        auto& gameObject = renderer->m_drawableObject[index];
+
+        UniformBufferObject* ubo = reinterpret_cast<UniformBufferObject*>(gameObject.mapped_ptr);
+        ubo->model = model;
+    }
+    void Render::DrawableObjectHandle::addVertices(std::vector<Vertex> vertices)
+    {
+        auto& drawableObject = renderer->m_drawableObject[index];
+        auto& gameObject = renderer->m_drawableObject[index];
+
+        auto verticesHandle = renderer->addVertexList(vertices);
+
+        drawableObject.vertIndices.push_back(verticesHandle);
     }
 }
