@@ -291,7 +291,7 @@ namespace vulk
 
             VkDescriptorPoolSize pool{};
             pool.type = descriptorType;
-            pool.descriptorCount = 1;
+            pool.descriptorCount = m_settings.max_descriptor_sets;
 
             layoutBidnings.push_back(layout);
             poolSizes.push_back(pool);

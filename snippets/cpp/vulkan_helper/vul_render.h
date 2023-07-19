@@ -10,7 +10,7 @@ namespace vulk
     public:
         struct Settings
         {
-            uint32_t max_objects = 1;
+            uint32_t max_objects = 128;
 
             uint32_t max_descriptor_sets = 100;
             uint32_t max_vertices_lists = 100;

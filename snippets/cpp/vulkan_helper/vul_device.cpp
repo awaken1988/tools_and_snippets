@@ -438,6 +438,11 @@ namespace vulk
         return m_renderpass;
     }
 
+    GLFWwindow& Device::getWindow()
+    {
+        return *m_window;
+    }
+
     VkImageView Device::createImageView(VkImage image, VkFormat format)
     {
         VkImageView ret;

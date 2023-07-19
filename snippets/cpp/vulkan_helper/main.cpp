@@ -16,6 +16,16 @@ std::vector<vulk::Render::Vertex> semplate_vertices()
     };
 }   
 
+std::vector<vulk::Render::Vertex> semplate_vertices_2()
+{
+    return {
+        {{-1.2f, -1.2f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+        {{1.0f, -1.2f, 1.0f},  {0.0f, 1.0f, 0.0f}},
+        {{0.2f, 0.2f, 1.0f},   {0.0f, 0.0f, 1.0f}},
+        {{-0.2f, 0.2f, 1.0f},  {1.0f, 1.0f, 1.0f}}
+    };
+}
+
 
 int main() {
     const bool is_hello = false;
@@ -46,7 +56,7 @@ int main() {
                 auto drawObject = renderer.addGameObject();
                 const auto swapChainExtents = renderer.device().swapChainExtent();
                 glm::mat4 model = glm::rotate(glm::mat4(1.0f), 1.0f * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-                glm::mat4 view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+                glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 4.0f, 4.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     	        glm::mat4 proj = glm::perspective(glm::radians(45.0f), swapChainExtents.width / (float) swapChainExtents.height, 0.1f, 10.0f);
     	        proj[1][1] *= -1;
 
@@ -56,7 +66,8 @@ int main() {
                 drawObject.setModelTransormation(model);
             }
           
-            while(1) {
+            while (!glfwWindowShouldClose(&renderer.device().getWindow())) {
+                glfwPollEvents();
                 renderer.draw();
             }
         }

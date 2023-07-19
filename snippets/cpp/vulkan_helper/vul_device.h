@@ -44,6 +44,8 @@ namespace vulk
 
         VkRenderPass renderpass();
 
+        GLFWwindow& getWindow();
+
         //helper
         VkImageView createImageView(VkImage image, VkFormat format);
         std::tuple<VkBuffer,VkDeviceMemory> createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags flags);
