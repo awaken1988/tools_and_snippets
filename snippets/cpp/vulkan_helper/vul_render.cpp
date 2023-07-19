@@ -92,7 +92,7 @@ namespace vulk
         }
     }
 
-    Render::VertexHandle Render::addVertexList(std::vector<Vertex> vertices)
+    Render::VertexHandle Render::addVertices(std::vector<Vertex> vertices)
     {
          const auto index = std::invoke([&]() -> size_t {
             for(int iObj=0; iObj<m_verticesOjects.size(); iObj++) {
@@ -513,13 +513,11 @@ namespace vulk
         UniformBufferObject* ubo = reinterpret_cast<UniformBufferObject*>(gameObject.mapped_ptr);
         ubo->model = model;
     }
-    void Render::DrawableObjectHandle::addVertices(std::vector<Vertex> vertices)
+    void Render::DrawableObjectHandle::addVertices(VertexHandle vertexHandle)
     {
         auto& drawableObject = renderer->m_drawableObject[index];
         auto& gameObject = renderer->m_drawableObject[index];
 
-        auto verticesHandle = renderer->addVertexList(vertices);
-
-        drawableObject.vertIndices.push_back(verticesHandle);
+        drawableObject.vertIndices.push_back(vertexHandle);
     }
 }

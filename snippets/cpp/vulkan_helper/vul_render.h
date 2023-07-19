@@ -10,16 +10,16 @@ namespace vulk
     public:
         struct Settings
         {
-            uint32_t max_objects = 128;
+            uint32_t max_objects = 1000;
 
-            uint32_t max_descriptor_sets = 100;
-            uint32_t max_vertices_lists = 100;
+            uint32_t max_descriptor_sets = 1000;
+            uint32_t max_vertices_lists = 1000;
         };
 
         //TODO: move vertex out of this class
         struct Vertex {
             glm::vec3 pos;
-            glm::vec3 color;
+            glm::vec3 color; 
 
             static VkVertexInputBindingDescription getBindingDescription() {
                 VkVertexInputBindingDescription bindingDescription{};
@@ -87,7 +87,7 @@ namespace vulk
             friend class Render;
         public:
             void setModelTransormation(const glm::mat4& model);
-            void addVertices(std::vector<Vertex> vertices);
+            void addVertices(VertexHandle vertexHandle);
         private:
             size_t index;
             Render* renderer = nullptr; //TODO: use reference
@@ -101,6 +101,8 @@ namespace vulk
     public:
         Render(std::unique_ptr<Device> device, Settings settings);
 
+        VertexHandle addVertices(std::vector<Vertex> vertices);
+
         DrawableObjectHandle addGameObject();
 
         void setViewProjection(const glm::mat4& view, const glm::mat4& projection);
@@ -110,7 +112,7 @@ namespace vulk
         Device& device();
 
     protected:
-         VertexHandle addVertexList(std::vector<Vertex> vertices);   
+           
 
     protected:
         std::unique_ptr<Device> m_device;
