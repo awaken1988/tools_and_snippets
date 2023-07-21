@@ -82,6 +82,8 @@ namespace vulk
 
     void Render::setViewProjection(const glm::mat4& view, const glm::mat4& projection)
     {
+        //TODO: remember if we set the view,project and skip it
+
         for(const auto iDrawableObject: m_drawableObject) {
             if(iDrawableObject.mapped_ptr == nullptr)
                 continue;
