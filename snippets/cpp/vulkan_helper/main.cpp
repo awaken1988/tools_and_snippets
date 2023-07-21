@@ -90,29 +90,40 @@ int main() {
 
             //const auto vertHandle = renderer.addVertexList(semplate_vertices());
 
-            auto default_vertice = renderer.addVertices(primitive::rectanglePrimitive());
+            auto rectangle = renderer.addVertices(primitive::rectanglePrimitive());
+            auto triangle = renderer.addVertices(primitive::trianglePrimitive());
 
-            for (int x = 0; x < 20; x++) {
-                for (int y = 0; y < 20; y++) {
+            for (int x = 0; x < 10; x++) {
+                for (int y = 0; y < 10; y++) {
                     auto drawObject = renderer.addGameObject();
                     const auto swapChainExtents = renderer.device().swapChainExtent();
                     //glm::mat4 model = glm::rotate(glm::mat4(1.0f), 1.0f * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
                     //glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 4.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
                     //glm::mat4 proj = glm::perspective(glm::radians(45.0f), swapChainExtents.width / (float) swapChainExtents.height, 0.1f, 10.0f);
 
-                    glm::mat4 model = glm::translate(glm::mat4{10.f}, glm::vec3(10.0f-x * 1.1f, 10.0f - y*1.1f, 0.0f));
+                    glm::mat4 model = glm::translate(glm::mat4{10.f}, glm::vec3(10.0f-x * 2.1f, 10.0f - y*2.1f, 0.0f));
                     glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 40.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-                    glm::mat4 proj = glm::perspective(glm::radians(45.0f), swapChainExtents.width / (float)swapChainExtents.height, 0.1f, 60.0f);
+                    glm::mat4 proj = glm::perspective(glm::radians(32.0f), swapChainExtents.width / (float)swapChainExtents.height, 0.1f, 60.0f);
 
                     proj[1][1] *= -1;
 
                     renderer.setViewProjection(view, proj);
 
-                    drawObject.addVertices(default_vertice);
+                    if ((x % 2) == 0 || (y % 2) == 0) {
+                        drawObject.addVertices(rectangle);
+                       
+                    }
+                    else {
+                        drawObject.addVertices(triangle);
+                    }
+
                     drawObject.setModelTransormation(model);
+                    
                 }
             }
           
+           
+
             Framecounter frames;
 
             while (!glfwWindowShouldClose(&renderer.device().getWindow())) {
