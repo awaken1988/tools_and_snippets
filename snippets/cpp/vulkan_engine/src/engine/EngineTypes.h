@@ -23,6 +23,7 @@
 #include <format>
 #include <cstring>
 #include <fstream>
+#include <cmath>
 
 
 namespace engine
@@ -58,4 +59,17 @@ namespace engine
 		glm::vec3 pos;
 		glm::vec3 color;	//TODO: later we only use Textures 
 	};
+
+	//some math helper
+	template<typename T>
+	bool betweenStartEnd(T start, T end, T value) {
+		return value >= start && value < end;
+	}
+
+	template<typename T>
+	bool betweenStartSize(T start, T size, T value) {
+		return betweenStartEnd(start, start + size, value);
+	}
+
+
 }

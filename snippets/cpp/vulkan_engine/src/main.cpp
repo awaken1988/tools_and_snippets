@@ -81,8 +81,135 @@ struct Framecounter
 };
 
 
+
+namespace blocks
+{
+    struct Position
+    {
+        constexpr Position() = default;
+        constexpr Position(int x, int y)
+            : x{ x }, y{ x } {}
+
+        int x = -1;
+        int y = -1;
+
+        Position operator+(const Position& other) {
+            return Position{ x + other.x, y + other.y };
+        }
+
+    };
+
+    constexpr int SIDE_LEN_MAX = 3;
+    constexpr int FIELDS = SIDE_LEN_MAX * SIDE_LEN_MAX;
+    constexpr Position FIELD_XY(SIDE_LEN_MAX ,SIDE_LEN_MAX );
+
+    struct Block
+    {
+        Position pos;
+        std::array<bool, FIELDS> fields; //!< solid=true; none=false
+
+        Position lowerLeft() const {
+            return pos;
+        }
+
+        Position upperRight() const {
+            return lowerLeft() + FIELD_XY;
+        }
+
+
+        bool& getPropterty(size_t x, size_t y) {
+            return fields[y * SIDE_LEN_MAX + x];
+        }
+
+        const bool getPropterty(size_t x, size_t y) const {
+            return fields[y * SIDE_LEN_MAX + x];
+        }
+
+        int left() const {
+            return pos.x;
+        }
+
+        int right() const {
+            return pos.x + SIDE_LEN_MAX;
+        }
+
+        int top() const {
+            return pos.y + SIDE_LEN_MAX;
+        }
+
+        int bottom() const {
+            return pos.y;
+        }
+
+        void move(Position direction) {
+            pos = pos + direction;
+        }
+
+        bool checkCollision(const Block& other) const {
+            const bool isX = engine::betweenStartEnd(left(), right(), other.left()) && engine::betweenStartEnd(left(), right(), other.right());
+            const bool isY = engine::betweenStartEnd(bottom(), top(), other.bottom()) && engine::betweenStartEnd(bottom(), top(), other.top());
+            if (!isX || isY)
+                return false;
+
+            const auto diff = Position(other.left() - other.left(), other.bottom()-bottom());
+            const auto start = Position(
+                diff.x < 0 ? 0 : diff.x,
+                diff.y < 0 ? 0 : diff.y);
+            const auto end = Position(
+                SIDE_LEN_MAX - std::abs(diff.x),
+                SIDE_LEN_MAX - std::abs(diff.y));
+
+            for (int iX = start.x; iX < end.x; iX++) {
+                for (int iY = start.y; iY < end.y; iY++) {
+                    const bool isSelf = getPropterty(iX, iY);
+                    const bool isOther = other.getPropterty(iX, iY);
+
+                    if (isSelf && isOther)
+                        return true;
+
+                }
+            }
+      
+            return false;
+        }
+    };
+
+    class GameState
+    {
+    public:
+
+
+        void updateMove() {
+            for (auto& iMoving : m_moving) {
+                iMoving.move(Position(0, 1));
+
+                const bool isCollision = std::invoke([&]() {
+                    for (const auto& iOther : m_moving) {
+                        if (&iMoving == &iOther)
+                            continue;
+                        if (iMoving.checkCollision(iOther))
+                            return true;
+                    }
+                    return false;
+                });
+
+
+                
+            }
+        }
+
+
+    private:
+        std::vector<Block> m_moving; // blocks not yet touched the bottom of the playing field
+        std::vector<Block> m_sticky; // blocks not be movable anymore
+    };
+}
+
+
+
+
 int main() {
-    const bool is_hello = false;
+    const bool is_hello = true;
 
      try {
         if(is_hello) {
