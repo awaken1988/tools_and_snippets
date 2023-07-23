@@ -103,10 +103,46 @@ namespace blocks
     constexpr int FIELDS = SIDE_LEN_MAX * SIDE_LEN_MAX;
     constexpr Position FIELD_XY(SIDE_LEN_MAX ,SIDE_LEN_MAX );
 
+    struct Rotation90
+    {
+        constexpr Rotation90() = default;
+        explicit constexpr Rotation90(int8_t rot90)
+            : rotation{rot90} {}
+
+        int8_t rotation=0;  // 1==90°; 2==180°; -1==-90°...
+    };
+
+    struct Field
+    {
+        std::array<bool, FIELDS> cells;
+
+        const bool getValue(int iX, int iY) const {
+            return cells[iY * SIDE_LEN_MAX + iX];
+        }
+
+        void setValue(int iX, int iY, bool value) {
+            cells[iY * SIDE_LEN_MAX + iX] = value;
+        }
+
+        template<typename F>
+        void foreach(F f) {
+            for (int iX = 0; iX < SIDE_LEN_MAX; iX++) {
+                for (int iY = 0; iY < SIDE_LEN_MAX; iY++) {
+                    f(iX, iY, getValue(iX, iY));
+                }
+            }
+        }
+    };
+
     struct Block
     {
         Position pos;
-        std::array<bool, FIELDS> fields; //!< solid=true; none=false
+        Field fields;
+
+        Block() = default;
+        Block(Position pos, const Field& fields)
+            : pos{ pos }, fields{ fields } {}
+
 
         Position lowerLeft() const {
             return pos;
@@ -114,15 +150,6 @@ namespace blocks
 
         Position upperRight() const {
             return lowerLeft() + FIELD_XY;
-        }
-
-
-        bool& getPropterty(size_t x, size_t y) {
-            return fields[y * SIDE_LEN_MAX + x];
-        }
-
-        const bool getPropterty(size_t x, size_t y) const {
-            return fields[y * SIDE_LEN_MAX + x];
         }
 
         int left() const {
@@ -141,9 +168,22 @@ namespace blocks
             return pos.y;
         }
 
-        void move(Position direction) {
-            pos = pos + direction;
+        Block move(Position direction) {
+            return Block(pos + direction, fields);
         }
+
+        Block rotate(Rotation90 rot) {
+            if (rot.rotation == 0 || (rot.rotation % 4) == 0)
+                return *this;
+            
+            Field nextField; 
+            fields.foreach([&nextField](int iX, int iY, bool value) {
+                nextField.setValue(SIDE_LEN_MAX-iY-1, iX, value);
+            });
+
+            return Block(pos, nextField);
+        }
+
 
         bool checkCollision(const Block& other) const {
             const bool isX = engine::betweenStartEnd(left(), right(), other.left()) && engine::betweenStartEnd(left(), right(), other.right());
@@ -161,8 +201,8 @@ namespace blocks
 
             for (int iX = start.x; iX < end.x; iX++) {
                 for (int iY = start.y; iY < end.y; iY++) {
-                    const bool isSelf = getPropterty(iX, iY);
-                    const bool isOther = other.getPropterty(iX, iY);
+                    const bool isSelf = fields.getValue(iX, iY);
+                    const bool isOther = other.fields.getValue(iX, iY);
 
                     if (isSelf && isOther)
                         return true;
@@ -176,32 +216,68 @@ namespace blocks
 
     class GameState
     {
-    public:
+    private:
+        struct tNextMove {
+            Rotation90 rotation;
+            Position direction;
+            size_t blockIndex = std::numeric_limits<size_t>::max();
+        };
 
+    public:
+        void input(size_t blockIndex, Position nextDirection, Rotation90 nextRotation) {
+            if (m_next.has_value())
+                return;
+            m_next = tNextMove{};
+            m_next->blockIndex = blockIndex;
+            m_next->direction = nextDirection;
+            m_next->rotation = nextRotation;
+        }
+
+        bool checkCollision(const Block& other) const {
+            for (const auto& iOther : m_sticky) {
+                if (other.checkCollision(iOther))
+                    return true;
+            }
+            return false;
+
+        }
 
         void updateMove() {
-            for (auto& iMoving : m_moving) {
-                iMoving.move(Position(0, 1));
+            if (!m_moving.has_value())
+                return;
 
-                const bool isCollision = std::invoke([&]() {
-                    for (const auto& iOther : m_moving) {
-                        if (&iMoving == &iOther)
-                            continue;
-                        if (iMoving.checkCollision(iOther))
-                            return true;
-                    }
-                    return false;
-                });
-
-
+            bool isCollision = false;
+            
+            //first try custom move + rotation
+            if(m_next.has_value()) {
+                const auto movedBlock = (*m_moving)
+                    .move(m_next->direction)
+                    .rotate(m_next->rotation);
+                isCollision = checkCollision(movedBlock);
                 
+                if (!isCollision)
+                    m_moving = movedBlock;
             }
+
+            //otherwise try downward
+            if (isCollision) {
+                const auto movedDownward = (*m_moving).move(Position{ 0,-1 });
+                isCollision = checkCollision(movedDownward);
+                
+                if (!isCollision)
+                    m_moving = movedDownward;
+            }
+
+            if (!isCollision)
+                return;
         }
 
 
     private:
-        std::vector<Block> m_moving; // blocks not yet touched the bottom of the playing field
+        std::optional<Block> m_moving;
         std::vector<Block> m_sticky; // blocks not be movable anymore
+        std::optional<tNextMove> m_next;
+
     };
 }
 
