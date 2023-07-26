@@ -70,6 +70,4 @@ namespace engine
 	bool betweenStartSize(T start, T size, T value) {
 		return betweenStartEnd(start, start + size, value);
 	}
-
-
 }

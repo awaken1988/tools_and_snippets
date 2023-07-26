@@ -8,6 +8,7 @@
 #include <memory>
 #include <chrono>
 #include <iostream>
+#include <vector>
 
 struct TestStruct {
     int x = 0;
@@ -82,149 +83,154 @@ struct Framecounter
 
 
 
+
+
+
+
+
+
 namespace blocks
-{
-    struct Position
+{ 
+    using ivec2 = glm::ivec2;
+
+    template<typename T, T D>
+    class Field
     {
-        constexpr Position() = default;
-        constexpr Position(int x, int y)
-            : x{ x }, y{ x } {}
-
-        int x = -1;
-        int y = -1;
-
-        Position operator+(const Position& other) {
-            return Position{ x + other.x, y + other.y };
+    public:
+        Field() = default;
+        Field(const Field&) = default;
+        Field(ivec2 size) : 
+            m_data{ std::vector<T>(static_cast<size_t>(size.x * size.y), D) },
+            m_size{ size }
+        {
+            
         }
 
-    };
-
-    constexpr int SIDE_LEN_MAX = 3;
-    constexpr int FIELDS = SIDE_LEN_MAX * SIDE_LEN_MAX;
-    constexpr Position FIELD_XY(SIDE_LEN_MAX ,SIDE_LEN_MAX );
-
-    struct Rotation90
-    {
-        constexpr Rotation90() = default;
-        explicit constexpr Rotation90(int8_t rot90)
-            : rotation{rot90} {}
-
-        int8_t rotation=0;  // 1==90°; 2==180°; -1==-90°...
-    };
-
-    struct Field
-    {
-        std::array<bool, FIELDS> cells;
-
-        const bool getValue(int iX, int iY) const {
-            return cells[iY * SIDE_LEN_MAX + iX];
+        ivec2 dimensions() const {
+            return m_size;
         }
 
-        void setValue(int iX, int iY, bool value) {
-            cells[iY * SIDE_LEN_MAX + iX] = value;
+        bool get(ivec2 index) const {
+            return m_data[indexOf(index)];
+        }
+
+        void set(ivec2 index, bool value) {
+            m_data[indexOf(index)] = value;
+        }
+
+        auto rotate(int x90) const {
+            Field<T,D> ret{ {m_size.y, m_size.x} };
+            this->foreach([&](ivec2 index, bool value) {
+                ret.set(index, value);
+            });
+            return ret;
         }
 
         template<typename F>
-        void foreach(F f) {
-            for (int iX = 0; iX < SIDE_LEN_MAX; iX++) {
-                for (int iY = 0; iY < SIDE_LEN_MAX; iY++) {
-                    f(iX, iY, getValue(iX, iY));
+        void foreach(F f) const {
+            for (int x = 0; x < m_size.x; x++) {
+                for (int y = 0; y < m_size.y; y++) {
+                    const ivec2 pos{ x,y };
+                    f(pos, m_data[indexOf(pos)]);
                 }
             }
         }
+        template<typename F>
+        void foreach(F f) {
+            for (int x = 0; x < m_size.x; x++) {
+                for (int y = 0; y < m_size.y; y++) {
+                    const ivec2 pos{ x,y };
+                    f(pos, m_data[pos]);
+                }
+            }
+        }
+    private:
+        size_t indexOf(glm::ivec2 index) const {
+            return index.y * m_size.x + index.x;
+        }
+    private:
+        std::vector<T> m_data;
+        ivec2 m_size;
     };
 
-    struct Block
+    using BoolField = Field<bool, false>;
+
+    class Block
     {
-        Position pos;
-        Field fields;
-
+    public:
         Block() = default;
-        Block(Position pos, const Field& fields)
-            : pos{ pos }, fields{ fields } {}
+        Block(const Block&) = default;
+        Block(ivec2 pos, BoolField field)
+            : m_pos{ pos }, m_field{ field }
+        {}
 
-
-        Position lowerLeft() const {
-            return pos;
+        ivec2 lowerLeft() const {
+            return m_pos;
         }
-
-        Position upperRight() const {
-            return lowerLeft() + FIELD_XY;
+        ivec2 upperRight() const {
+            return m_pos + m_field.dimensions();
         }
-
         int left() const {
-            return pos.x;
+            return m_pos.x;
         }
-
         int right() const {
-            return pos.x + SIDE_LEN_MAX;
+            return m_pos.x + m_field.dimensions().x;
         }
-
         int top() const {
-            return pos.y + SIDE_LEN_MAX;
+            return m_pos.y + m_field.dimensions().y;
         }
-
         int bottom() const {
-            return pos.y;
+            return m_pos.y;
         }
-
-        Block move(Position direction) {
-            return Block(pos + direction, fields);
+        Block move(ivec2 direction) const {
+            return Block(m_pos + direction, m_field);
         }
-
-        Block rotate(Rotation90 rot) {
-            if (rot.rotation == 0 || (rot.rotation % 4) == 0)
-                return *this;
-            
-            Field nextField; 
-            fields.foreach([&nextField](int iX, int iY, bool value) {
-                nextField.setValue(SIDE_LEN_MAX-iY-1, iX, value);
-            });
-
-            return Block(pos, nextField);
+        Block rotate(int x90) const {
+            return Block(m_pos, m_field.rotate(x90));
         }
-
-
         bool checkCollision(const Block& other) const {
             const bool isX = engine::betweenStartEnd(left(), right(), other.left()) && engine::betweenStartEnd(left(), right(), other.right());
             const bool isY = engine::betweenStartEnd(bottom(), top(), other.bottom()) && engine::betweenStartEnd(bottom(), top(), other.top());
             if (!isX || isY)
                 return false;
 
-            const auto diff = Position(other.left() - other.left(), other.bottom()-bottom());
-            const auto start = Position(
+            const auto diff = ivec2{ other.left() - other.left(), other.bottom() - bottom() };
+            const auto start = ivec2{
                 diff.x < 0 ? 0 : diff.x,
-                diff.y < 0 ? 0 : diff.y);
-            const auto end = Position(
-                SIDE_LEN_MAX - std::abs(diff.x),
-                SIDE_LEN_MAX - std::abs(diff.y));
+                diff.y < 0 ? 0 : diff.y };
+            const auto end = ivec2{
+                1000 - std::abs(diff.x),
+                1000 - std::abs(diff.y)};
 
             for (int iX = start.x; iX < end.x; iX++) {
                 for (int iY = start.y; iY < end.y; iY++) {
-                    const bool isSelf = fields.getValue(iX, iY);
-                    const bool isOther = other.fields.getValue(iX, iY);
+                    const bool isSelf = m_field.get({ iX, iY });
+                    const bool isOther = other.m_field.get({ iX, iY });
 
                     if (isSelf && isOther)
                         return true;
-
                 }
             }
-      
+
             return false;
         }
+    private:
+        BoolField m_field;
+        ivec2 m_pos;
+       
     };
 
     class GameState
     {
     private:
         struct tNextMove {
-            Rotation90 rotation;
-            Position direction;
+            int rotation;
+            ivec2 direction;
             size_t blockIndex = std::numeric_limits<size_t>::max();
         };
 
     public:
-        void input(size_t blockIndex, Position nextDirection, Rotation90 nextRotation) {
+        void input(size_t blockIndex, ivec2 nextDirection, int nextRotation) {
             if (m_next.has_value())
                 return;
             m_next = tNextMove{};
@@ -247,23 +253,23 @@ namespace blocks
                 return;
 
             bool isCollision = false;
-            
+
             //first try custom move + rotation
-            if(m_next.has_value()) {
+            if (m_next.has_value()) {
                 const auto movedBlock = (*m_moving)
                     .move(m_next->direction)
                     .rotate(m_next->rotation);
                 isCollision = checkCollision(movedBlock);
-                
+
                 if (!isCollision)
                     m_moving = movedBlock;
             }
 
             //otherwise try downward
             if (isCollision) {
-                const auto movedDownward = (*m_moving).move(Position{ 0,-1 });
+                const auto movedDownward = (*m_moving).move({ 0,-1 });
                 isCollision = checkCollision(movedDownward);
-                
+
                 if (!isCollision)
                     m_moving = movedDownward;
             }
@@ -277,9 +283,19 @@ namespace blocks
         std::optional<Block> m_moving;
         std::vector<Block> m_sticky; // blocks not be movable anymore
         std::optional<tNextMove> m_next;
-
     };
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
