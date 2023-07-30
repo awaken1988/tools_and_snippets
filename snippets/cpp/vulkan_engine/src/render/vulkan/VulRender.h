@@ -102,6 +102,7 @@ namespace vulk
         virtual engine::DrawableHandle addDrawable() override;
 
         virtual void setViewProjection(const glm::mat4& view, const glm::mat4& projection) override;
+        virtual void setWorldTransform(const engine::DrawableHandle& handle, const glm::mat4& transform) override;
     
         void draw() override;
 

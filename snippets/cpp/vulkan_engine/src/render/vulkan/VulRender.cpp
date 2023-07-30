@@ -89,6 +89,11 @@ namespace vulk
         }
     }
 
+    void Render::setWorldTransform(const engine::DrawableHandle& handle, const glm::mat4& transform)
+    {
+        //TODO   
+    }
+
     engine::VertexHandle Render::addVertex(const std::span<engine::Vertex> vertex)
     {
          const auto index = std::invoke([&]() -> size_t {

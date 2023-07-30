@@ -5,6 +5,11 @@
 
 namespace engine
 {
+	Render::~Render()
+	{
+		
+	}
+
 	std::unique_ptr<Render> createInstance(RenderBackend backend)
 	{
 		switch (backend) {
