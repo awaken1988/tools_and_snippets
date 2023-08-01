@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(VUL_PREFIX ./src/render/vulkan)
 set(ENGINE_PREFIX ./src/engine)
+set(EXAMPLE_PREFIX ./src/example)
 
 set(ENGINE_FILES
     ${ENGINE_PREFIX}/EngineTypes.h 
@@ -22,6 +23,10 @@ set(VUL_FILES
     ${VUL_PREFIX}/VulRender.cpp
 )
 
+set(EXAMPLE_FILES
+    ${EXAMPLE_PREFIX}/blocks/blocks.h
+)
+
 set(EXTERNAL_FILES
     src/extern/stb_image/stb_image.h
 )
@@ -32,6 +37,7 @@ add_executable(hello
     ${ENGINE_FILES}
     ${VUL_FILES}
     ${EXTERNAL_FILES}
+    ${EXAMPLE_FILES}
 )
 
 target_include_directories(hello PUBLIC ./src)
@@ -40,7 +46,7 @@ target_include_directories(hello PUBLIC ./src/engine)
 source_group("engine" ${ENGINE_FILES})
 source_group("vulkan" ${VUL_FILES})
 source_group("external" ${EXTERNAL_FILES})
-
+source_group("example" ${EXAMPLE_FILES})
 
 IF(WIN32)
     #Usage:
