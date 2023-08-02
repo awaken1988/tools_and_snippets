@@ -37,6 +37,10 @@ namespace engine
 		explicit HandleBase(size_t index)
 			: index{ index } {}
 
+		HandleBase() = default;
+		HandleBase(const HandleBase&) = default;
+
+
 		auto isValid(){
 			return std::numeric_limits<size_t>::max();
 		}
@@ -69,5 +73,33 @@ namespace engine
 	template<typename T>
 	bool betweenStartSize(T start, T size, T value) {
 		return betweenStartEnd(start, start + size, value);
+	}
+
+	namespace primitive
+	{
+		const auto l = -0.5f;
+		const auto h = 0.5f;
+
+		static std::vector<engine::Vertex> trianglePrimitive()
+		{
+			return {
+				{{-0.5f, -0.5f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+				{{0.5f, -0.5f, 1.0f},  {0.0f, 1.0f, 0.0f}},
+				{{0.5f, 0.5f, 1.0f},   {1.0f, 1.0f, 1.0f}},
+			};
+		}
+
+		static std::vector<engine::Vertex> rectanglePrimitive()
+		{
+			return {
+				 {{l, l, 1.0f}, {1.0f, 0.0f, 0.0f}},
+				 {{h, l, 1.0f}, {0.0f, 1.0f, 0.0f}},
+				 {{h, h, 1.0f}, {1.0f, 1.0f, 1.0f}},
+
+				 {{h, h, 1.0f}, {1.0f, 1.0f, 1.0f}},
+				 {{l, h, 1.0f}, {1.0f, 1.0f, 1.0f}},
+				 {{l, l, 1.0f}, {1.0f, 0.0f, 0.0f}},
+			};
+		}
 	}
 }

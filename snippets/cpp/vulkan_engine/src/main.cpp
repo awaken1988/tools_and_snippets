@@ -22,33 +22,7 @@ void test()
 
 
 
-namespace primitive
-{
-    const auto l = -0.5f;
-    const auto h = 0.5f;
 
-    std::vector<engine::Vertex> trianglePrimitive()
-    {
-        return {
-            {{-0.5f, -0.5f, 1.0f}, {1.0f, 0.0f, 0.0f}},
-            {{0.5f, -0.5f, 1.0f},  {0.0f, 1.0f, 0.0f}},
-            {{0.5f, 0.5f, 1.0f},   {1.0f, 1.0f, 1.0f}},
-        };
-    }
-
-    std::vector<engine::Vertex> rectanglePrimitive()
-    {
-        return {
-             {{l, l, 1.0f}, {1.0f, 0.0f, 0.0f}},
-             {{h, l, 1.0f}, {0.0f, 1.0f, 0.0f}},
-             {{h, h, 1.0f}, {1.0f, 1.0f, 1.0f}},
-
-             {{h, h, 1.0f}, {1.0f, 1.0f, 1.0f}},
-             {{l, h, 1.0f}, {1.0f, 1.0f, 1.0f}},
-             {{l, l, 1.0f}, {1.0f, 0.0f, 0.0f}},
-        };
-    }
-}
 
 struct Framecounter
 {
@@ -133,11 +107,11 @@ int main() {
 
             //Framecounter frames;
 
-            //while (!glfwWindowShouldClose(&renderer.device().getWindow())) {
-            //    glfwPollEvents();
-            //    renderer.draw();
-            //    frames.next();
-            //}
+    /*    while (!glfwWindowShouldClose(&renderer.device().getWindow())) {
+            glfwPollEvents();
+            renderer.draw();
+            frames.next();
+        }*/
         }
         
     }

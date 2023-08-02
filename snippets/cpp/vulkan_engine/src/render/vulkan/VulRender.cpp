@@ -94,6 +94,12 @@ namespace vulk
         //TODO   
     }
 
+
+    GLFWwindow& Render::window()
+    {
+        return device().getWindow();
+    }
+
     engine::VertexHandle Render::addVertex(const std::span<engine::Vertex> vertex)
     {
          const auto index = std::invoke([&]() -> size_t {
@@ -524,11 +530,17 @@ namespace vulk
         UniformBufferObject* ubo = reinterpret_cast<UniformBufferObject*>(gameObject.mapped_ptr);
         ubo->model = model;
     }
+
+    void Render::setVertex(engine::DrawableHandle drawable, engine::VertexHandle vertexHandle)
+    {
+        auto& drawableObject = m_drawableObject[drawable.index];
+        drawableObject.vertIndices.push_back(vertexHandle);
+    }
+
     //void Render::DrawableObjectHandle::addVertices(VertexHandle vertexHandle)
     //{
     //    auto& drawableObject = renderer->m_drawableObject[index];
     //    auto& gameObject = renderer->m_drawableObject[index];
-
     //    drawableObject.vertIndices.push_back(vertexHandle);
     //}
 }

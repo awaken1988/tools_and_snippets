@@ -10,7 +10,7 @@ namespace engine
 		
 	}
 
-	std::unique_ptr<Render> createInstance(RenderBackend backend)
+	std::unique_ptr<Render> Render::createInstance(RenderBackend backend)
 	{
 		switch (backend) {
 		case RenderBackend::VULKAN: {

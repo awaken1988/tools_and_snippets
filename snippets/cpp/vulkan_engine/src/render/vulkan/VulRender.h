@@ -100,10 +100,11 @@ namespace vulk
 
         virtual engine::VertexHandle addVertex(const std::span<engine::Vertex> vertex) override;
         virtual engine::DrawableHandle addDrawable() override;
-
         virtual void setViewProjection(const glm::mat4& view, const glm::mat4& projection) override;
         virtual void setWorldTransform(const engine::DrawableHandle& handle, const glm::mat4& transform) override;
-    
+        virtual void setVertex(engine::DrawableHandle drawable, engine::VertexHandle vertexHandle) override;
+        virtual GLFWwindow& window() override;
+
         void draw() override;
 
         Device& device();

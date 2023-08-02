@@ -25,6 +25,7 @@ set(VUL_FILES
 
 set(EXAMPLE_FILES
     ${EXAMPLE_PREFIX}/blocks/blocks.h
+    ${EXAMPLE_PREFIX}/blocks/blocks.cpp
 )
 
 set(EXTERNAL_FILES
