@@ -172,7 +172,7 @@ namespace blocks
                 glm::mat4 model = toWorldTransform(pos);
                 render.setWorldTransform(drawable, model);
 
-                if ((pos.x % 2) == 0) {
+                if (pos.y > 1) {
                     render.setEnabled(drawable, false);
                 }
 
@@ -183,7 +183,7 @@ namespace blocks
                 int width = 0, height = 0;
                 glfwGetWindowSize(&render.window(), &width, &height);
 
-                glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 60.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+                glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 60.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
                 glm::mat4 proj = glm::perspective(glm::radians(34.0f), (float)width / (float)height, 0.1f, 60.0f);
                 proj[1][1] *= -1;
 
