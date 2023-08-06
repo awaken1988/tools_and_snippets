@@ -155,9 +155,10 @@ namespace blocks
 
     public:
         GameState(engine::Render& render) : 
+            m_worldSize{10, 15},
             m_render{ render }, 
-            m_world{ ivec2{0,0}, BoolField{{20,30}} },
-            m_drawObjects{ {20,30} }
+            m_world{ ivec2{0,0}, BoolField{m_worldSize} },
+            m_drawObjects{ m_worldSize }
         {
             auto rectangle = engine::primitive::rectanglePrimitive(); //TODO: fix addVertex...
             m_vertex = render.addVertex(rectangle);
@@ -168,8 +169,13 @@ namespace blocks
                 render.setVertex(drawable, m_vertex);
             
                 //create position for each field
-                glm::mat4 model = glm::translate(glm::mat4{10.f}, glm::vec3(10.0f - pos.x * 1.1f, 10.0f - pos.y * 1.1f, 0.0f));
+                glm::mat4 model = toWorldTransform(pos);
                 render.setWorldTransform(drawable, model);
+
+                if ((pos.x % 2) == 0) {
+                    render.setEnabled(drawable, false);
+                }
+
             });
 
             //set camera
@@ -178,11 +184,26 @@ namespace blocks
                 glfwGetWindowSize(&render.window(), &width, &height);
 
                 glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 60.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-                glm::mat4 proj = glm::perspective(glm::radians(32.0f), (float)width / (float)height, 0.1f, 60.0f);
+                glm::mat4 proj = glm::perspective(glm::radians(34.0f), (float)width / (float)height, 0.1f, 60.0f);
                 proj[1][1] *= -1;
 
                 render.setViewProjection(view, proj);
             }
+        }
+
+        glm::mat4 toWorldTransform(glm::vec2 pos) {
+            const float offset = 10.0f;
+            const glm::vec3 translatePos {
+                offset - (pos.x * 1.1f),
+                    offset * 1.5f - (pos.y * 1.1f),
+                    0.0f
+            };
+
+            return glm::translate(glm::mat4{1.0f}, translatePos);
+        }
+
+        glm::mat4 toWorldTransform(ivec2 pos) {
+            return toWorldTransform(glm::vec2(pos.x, pos.y));
         }
 
         void input(size_t blockIndex, ivec2 nextDirection, int nextRotation) {
@@ -232,10 +253,14 @@ namespace blocks
     private:
         engine::Render& m_render;
 
+        const ivec2 m_worldSize;
+
         Block m_world;
         std::optional<Block> m_moving;
         std::optional<tNextMove> m_next;
+       
         Field<DrawableHandle,DrawableHandle{}> m_drawObjects;
+        
         VertexHandle m_vertex;
     };
 

@@ -204,11 +204,10 @@ namespace vulk
 
 
         for(auto& iDrawableObj: m_drawableObject) {
-            if(iDrawableObj.mapped_ptr == nullptr)
+            if (iDrawableObj.mapped_ptr == nullptr || !iDrawableObj.isEnabled) {
                 continue;
-
-            //std::cout << "draw gameObject" << std::endl;
-
+            }
+           
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &iDrawableObj.uboDescriptor, 0, nullptr);
 
             for(auto iVerticeIndice: iDrawableObj.vertIndices) {
@@ -539,6 +538,12 @@ namespace vulk
     {
         auto& drawableObject = m_drawableObject[drawable.index];
         drawableObject.vertIndices.push_back(vertexHandle);
+    }
+
+    void Render::setEnabled(engine::DrawableHandle drawHdnl, bool isEnabled)
+    {
+        auto& drawObj = m_drawableObject[drawHdnl.index];
+        drawObj.isEnabled = isEnabled;
     }
 
     //void Render::DrawableObjectHandle::addVertices(VertexHandle vertexHandle)

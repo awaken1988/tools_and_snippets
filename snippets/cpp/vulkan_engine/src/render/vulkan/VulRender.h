@@ -68,6 +68,7 @@ namespace vulk
             VkDeviceMemory uboMemory;
             VkDescriptorSet uboDescriptor;
             std::vector<engine::VertexHandle> vertIndices;
+            bool isEnabled = true;
            
             size_t index;
         };
@@ -103,6 +104,7 @@ namespace vulk
         virtual void setViewProjection(const glm::mat4& view, const glm::mat4& projection) override;
         virtual void setWorldTransform(const engine::DrawableHandle& handle, const glm::mat4& transform) override;
         virtual void setVertex(engine::DrawableHandle drawable, engine::VertexHandle vertexHandle) override;
+        virtual void setEnabled(engine::DrawableHandle drawHdnl, bool isEnabled) override;
         virtual GLFWwindow& window() override;
 
         void draw() override;
@@ -132,6 +134,5 @@ namespace vulk
 
         glm::mat4 m_view;
         glm::mat4 m_projection;
-
     };
 }
