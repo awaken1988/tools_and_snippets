@@ -156,7 +156,8 @@ namespace blocks
     public:
         GameState(engine::Render& render) : 
             m_render{ render }, 
-            m_world{ ivec2{0,0}, BoolField{{20,30}} }
+            m_world{ ivec2{0,0}, BoolField{{20,30}} },
+            m_drawObjects{ {20,30} }
         {
             auto rectangle = engine::primitive::rectanglePrimitive(); //TODO: fix addVertex...
             m_vertex = render.addVertex(rectangle);
@@ -167,7 +168,7 @@ namespace blocks
                 render.setVertex(drawable, m_vertex);
             
                 //create position for each field
-                glm::mat4 model = glm::translate(glm::mat4{10.f}, glm::vec3(10.0f - pos.x * 2.1f, 10.0f - pos.y * 2.1f, 0.0f));
+                glm::mat4 model = glm::translate(glm::mat4{10.f}, glm::vec3(10.0f - pos.x * 1.1f, 10.0f - pos.y * 1.1f, 0.0f));
                 render.setWorldTransform(drawable, model);
             });
 
@@ -176,7 +177,7 @@ namespace blocks
                 int width = 0, height = 0;
                 glfwGetWindowSize(&render.window(), &width, &height);
 
-                glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 40.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+                glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 60.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
                 glm::mat4 proj = glm::perspective(glm::radians(32.0f), (float)width / (float)height, 0.1f, 60.0f);
                 proj[1][1] *= -1;
 
@@ -243,9 +244,6 @@ namespace blocks
 
         while (!glfwWindowShouldClose(&render.window())) {
             glfwPollEvents();
-            
-            
-            
             render.draw();
         }
 

@@ -6,23 +6,6 @@
 
 #include "example/blocks/blocks.h"
 
-struct TestStruct {
-    int x = 0;
-};
-
-void giveSpan(const std::span<TestStruct> arg) {
-
-}
-
-void test()
-{
-    std::vector<TestStruct> arr;
-    giveSpan(arr);
-}
-
-
-
-
 
 struct Framecounter
 {
@@ -52,72 +35,86 @@ struct Framecounter
 };
 
 
+enum class AppType {
+    BLOCKS_GAME,
+    TRIANGLE_DEMO,
+};
 
-int main() {
-    const bool is_hello = true;
+void app();
 
-     try {
-        if(is_hello) {
-        
-        }
-        else {
-            using namespace engine;
-
-            auto render = Render::createInstance(RenderBackend::VULKAN);
-
-            auto testPrimitive = primitive::rectanglePrimitive();
-            auto testHandle = render->addVertex(testPrimitive);
-
-
-            //const auto vertHandle = renderer.addVertexList(semplate_vertices());
-
-            //auto rectangle = render->addVertex(primitive::rectanglePrimitive());
-            //auto triangle = render->addVertex((primitive::trianglePrimitive());
-
-            //for (int x = 0; x < 10; x++) {
-            //    for (int y = 0; y < 10; y++) {
-            //        auto drawObject = renderer.addGameObject();
-            //        const auto swapChainExtents = renderer.device().swapChainExtent();
-            //        //glm::mat4 model = glm::rotate(glm::mat4(1.0f), 1.0f * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-            //        //glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 4.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            //        //glm::mat4 proj = glm::perspective(glm::radians(45.0f), swapChainExtents.width / (float) swapChainExtents.height, 0.1f, 10.0f);
-
-            //        glm::mat4 model = glm::translate(glm::mat4{10.f}, glm::vec3(10.0f-x * 2.1f, 10.0f - y*2.1f, 0.0f));
-            //        glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 40.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            //        glm::mat4 proj = glm::perspective(glm::radians(32.0f), swapChainExtents.width / (float)swapChainExtents.height, 0.1f, 60.0f);
-
-            //        proj[1][1] *= -1;
-
-            //        renderer.setViewProjection(view, proj);
-
-            //        if ((x % 2) == 0 || (y % 2) == 0) {
-            //            drawObject.addVertices(rectangle);
-            //           
-            //        }
-            //        else {
-            //            drawObject.addVertices(triangle);
-            //        }
-
-            //        drawObject.setModelTransormation(model);
-            //        
-            //    }
-            //}
-          
-           
-
-            //Framecounter frames;
-
-    /*    while (!glfwWindowShouldClose(&renderer.device().getWindow())) {
-            glfwPollEvents();
-            renderer.draw();
-            frames.next();
-        }*/
-        }
-        
+int main() 
+{
+    try {
+        app();
     }
-    catch(std::string& e) {
+    catch (std::string& e) {
         std::cout << e << std::endl;
+        return 1;
     }
 
     return 0;
+}
+
+void app() {
+    const auto app = AppType::BLOCKS_GAME;
+
+    using namespace engine;
+
+    auto render = Render::createInstance(RenderBackend::VULKAN);
+
+    switch (app) {
+    case AppType::BLOCKS_GAME: {
+        blocks::start(*render);
+    } break;
+    case AppType::TRIANGLE_DEMO: {
+        using namespace engine;
+
+        blocks::start(*render);
+
+        auto testPrimitiveTriangle = primitive::rectanglePrimitive();
+        auto testPrimitiveRectangle = primitive::trianglePrimitive();
+
+        auto rectangle = render->addVertex(testPrimitiveTriangle);
+        auto triangle = render->addVertex(testPrimitiveRectangle);
+
+        int width = 0, height = 0;
+        glfwGetWindowSize(&render->window(), &width, &height);
+
+
+        for (int x = 0; x < 10; x++) {
+            for (int y = 0; y < 10; y++) {
+                auto drawObject = render->addDrawable();
+                //const auto swapChainExtents = render.device().swapChainExtent();
+                //glm::mat4 model = glm::rotate(glm::mat4(1.0f), 1.0f * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+                //glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 4.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+                //glm::mat4 proj = glm::perspective(glm::radians(45.0f), swapChainExtents.width / (float) swapChainExtents.height, 0.1f, 10.0f);
+
+                glm::mat4 model = glm::translate(glm::mat4{10.f}, glm::vec3(10.0f - x * 2.1f, 10.0f - y * 2.1f, 0.0f));
+                glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 40.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+                glm::mat4 proj = glm::perspective(glm::radians(32.0f), width / (float)height, 0.1f, 60.0f);
+
+                proj[1][1] *= -1;
+
+                render->setViewProjection(view, proj);
+
+                if ((x % 2) == 0 || (y % 2) == 0) {
+                    render->setVertex(drawObject, rectangle);
+                }
+                else {
+                    render->setVertex(drawObject, triangle);
+                }
+
+                render->setWorldTransform(drawObject, model);
+            }
+        }
+
+        Framecounter frames;
+
+        while (!glfwWindowShouldClose(&render->window())) {
+            glfwPollEvents();
+            render->draw();
+            frames.next();
+        }
+    } break;
+    }
 }

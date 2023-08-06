@@ -91,7 +91,11 @@ namespace vulk
 
     void Render::setWorldTransform(const engine::DrawableHandle& handle, const glm::mat4& transform)
     {
-        //TODO   
+        auto& drawable = m_drawableObject[handle.index];
+        
+        UniformBufferObject* ubo = reinterpret_cast<UniformBufferObject*>(drawable.mapped_ptr);
+
+        ubo->model = transform;
     }
 
 
