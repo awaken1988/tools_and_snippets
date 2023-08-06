@@ -9,3 +9,4 @@ rust_snippets/*/target
 /tools/rust/network_check/target/
 /snippets/cpp/vulkan_example/build
 /snippets/cpp/vulkan_helper/build
+*.project

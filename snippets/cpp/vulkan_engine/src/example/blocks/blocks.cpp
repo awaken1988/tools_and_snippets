@@ -20,6 +20,17 @@ namespace blocks
             
         }
 
+        template<size_t X, size_t Y>
+        static Field fromArray(T(&arg)[X][Y]) {
+            Field ret{ {static_cast<int>(X), static_cast<int>(Y)} };
+
+            ret.foreach([&](glm::ivec2 pos, auto&& data) {
+                data = arg[pos.x][pos.y];
+            });
+
+            return ret;
+        }
+
         ivec2 dimensions() const {
             return m_size;
         }
@@ -67,7 +78,11 @@ namespace blocks
         ivec2 m_size;
     };
 
+
+
     using BoolField = Field<bool, false>;
+
+
 
     class Block
     {
@@ -144,6 +159,32 @@ namespace blocks
         ivec2 m_pivot; 
     };
 
+
+
+    static const auto& getFigures() {        
+        constexpr auto O = false;
+        constexpr auto I = true;
+        
+        static auto ret = std::invoke([&]() {
+            std::vector<BoolField> ret;
+
+            bool data[][2] = {
+                {I,O},
+                {I,O},
+                {I,O},
+                {I,I},
+            };
+
+            ret.push_back(BoolField::fromArray(data));
+
+            return ret;
+        });
+
+        return ret;
+    }
+
+
+
     class GameState
     {
     private:
@@ -219,9 +260,26 @@ namespace blocks
             return m_world.checkCollision(other);
         }
 
+        void update() {
+            if (!m_moving.has_value()) {
+                const glm::ivec2 startPos {m_worldSize.x/2, m_worldSize.y-3};
+                m_moving = Block{ startPos, getFigures()[0] };
+            }
+            
+            updateMove();
+        }
+
         void updateMove() {
+            
             if (!m_moving.has_value())
                 return;
+
+
+
+
+            return; //FIXME: only for debug
+
+
 
             bool isCollision = false;
 
@@ -249,6 +307,12 @@ namespace blocks
                 return;
         }
 
+        void updateMovingDrawable() {
+            if (!m_moving.has_value())
+                return;
+
+        }
+
 
     private:
         engine::Render& m_render;
@@ -269,6 +333,9 @@ namespace blocks
 
         while (!glfwWindowShouldClose(&render.window())) {
             glfwPollEvents();
+
+            gamestate.update();
+
             render.draw();
         }
 
