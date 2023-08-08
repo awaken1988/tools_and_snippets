@@ -24,6 +24,7 @@
 #include <cstring>
 #include <fstream>
 #include <cmath>
+#include <chrono>
 
 
 namespace engine
@@ -102,4 +103,30 @@ namespace engine
 			};
 		}
 	}
+
+	class RetryTimer
+	{
+	public:
+		RetryTimer(std::chrono::microseconds timeout)
+			: m_timeout{ timeout }
+		{
+			m_last = std::chrono::steady_clock::now();
+		}
+
+		explicit operator bool() {
+			const auto now = std::chrono::steady_clock::now();
+			const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_last);
+
+			const bool isTrigger = elapsed >= m_timeout;
+
+			if (isTrigger)
+				m_last = now;
+
+			return isTrigger;
+		}
+
+	private:
+		std::chrono::microseconds m_timeout;
+		std::chrono::steady_clock::time_point m_last;
+	};
 }

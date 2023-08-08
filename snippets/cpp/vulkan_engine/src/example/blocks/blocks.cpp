@@ -315,6 +315,8 @@ namespace blocks
             if (!m_moving.has_value())
                 return;
 
+            *m_moving = m_moving->move({ 0,-1 });
+
             return; //FIXME: only for debug
 
             bool isCollision = false;
@@ -379,11 +381,16 @@ namespace blocks
 
     void start(engine::Render& render) {
         GameState gamestate{render};
+        engine::RetryTimer timeout{ std::chrono::seconds{2} };
+        
 
         while (!glfwWindowShouldClose(&render.window())) {
             glfwPollEvents();
 
-            gamestate.update();
+            if (timeout) {
+                gamestate.update();
+            }
+            
 
             render.draw();
         }
