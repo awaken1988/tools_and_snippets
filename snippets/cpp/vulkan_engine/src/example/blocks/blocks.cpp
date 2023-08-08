@@ -1,5 +1,7 @@
 #include "blocks.h"
 
+#include <ranges>
+
 namespace blocks
 { 
     using DrawableHandle = engine::DrawableHandle;
@@ -69,6 +71,15 @@ namespace blocks
                 }
             }
         }
+
+        const auto begin() const {
+            return m_data.begin();
+        }
+
+        const auto end() const {
+            return m_data.end();
+        }
+
     private:
         size_t indexOf(glm::ivec2 index) const {
             return index.y * m_size.x + index.x;
@@ -153,6 +164,15 @@ namespace blocks
 
             return false;
         }
+
+        const BoolField& getField() const {
+            return m_field;
+        }
+
+        const ivec2& getPos() const {
+            return m_pos;
+        }
+
     private:
         BoolField m_field;
         ivec2 m_pos;
@@ -183,6 +203,17 @@ namespace blocks
         return ret;
     }
 
+    size_t maxFigureBlocks() {
+        size_t ret = 0;
+        for (const auto& iFigure : getFigures()) {
+            const size_t count = std::ranges::count(iFigure, true);
+            ret = std::max(ret, count);
+        }
+
+        return ret;
+    }
+
+
 
 
     class GameState
@@ -199,12 +230,22 @@ namespace blocks
             m_worldSize{10, 15},
             m_render{ render }, 
             m_world{ ivec2{0,0}, BoolField{m_worldSize} },
-            m_drawObjects{ m_worldSize }
+            m_drawField { m_worldSize }
         {
             auto rectangle = engine::primitive::rectanglePrimitive(); //TODO: fix addVertex...
             m_vertex = render.addVertex(rectangle);
 
-            m_drawObjects.foreach([&](ivec2 pos, DrawableHandle& drawable) {
+            //moving drawables
+            const auto movingBlocks = maxFigureBlocks();
+            for (auto iMoving = 0; iMoving < movingBlocks; iMoving++) {
+                auto drawableMoving = m_render.addDrawable();
+
+                render.setVertex(drawableMoving, m_vertex);
+        
+                m_drawMoving.push_back(drawableMoving);
+            }
+
+            m_drawField.foreach([&](ivec2 pos, DrawableHandle& drawable) {
                 //create Drawable for each field
                 drawable = render.addDrawable();
                 render.setVertex(drawable, m_vertex);
@@ -267,19 +308,14 @@ namespace blocks
             }
             
             updateMove();
+            updateMovingDrawable();
         }
 
-        void updateMove() {
-            
+        void updateMove() {            
             if (!m_moving.has_value())
                 return;
 
-
-
-
             return; //FIXME: only for debug
-
-
 
             bool isCollision = false;
 
@@ -311,6 +347,18 @@ namespace blocks
             if (!m_moving.has_value())
                 return;
 
+            size_t drawIndex = 0;
+            m_moving->getField().foreach([&](ivec2 offset, bool value) {
+                if (!value)
+                    return;
+
+                const auto pos =  m_moving->getPos() + offset;
+
+                auto draw = m_drawMoving[drawIndex];
+                m_render.setWorldTransform(draw, toWorldTransform(pos));
+
+                drawIndex++;
+            });
         }
 
 
@@ -323,8 +371,9 @@ namespace blocks
         std::optional<Block> m_moving;
         std::optional<tNextMove> m_next;
        
-        Field<DrawableHandle,DrawableHandle{}> m_drawObjects;
-        
+        Field<DrawableHandle, DrawableHandle{}> m_drawField;
+        std::vector<DrawableHandle> m_drawMoving;
+
         VertexHandle m_vertex;
     };
 
