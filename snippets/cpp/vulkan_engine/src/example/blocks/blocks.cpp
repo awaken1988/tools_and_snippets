@@ -37,6 +37,10 @@ namespace blocks
             return m_size;
         }
 
+        size_t size() const { 
+            return m_size.x * m_size.y;
+        }
+
         bool get(ivec2 index) const {
             return m_data[indexOf(index)];
         }
@@ -154,10 +158,10 @@ namespace blocks
 
             for (int iX = leftPos; iX < rightPos; iX++) {
                 for (int iY = bottomPos; iY < topPos; iY++) {
-                    const ivec2 selfOffset{ iX - m_pos.x, iY - m_pos.y };
-                    const ivec2 otherOffset{ iX - m_pos.x, iY - m_pos.y };
+                    const ivec2 selffOffset{ iX - left(), iY - bottom()};
+                    const ivec2 otherOffset{ iX - other.left(), iY - other.bottom()};
 
-                    if (m_field.get(selfOffset) && other.m_field.get(otherOffset))
+                    if (m_field.get(selffOffset) && other.m_field.get(otherOffset))
                         return true;
                 }
             }
@@ -166,6 +170,10 @@ namespace blocks
         }
 
         const BoolField& getField() const {
+            return m_field;
+        }
+
+        BoolField& getField() {
             return m_field;
         }
 
@@ -235,29 +243,22 @@ namespace blocks
             auto rectangle = engine::primitive::rectanglePrimitive(); //TODO: fix addVertex...
             m_vertex = render.addVertex(rectangle);
 
-            //moving drawables
-            const auto movingBlocks = maxFigureBlocks();
-            for (auto iMoving = 0; iMoving < movingBlocks; iMoving++) {
-                auto drawableMoving = m_render.addDrawable();
-
-                render.setVertex(drawableMoving, m_vertex);
-        
-                m_drawMoving.push_back(drawableMoving);
+            //init enough drawhandles from the render
+            {
+                const size_t drawing_elements = m_world.getField().size() * maxFigureBlocks();
+                for (auto iHdnl = 0; iHdnl < drawing_elements; iHdnl++) {
+                    auto drawHndl = m_render.addDrawable();
+                    render.setVertex(drawHndl, m_vertex);
+                    render.setEnabled(drawHndl, false);
+                    m_drawMoving.push_back(drawHndl);
+                }
             }
 
-            m_drawField.foreach([&](ivec2 pos, DrawableHandle& drawable) {
-                //create Drawable for each field
-                drawable = render.addDrawable();
-                render.setVertex(drawable, m_vertex);
-            
-                //create position for each field
-                glm::mat4 model = toWorldTransform(pos);
-                render.setWorldTransform(drawable, model);
-
-                if (pos.y > 1) {
-                    render.setEnabled(drawable, false);
+            //init world
+            m_world.getField().foreach([&](ivec2 pos, bool value) {
+                if (pos.y < 3) {
+                    (m_world.getField()).set(pos, true);
                 }
-
             });
 
             //set camera
@@ -303,26 +304,23 @@ namespace blocks
 
         void update() {
             if (!m_moving.has_value()) {
-                const glm::ivec2 startPos {m_worldSize.x/2, m_worldSize.y-3};
+                const glm::ivec2 startPos {m_worldSize.x/2, m_worldSize.y-6};
                 m_moving = Block{ startPos, getFigures()[0] };
             }
             
             updateMove();
-            updateMovingDrawable();
+            updateDrawable();
         }
 
         void updateMove() {            
             if (!m_moving.has_value())
                 return;
 
-            *m_moving = m_moving->move({ 0,-1 });
-
-            return; //FIXME: only for debug
+            const bool isCustomMove = m_next.has_value();
 
             bool isCollision = false;
 
-            //first try custom move + rotation
-            if (m_next.has_value()) {
+            if (isCustomMove) {
                 const auto movedBlock = (*m_moving)
                     .move(m_next->direction)
                     .rotate(m_next->rotation);
@@ -333,7 +331,7 @@ namespace blocks
             }
 
             //otherwise try downward
-            if (isCollision) {
+            if (!isCustomMove || isCollision) {
                 const auto movedDownward = (*m_moving).move({ 0,-1 });
                 isCollision = checkCollision(movedDownward);
 
@@ -345,11 +343,32 @@ namespace blocks
                 return;
         }
 
-        void updateMovingDrawable() {
+        void updateDrawable() {
             if (!m_moving.has_value())
                 return;
 
+            //reset drawobjects -> non drawing
+            for (size_t iHndl = 0; iHndl < m_drawMoving.size(); iHndl++) {
+                m_render.setEnabled(m_drawMoving[iHndl], false);
+            }
+
             size_t drawIndex = 0;
+
+            //update world
+            m_world.getField().foreach([&](ivec2 offset, bool value) {
+                if (!value)
+                    return;
+
+                const auto pos = m_world.getPos() + offset;
+
+                auto draw = m_drawMoving[drawIndex];
+                m_render.setWorldTransform(draw, toWorldTransform(pos));
+                m_render.setEnabled(draw, true);
+
+                drawIndex++;
+                });
+
+            //update moving object
             m_moving->getField().foreach([&](ivec2 offset, bool value) {
                 if (!value)
                     return;
@@ -358,6 +377,7 @@ namespace blocks
 
                 auto draw = m_drawMoving[drawIndex];
                 m_render.setWorldTransform(draw, toWorldTransform(pos));
+                m_render.setEnabled(draw, true);
 
                 drawIndex++;
             });
