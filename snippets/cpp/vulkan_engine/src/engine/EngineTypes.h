@@ -16,6 +16,7 @@
 #include <set>
 #include <span>
 #include <optional>
+#include <ranges>
 #include <algorithm>
 #include <functional>
 #include <iostream>
