@@ -35,15 +35,11 @@ namespace blocks
             }
 
             //init world
-            m_world.getField().foreach([&](ivec2 pos, bool value) {
-                if (pos.y < 3) {
-                    (m_world.getField()).set(pos, true);
+            for(auto iCell: m_world.getField()) {
+                if (iCell.pos.y < 3) {
+                    iCell.set(1);
                 }
-            });
-
-            auto iter = m_world.getField().begin();
-            iter++;
-            auto x = *iter;
+            }
 
             //set camera
             {
@@ -129,9 +125,6 @@ namespace blocks
         }
 
         void updateDrawable() {
-            if (!m_moving.has_value())
-                return;
-
             //reset drawobjects -> non drawing
             for (size_t iHndl = 0; iHndl < m_drawMoving.size(); iHndl++) {
                 m_render.setEnabled(m_drawMoving[iHndl], false);
@@ -140,32 +133,34 @@ namespace blocks
             size_t drawIndex = 0;
 
             //update world
-            m_world.getField().foreach([&](ivec2 offset, bool value) {
-                if (!value)
-                    return;
+            for(auto iCell: m_world.getField()) {
+                if (!iCell.get())
+                    continue;
 
-                const auto pos = m_world.getPos() + offset;
+                const auto pos = m_world.getPos() + iCell.pos;
 
                 auto draw = m_drawMoving[drawIndex];
                 m_render.setWorldTransform(draw, toWorldTransform(pos));
                 m_render.setEnabled(draw, true);
 
                 drawIndex++;
-                });
+            }
 
             //update moving object
-            m_moving->getField().foreach([&](ivec2 offset, bool value) {
-                if (!value)
-                    return;
+            if (!m_moving.has_value()) {
+                for(auto iCell: m_moving->getField()) {
+                    if (!iCell.get())
+                        continue;
 
-                const auto pos =  m_moving->getPos() + offset;
+                    const auto pos =  m_moving->getPos() + iCell.pos;
 
-                auto draw = m_drawMoving[drawIndex];
-                m_render.setWorldTransform(draw, toWorldTransform(pos));
-                m_render.setEnabled(draw, true);
+                    auto draw = m_drawMoving[drawIndex];
+                    m_render.setWorldTransform(draw, toWorldTransform(pos));
+                    m_render.setEnabled(draw, true);
 
-                drawIndex++;
-            });
+                    drawIndex++;
+                }
+            }
         }
 
 

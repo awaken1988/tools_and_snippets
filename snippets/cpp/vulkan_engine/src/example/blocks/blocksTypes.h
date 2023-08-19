@@ -39,11 +39,7 @@ namespace blocks
             return m_size.x * m_size.y;
         }
 
-        const T& get(ivec2 index) const {
-            return m_data[indexOf(index)];
-        }
-
-        T& get(ivec2 index) {
+        T get(ivec2 index) const {
             return m_data[indexOf(index)];
         }
 
@@ -79,15 +75,21 @@ namespace blocks
             }
         }
 
-        class iteratorItem {
+        struct iteratorItem {
         public:
-            iteratorItem() :
-                pos{0,0} {}
-            explicit iteratorItem(ivec2 pos, T* value)
-                : pos{ pos }, value{ value } {}
-                
-            ivec2 pos;
-            T* value=nullptr;
+            const ivec2 pos;
+            Field* field;
+
+            iteratorItem() 
+                : pos{0,0} {}
+            explicit iteratorItem(ivec2 pos, Field* field)
+                : pos{ pos }, field{ field } {}
+            void set(const T& value) {
+                field->set(pos, value);
+            };
+            T get() const {
+                return field->get(pos);
+            }
         };
 
         struct iteratorSentinel{};
@@ -102,6 +104,8 @@ namespace blocks
 
             explicit iterator(Field& field) 
                 : m_field(field), m_pos{0,0} {}
+            explicit iterator(const Field& field) 
+                : m_field(field), m_pos{0,0} {}
             iterator& operator++() { 
                 m_pos.x++;
                 m_pos.y += (m_pos.x > m_field.dimensions().x) ? 1 : 0;
@@ -113,10 +117,10 @@ namespace blocks
                 return retval; 
             }
             bool operator==(iteratorSentinel) const {
-                return m_pos.y >= dimensions().y;
+                return m_pos.y >= m_field.dimensions().y;
             }
             iteratorItem operator*() {
-                return iteratorItem( m_pos, &m_field.get(m_pos) );
+                return iteratorItem( m_pos, &m_field );
             }
         private:
             Field m_field;
@@ -126,6 +130,11 @@ namespace blocks
         auto begin() {
             return iterator{ *this };
         }
+
+        auto begin() const {
+            return iterator{ *this };
+        }
+
 
         auto end() const {
             return iteratorSentinel{};
@@ -141,7 +150,7 @@ namespace blocks
     };
 
     //Workaround with uint8_t becasue vector<bool> is something special
-    using BoolField = Field<uint8_t, false>;
+    using BoolField = Field<bool, false>;
 
     class Block
     {
@@ -232,13 +241,13 @@ namespace blocks
     };
 
     static const auto& getFigures() {
-        constexpr auto O = 0;
-        constexpr auto I = 1;
+        constexpr auto O = false;
+        constexpr auto I = true;
 
         static auto ret = std::invoke([&]() {
             std::vector<BoolField> ret;
 
-            uint8_t data[][2] = {
+            bool data[][2] = {
                 {I,O},
                 {I,O},
                 {I,O},
