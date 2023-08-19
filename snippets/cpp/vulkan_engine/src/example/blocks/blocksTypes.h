@@ -39,11 +39,11 @@ namespace blocks
             return m_size.x * m_size.y;
         }
 
-        const bool& get(ivec2 index) const {
+        const T& get(ivec2 index) const {
             return m_data[indexOf(index)];
         }
 
-        bool& get(ivec2 index) {
+        T& get(ivec2 index) {
             return m_data[indexOf(index)];
         }
 
@@ -79,25 +79,29 @@ namespace blocks
             }
         }
 
-        struct iteratorItem {
-            explicit iteratorItem(ivec2 pos, T& value)
+        class iteratorItem {
+        public:
+            iteratorItem() :
+                pos{0,0} {}
+            explicit iteratorItem(ivec2 pos, T* value)
                 : pos{ pos }, value{ value } {}
+                
             ivec2 pos;
-            T& value;
+            T* value=nullptr;
         };
 
         struct iteratorSentinel{};
 
-        class iterator : public std::iterator<
-            std::input_iterator_tag,   // iterator_category
-            long,                      // value_type
-            long,                      // difference_type
-            T*,                        // pointer
-            iteratorItem               // reference
-        > {
+        class iterator {
         public:
+            std::input_iterator_tag iterator_category;
+            long value_type;
+            long difference_type;
+            T* pointer;
+            iteratorItem reference;
+
             explicit iterator(Field& field) 
-                : m_field(field), m_pos{0.0f,0.0f} {}
+                : m_field(field), m_pos{0,0} {}
             iterator& operator++() { 
                 m_pos.x++;
                 m_pos.y += (m_pos.x > m_field.dimensions().x) ? 1 : 0;
@@ -112,7 +116,7 @@ namespace blocks
                 return m_pos.y >= dimensions().y;
             }
             iteratorItem operator*() {
-                return iteratorItem( m_pos, m_field.get(m_pos) );
+                return iteratorItem( m_pos, &m_field.get(m_pos) );
             }
         private:
             Field m_field;
@@ -136,11 +140,8 @@ namespace blocks
         ivec2 m_size;
     };
 
-
-
-    using BoolField = Field<bool, false>;
-
-
+    //Workaround with uint8_t becasue vector<bool> is something special
+    using BoolField = Field<uint8_t, false>;
 
     class Block
     {
@@ -231,13 +232,13 @@ namespace blocks
     };
 
     static const auto& getFigures() {
-        constexpr auto O = false;
-        constexpr auto I = true;
+        constexpr auto O = 0;
+        constexpr auto I = 1;
 
         static auto ret = std::invoke([&]() {
             std::vector<BoolField> ret;
 
-            bool data[][2] = {
+            uint8_t data[][2] = {
                 {I,O},
                 {I,O},
                 {I,O},
