@@ -25,7 +25,7 @@ namespace blocks
 
             //init enough drawhandles from the render
             {
-                const size_t drawing_elements = m_world.getField().size() * maxFigureBlocks();
+                const size_t drawing_elements = m_world.getField().size() + maxFigureBlocks();
                 for (auto iHdnl = 0; iHdnl < drawing_elements; iHdnl++) {
                     auto drawHndl = m_render.addDrawable();
                     render.setVertex(drawHndl, m_vertex);
@@ -132,7 +132,7 @@ namespace blocks
 
             size_t drawIndex = 0;
 
-            //update world
+            //update world 
             for(auto iCell: m_world.getField()) {
                 if (!iCell.get())
                     continue;
@@ -147,7 +147,7 @@ namespace blocks
             }
 
             //update moving object
-            if (!m_moving.has_value()) {
+            if (m_moving.has_value()) {
                 for(auto iCell: m_moving->getField()) {
                     if (!iCell.get())
                         continue;

@@ -108,7 +108,10 @@ namespace blocks
                 : m_field(field), m_pos{0,0} {}
             iterator& operator++() { 
                 m_pos.x++;
-                m_pos.y += (m_pos.x > m_field.dimensions().x) ? 1 : 0;
+                if (m_pos.x >= m_field.dimensions().x) {
+                    m_pos.x = 0;
+                    m_pos.y++;
+                }
                 return *this; 
             }
             iterator operator++(int) { 
@@ -123,7 +126,7 @@ namespace blocks
                 return iteratorItem( m_pos, &m_field );
             }
         private:
-            Field m_field;
+            Field& m_field;
             ivec2 m_pos;
         };
 
@@ -134,7 +137,6 @@ namespace blocks
         auto begin() const {
             return iterator{ *this };
         }
-
 
         auto end() const {
             return iteratorSentinel{};
@@ -265,8 +267,7 @@ namespace blocks
     size_t maxFigureBlocks() {
         size_t ret = 0;
         for (const auto& iFigure : getFigures()) {
-            //const size_t count = std::ranges::count(iFigure, true);
-            //ret = std::max(ret, count);
+            ret = std::max(ret, iFigure.size());
         }
 
         return ret;
