@@ -185,7 +185,7 @@ namespace blocks
             return Block(m_pos + direction, m_field);
         }
         Block rotate(int x90) const {
-            auto ret = Block(m_pos, m_field.rotate(x90));
+             auto ret = Block(m_pos, m_field.rotate(x90));
             ret.m_pos += m_pivot;
 
             return ret;

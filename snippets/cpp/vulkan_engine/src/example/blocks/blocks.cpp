@@ -8,9 +8,12 @@ namespace blocks
     {
     private:
         struct tNextMove {
-            int rotation;
-            ivec2 direction;
-            size_t blockIndex = std::numeric_limits<size_t>::max();
+            int rotation = 0;
+            ivec2 direction = {0,0};
+
+            auto isMove() const {
+                return !(rotation == 0 && direction == ivec2{0, 0});
+            }
         };
 
     public:
@@ -69,13 +72,12 @@ namespace blocks
             return toWorldTransform(glm::vec2(pos.x, pos.y));
         }
 
-        void input(size_t blockIndex, ivec2 nextDirection, int nextRotation) {
-            if (m_next.has_value())
-                return;
-            m_next = tNextMove{};
-            m_next->blockIndex = blockIndex;
-            m_next->direction = nextDirection;
-            m_next->rotation = nextRotation;
+        void inputDirection(ivec2 direction) {
+            m_next.direction = direction;
+        }
+
+        void inputRotation(int rotation) {
+            m_next.rotation = rotation;
         }
 
         bool checkCollision(const Block& other) const {
@@ -92,19 +94,17 @@ namespace blocks
             updateDrawable();
         }
 
-        void updateMove() {            
+        void updateMove() {
             if (!m_moving.has_value())
                 return;
-
-            const bool isCustomMove = m_next.has_value();
 
             bool isCollision = false;
 
             //first try to rotate/move with the user input
-            if (isCustomMove) {
+            if (m_next.isMove()) {
                 const auto movedBlock = (*m_moving)
-                    .move(m_next->direction)
-                    .rotate(m_next->rotation);
+                    .move(m_next.direction)
+                    .rotate(m_next.rotation);
                 isCollision = checkCollision(movedBlock);
 
                 if (!isCollision)
@@ -112,7 +112,7 @@ namespace blocks
             }
 
             //otherwise simply go downward
-            if (!isCustomMove || isCollision) {
+            if (!m_next.isMove() || isCollision) {
                 const auto movedDownward = (*m_moving).move({ 0,-1 });
                 isCollision = checkCollision(movedDownward);
 
@@ -171,7 +171,7 @@ namespace blocks
 
         Block m_world;
         std::optional<Block> m_moving;
-        std::optional<tNextMove> m_next;
+        tNextMove m_next;
        
         Field<DrawableHandle, DrawableHandle{}> m_drawField;
         std::vector<DrawableHandle> m_drawMoving;
@@ -179,19 +179,40 @@ namespace blocks
         VertexHandle m_vertex;
     };
 
+    struct MoveDir {
+        static constexpr ivec2 LEFT = { -1,0 };
+        static constexpr ivec2 RIGHT = { -1,0 };
+    };
+
     void start(engine::Render& render) {
         GameState gamestate{render};
         engine::RetryTimer timeout{ std::chrono::seconds{2} };
         
+        auto&& window = &render.window();
 
-        while (!glfwWindowShouldClose(&render.window())) {
+        ivec2 direction{ 0,0 };
+        int rotation = 0;
+
+        while (!glfwWindowShouldClose(window)) {
             glfwPollEvents();
+
+            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+                gamestate.inputDirection(MoveDir::LEFT);
+            }
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+                gamestate.inputDirection(MoveDir::RIGHT);
+            }
+            if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+                gamestate.inputRotation(-1);
+            }
+            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+                gamestate.inputRotation(1);
+            }
 
             if (timeout) {
                 gamestate.update();
             }
             
-
             render.draw();
         }
 
