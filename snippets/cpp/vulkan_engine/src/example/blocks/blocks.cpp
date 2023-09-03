@@ -92,6 +92,8 @@ namespace blocks
             
             updateMove();
             updateDrawable();
+
+            m_next = tNextMove{};
         }
 
         void updateMove() {

@@ -49,9 +49,10 @@ namespace blocks
 
         auto rotate(int x90) const {
             Field<T, D> ret{ {m_size.y, m_size.x} };
-            this->foreach([&](ivec2 index, T value) {
-                ret.set(index, value);
-                });
+            for (const auto i : *this) {
+                std::cout << std::format("{} {} {}", i.pos.y, i.pos.x, i.get()) << std::endl;
+                ret.set({ i.pos.y, i.pos.x }, i.get());
+            }
             return ret;
         }
 
@@ -75,38 +76,43 @@ namespace blocks
             }
         }
 
-        struct iteratorItem {
-        public:
-            const ivec2 pos;
-            Field* field;
+        struct iteratorSentinel {};
 
-            iteratorItem() 
+        struct IteratorItemConst {
+        public:
+            ivec2 pos;
+            const Field* field;         
+
+            IteratorItemConst()
                 : pos{0,0} {}
-            explicit iteratorItem(ivec2 pos, Field* field)
+            explicit IteratorItemConst(ivec2 pos, const Field* field)
                 : pos{ pos }, field{ field } {}
-            void set(const T& value) {
-                field->set(pos, value);
-            };
+            
             T get() const {
                 return field->get(pos);
             }
         };
 
-        struct iteratorSentinel{};
-
-        class iterator {
+        struct IteratorItem : public IteratorItemConst {
         public:
-            std::input_iterator_tag iterator_category;
-            long value_type;
-            long difference_type;
-            T* pointer;
-            iteratorItem reference;
+            using IteratorItemConst::IteratorItemConst;
 
-            explicit iterator(Field& field) 
+            void set(const T& value) {
+                const_cast<Field*>(this->field)->set(this->pos, value);
+            };
+        };
+
+        class IteratorConst {
+        public:
+            using iterator_category = std::input_iterator_tag;
+            using value_type = IteratorItemConst;
+            using difference_type = long;
+            using pointer = value_type*;
+            using reference = value_type&;
+
+            explicit IteratorConst(const Field& field)
                 : m_field(field), m_pos{0,0} {}
-            explicit iterator(const Field& field) 
-                : m_field(field), m_pos{0,0} {}
-            iterator& operator++() { 
+            IteratorConst& operator++() {
                 m_pos.x++;
                 if (m_pos.x >= m_field.dimensions().x) {
                     m_pos.x = 0;
@@ -114,28 +120,39 @@ namespace blocks
                 }
                 return *this; 
             }
-            iterator operator++(int) { 
-                iterator retval = *this; 
+            IteratorConst operator++(int) {
+                IteratorConst retval = *this; 
                 ++(*this); 
                 return retval; 
             }
+
             bool operator==(iteratorSentinel) const {
                 return m_pos.y >= m_field.dimensions().y;
             }
-            iteratorItem operator*() {
-                return iteratorItem( m_pos, &m_field );
+            IteratorItemConst operator*() const {
+                return IteratorItemConst( m_pos, &m_field );
             }
-        private:
-            Field& m_field;
+        protected:
+            const Field& m_field;
             ivec2 m_pos;
         };
 
+        class Iterator : public IteratorConst
+        {
+        public:
+            using IteratorConst::IteratorConst;
+
+            IteratorItem operator*() {
+                return IteratorItem(this->m_pos, &this->m_field);
+            }
+        };
+
         auto begin() {
-            return iterator{ *this };
+            return Iterator{ *this };
         }
 
         auto begin() const {
-            return iterator{ *this };
+            return IteratorConst{ *this };
         }
 
         auto end() const {
@@ -185,8 +202,8 @@ namespace blocks
             return Block(m_pos + direction, m_field);
         }
         Block rotate(int x90) const {
-             auto ret = Block(m_pos, m_field.rotate(x90));
-            ret.m_pos += m_pivot;
+            auto ret = Block(m_pos, m_field.rotate(x90));
+            //ret.m_pos += m_pivot;
 
             return ret;
         }
