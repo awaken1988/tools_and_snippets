@@ -469,7 +469,7 @@ namespace vulk
         return ret;
     }
 
-    std::tuple<VkBuffer,VkDeviceMemory> Device::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags flags) 
+    BufferMemory Device::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags flags)
     {
         VkBuffer buffer; 
         VkDeviceMemory bufferMemory;
@@ -498,7 +498,11 @@ namespace vulk
 
        vkBindBufferMemory(m_logical_device, buffer, bufferMemory, 0);
 
-       return std::tuple<VkBuffer,VkDeviceMemory>{buffer, bufferMemory};
+       return BufferMemory{
+           .buffer = buffer,
+           .memory = bufferMemory,
+           .size = size,
+       };
     }
 
     uint32_t Device::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) 

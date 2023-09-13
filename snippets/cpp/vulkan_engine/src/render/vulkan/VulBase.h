@@ -70,4 +70,11 @@ namespace vulk
 		const auto str = std::vformat(fmt, std::make_format_args(args...));
 		std::cout << "[Vulkan] " << str << std::endl;
 	}
+
+	struct BufferMemory
+	{
+		VkBuffer buffer;
+		VkDeviceMemory memory;
+		VkDeviceSize size;
+	};
 }

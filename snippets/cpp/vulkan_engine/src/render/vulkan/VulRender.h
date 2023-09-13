@@ -49,6 +49,12 @@ namespace vulk
             }
         };
 
+        struct EnvironmentData
+        {
+            glm::mat4 view;
+            glm::mat4 proj;
+        };
+
         //we used a fixed UniformBufferObject for now
         struct UniformBufferObject
         {
@@ -92,8 +98,8 @@ namespace vulk
         };
 
         enum class eDescriptorLayoutBinding: uint32_t {
-            UBO = 0,
-            TEXTURE = 1,
+            PER_ENVIRONMENT = 0,
+            PER_OBJECT = 1,
         };
 
     public:
@@ -117,22 +123,32 @@ namespace vulk
     protected:
         std::unique_ptr<Device> m_device;
 
-        void initDescriptorSetLayout();
+        void initRenderProperties();
         void initPipeline();
 
         void recordDraw(uint32_t imageIndex);
 
         Settings m_settings;
 
-        VkDescriptorSetLayout m_descriptor_set_layout;
+        //VkDescriptorSetLayout m_descriptor_set_layout;
         VkPipelineLayout m_pipelineLayout;
         VkPipeline m_pipeline;
-        VkDescriptorPool m_descriptorPool;
+        //VkDescriptorPool m_descriptorPool;
 
         std::vector<DrawableObject> m_drawableObject;
         std::vector<VerticeList> m_verticesOjects;
 
         glm::mat4 m_view;
         glm::mat4 m_projection;
+
+        struct {
+            BufferMemory objectBuff;
+            BufferMemory environmentBuff;
+            VkDescriptorSet descriptorSet;
+            VkDescriptorSetLayout descriptorSetLayout;
+            VkDescriptorPool descriptorPool;
+        } m_renderProps;
+        
+        
     };
 }

@@ -48,7 +48,7 @@ namespace vulk
 
         //helper
         VkImageView createImageView(VkImage image, VkFormat format);
-        std::tuple<VkBuffer,VkDeviceMemory> createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags flags);
+        BufferMemory createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags flags);
         uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
         VkShaderModule loadShader(std::vector<uint8_t> bytecode);
         VkShaderModule loadShaderFile(std::string path);

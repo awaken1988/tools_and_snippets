@@ -10,92 +10,92 @@ namespace vulk
         m_drawableObject.resize(m_settings.max_objects);
         m_verticesOjects.resize(m_settings.max_vertices_lists);
 
-        initDescriptorSetLayout();
+        initRenderProperties();
         initPipeline();
     }
 
     engine::DrawableHandle Render::addDrawable()
     {
-        const auto index = std::invoke([&]() -> size_t {
-            for(int iObj=0; iObj<m_drawableObject.size(); iObj++) {
-                if(m_drawableObject[iObj].mapped_ptr==nullptr)
-                    return iObj;
-            }
-            throw std::string{"no free drawable slot"};
-        });
+        //const auto index = std::invoke([&]() -> size_t {
+        //    for(int iObj=0; iObj<m_drawableObject.size(); iObj++) {
+        //        if(m_drawableObject[iObj].mapped_ptr==nullptr)
+        //            return iObj;
+        //    }
+        //    throw std::string{"no free drawable slot"};
+        //});
 
-        DrawableObject& drawable = m_drawableObject[index];
+        //DrawableObject& drawable = m_drawableObject[index];
 
-        //create UBO + map
-        {
-            const size_t uboSize = sizeof(UniformBufferObject);
-            auto [uboBuffer, uboMemory] = m_device->createBuffer(
-                uboSize, 
-                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-            drawable.uboBuffer = uboBuffer;
-            drawable.uboMemory = uboMemory;
+        ////create UBO + map
+        //{
+        //    const size_t uboSize = sizeof(UniformBufferObject);
+        //    auto [uboBuffer, uboMemory] = m_device->createBuffer(
+        //        uboSize, 
+        //        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+        //        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        //    drawable.uboBuffer = uboBuffer;
+        //    drawable.uboMemory = uboMemory;
 
-            if(vkMapMemory(m_device->logicalDevice(), drawable.uboMemory, 0, uboSize, 0, &drawable.mapped_ptr)) {
-                throw std::string{"mapping ubo to memory failed"};
-            }
-        }
+        //    if(vkMapMemory(m_device->logicalDevice(), drawable.uboMemory, 0, uboSize, 0, &drawable.mapped_ptr)) {
+        //        throw std::string{"mapping ubo to memory failed"};
+        //    }
+        //}
 
-        //Write DescriptorSet
-        {
-            VkDescriptorSetAllocateInfo allocInfo{};
-            allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-            allocInfo.descriptorPool = m_descriptorPool;
-            allocInfo.descriptorSetCount = 1;
-            allocInfo.pSetLayouts = &m_descriptor_set_layout;
+        ////Write DescriptorSet
+        //{
+        //    VkDescriptorSetAllocateInfo allocInfo{};
+        //    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        //    allocInfo.descriptorPool = m_descriptorPool;
+        //    allocInfo.descriptorSetCount = 1;
+        //    allocInfo.pSetLayouts = &m_descriptor_set_layout;
 
-            if (vkAllocateDescriptorSets(m_device->logicalDevice(), &allocInfo, &drawable.uboDescriptor) != VK_SUCCESS) {
-                throw std::string("failed to allocate descriptor sets!");
-            }
+        //    if (vkAllocateDescriptorSets(m_device->logicalDevice(), &allocInfo, &drawable.uboDescriptor) != VK_SUCCESS) {
+        //        throw std::string("failed to allocate descriptor sets!");
+        //    }
 
-            VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = drawable.uboBuffer;
-            bufferInfo.offset = 0;
-            bufferInfo.range = sizeof(UniformBufferObject);
+        //    VkDescriptorBufferInfo bufferInfo{};
+        //    bufferInfo.buffer = drawable.uboBuffer;
+        //    bufferInfo.offset = 0;
+        //    bufferInfo.range = sizeof(UniformBufferObject);
 
-            std::array<VkWriteDescriptorSet, 1> descriptorWrite{};
-            descriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite[0].dstSet = drawable.uboDescriptor;
-            descriptorWrite[0].dstBinding = 0;
-            descriptorWrite[0].dstArrayElement = 0;
-            descriptorWrite[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrite[0].descriptorCount = 1;
-            descriptorWrite[0].pBufferInfo = &bufferInfo;
-            descriptorWrite[0].pImageInfo = nullptr; // Optional
-            descriptorWrite[0].pTexelBufferView = nullptr; // Optional
+        //    std::array<VkWriteDescriptorSet, 1> descriptorWrite{};
+        //    descriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        //    descriptorWrite[0].dstSet = drawable.uboDescriptor;
+        //    descriptorWrite[0].dstBinding = 0;
+        //    descriptorWrite[0].dstArrayElement = 0;
+        //    descriptorWrite[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        //    descriptorWrite[0].descriptorCount = 1;
+        //    descriptorWrite[0].pBufferInfo = &bufferInfo;
+        //    descriptorWrite[0].pImageInfo = nullptr; // Optional
+        //    descriptorWrite[0].pTexelBufferView = nullptr; // Optional
 
-            vkUpdateDescriptorSets(m_device->logicalDevice(), descriptorWrite.size(), descriptorWrite.data(), 0, nullptr);
-        }
+        //    vkUpdateDescriptorSets(m_device->logicalDevice(), descriptorWrite.size(), descriptorWrite.data(), 0, nullptr);
+        //}
 
-        return engine::DrawableHandle{index};
+        return engine::DrawableHandle{0}; //original: index
     }
 
     void Render::setViewProjection(const glm::mat4& view, const glm::mat4& projection)
     {
         //TODO: remember if we set the view,project and skip it
 
-        for(const auto iDrawableObject: m_drawableObject) {
-            if(iDrawableObject.mapped_ptr == nullptr)
-                continue;
+        //for(const auto iDrawableObject: m_drawableObject) {
+        //    if(iDrawableObject.mapped_ptr == nullptr)
+        //        continue;
 
-            UniformBufferObject* ubo = reinterpret_cast<UniformBufferObject*>(iDrawableObject.mapped_ptr);
-            ubo->proj = projection;
-            ubo->view = view;
-        }
+        //    UniformBufferObject* ubo = reinterpret_cast<UniformBufferObject*>(iDrawableObject.mapped_ptr);
+        //    ubo->proj = projection;
+        //    ubo->view = view;
+        //}
     }
 
     void Render::setWorldTransform(const engine::DrawableHandle& handle, const glm::mat4& transform)
     {
-        auto& drawable = m_drawableObject[handle.index];
+ /*       auto& drawable = m_drawableObject[handle.index];
         
         UniformBufferObject* ubo = reinterpret_cast<UniformBufferObject*>(drawable.mapped_ptr);
 
-        ubo->model = transform;
+        ubo->model = transform;*/
     }
 
 
@@ -128,7 +128,7 @@ namespace vulk
         }
 
         const size_t verticesSize = sizeof(Vertex) * vertex.size();
-        auto [vertBuffer, vertMemory] = m_device->createBuffer(
+        auto [vertBuffer, vertMemory, vertSize] = m_device->createBuffer(
             verticesSize, 
             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -293,17 +293,17 @@ namespace vulk
         return *m_device;
     }
 
-    void Render::initDescriptorSetLayout()
+    void Render::initRenderProperties()
     {
         std::vector<VkDescriptorSetLayoutBinding> layoutBidnings;
         std::vector<VkDescriptorPoolSize> poolSizes;
 
-        //UBO
+        //per enviromnet data (e.g view, projection)
         {
             const auto descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
             VkDescriptorSetLayoutBinding layout{};
-            layout.binding = static_cast<uint32_t>(eDescriptorLayoutBinding::UBO);
+            layout.binding = static_cast<uint32_t>(eDescriptorLayoutBinding::PER_ENVIRONMENT);
             layout.descriptorType = descriptorType;
             layout.descriptorCount = 1;
             layout.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -315,25 +315,35 @@ namespace vulk
 
             layoutBidnings.push_back(layout);
             poolSizes.push_back(pool);
+
+            m_renderProps.environmentBuff = m_device->createBuffer(
+                sizeof(EnvironmentData),
+                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         }
 
-        //Texture
-        if(false){
-            const auto descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        //per object data (e.g model transormation)
+        {
+            const auto descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 
             VkDescriptorSetLayoutBinding layout{};
-            layout.binding = static_cast<uint32_t>(eDescriptorLayoutBinding::TEXTURE);
-            layout.descriptorCount = 1;
+            layout.binding = static_cast<uint32_t>(eDescriptorLayoutBinding::PER_OBJECT);
             layout.descriptorType = descriptorType;
-            layout.pImmutableSamplers = nullptr;
-            layout.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            layout.descriptorCount = 1;
+            layout.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+            layout.pImmutableSamplers = nullptr; // Optional
 
             VkDescriptorPoolSize pool{};
             pool.type = descriptorType;
-            pool.descriptorCount = 1;
+            pool.descriptorCount = m_settings.max_descriptor_sets;
 
             layoutBidnings.push_back(layout);
             poolSizes.push_back(pool);
+
+            m_renderProps.objectBuff = m_device->createBuffer(
+                sizeof(UniformBufferObject) * m_settings.max_objects,
+                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
         }
 
         // create layout
@@ -343,7 +353,7 @@ namespace vulk
             layoutInfo.bindingCount = layoutBidnings.size();
             layoutInfo.pBindings = layoutBidnings.data();
 
-            if (vkCreateDescriptorSetLayout(m_device->logicalDevice(), &layoutInfo, nullptr, &m_descriptor_set_layout) != VK_SUCCESS) {
+            if (vkCreateDescriptorSetLayout(m_device->logicalDevice(), &layoutInfo, nullptr, &m_renderProps.descriptorSetLayout) != VK_SUCCESS) {
                 throw std::string("failed to create descriptor set layout!");
             }
         }
@@ -356,9 +366,59 @@ namespace vulk
             poolInfo.pPoolSizes = poolSizes.data();
             poolInfo.maxSets = m_settings.max_descriptor_sets;
 
-            if (vkCreateDescriptorPool(m_device->logicalDevice(), &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS) {
+            if (vkCreateDescriptorPool(m_device->logicalDevice(), &poolInfo, nullptr, &m_renderProps.descriptorPool) != VK_SUCCESS) {
                 throw std::string("failed to create descriptor pool!");
             }
+        }
+
+        //create descriptor set
+        {
+            VkDescriptorSetAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            allocInfo.descriptorPool = m_renderProps.descriptorPool;
+            allocInfo.descriptorSetCount = 1;
+            allocInfo.pSetLayouts = &m_renderProps.descriptorSetLayout;
+
+            if (vkAllocateDescriptorSets(m_device->logicalDevice(), &allocInfo, &m_renderProps.descriptorSet) != VK_SUCCESS) {
+                throw std::string("failed to allocate descriptor sets!");
+            }
+        }
+
+
+        //update descriptor set
+        {
+            VkDescriptorBufferInfo environentBufferInfo{};
+            environentBufferInfo.buffer = m_renderProps.environmentBuff.buffer;
+            environentBufferInfo.offset = 0;
+            environentBufferInfo.range = m_renderProps.environmentBuff.size;
+
+            VkDescriptorBufferInfo objectBufferInfo{};
+            objectBufferInfo.buffer = m_renderProps.objectBuff.buffer;
+            objectBufferInfo.offset = 0;
+            objectBufferInfo.range = m_renderProps.objectBuff.size;
+
+            std::array<VkWriteDescriptorSet, 2> descriptorWrite{};
+            descriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite[0].dstSet = m_renderProps.descriptorSet;
+            descriptorWrite[0].dstBinding = static_cast<uint32_t>(eDescriptorLayoutBinding::PER_ENVIRONMENT);
+            descriptorWrite[0].dstArrayElement = 0;
+            descriptorWrite[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite[0].descriptorCount = 1;
+            descriptorWrite[0].pBufferInfo = &environentBufferInfo;
+            descriptorWrite[0].pImageInfo = nullptr; // Optional
+            descriptorWrite[0].pTexelBufferView = nullptr; // Optional
+
+            descriptorWrite[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite[1].dstSet = m_renderProps.descriptorSet;
+            descriptorWrite[1].dstBinding = static_cast<uint32_t>(eDescriptorLayoutBinding::PER_OBJECT);
+            descriptorWrite[1].dstArrayElement = 0;
+            descriptorWrite[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorWrite[1].descriptorCount = 1;
+            descriptorWrite[1].pBufferInfo = &objectBufferInfo;
+            descriptorWrite[1].pImageInfo = nullptr; // Optional
+            descriptorWrite[1].pTexelBufferView = nullptr; // Optional
+
+            vkUpdateDescriptorSets(m_device->logicalDevice(), descriptorWrite.size(), descriptorWrite.data(), 0, nullptr);
         }
     }
 
@@ -489,7 +549,7 @@ namespace vulk
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = 1; // Optional
-        pipelineLayoutInfo.pSetLayouts = &m_descriptor_set_layout; // Optional
+        pipelineLayoutInfo.pSetLayouts = &m_renderProps.descriptorSetLayout; // Optional
         pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
         pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
