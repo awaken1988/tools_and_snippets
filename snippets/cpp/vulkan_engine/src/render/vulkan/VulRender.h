@@ -56,27 +56,23 @@ namespace vulk
         };
 
         //we used a fixed UniformBufferObject for now
-        struct UniformBufferObject
+        struct ObjectData
         {
             glm::mat4 model;
-            glm::mat4 view;
-            glm::mat4 proj;
         };
 
-        class DrawableObject
+        struct DrawableObject
         {
-            friend class Render;
-        public:
-           
-        private:
-            void* mapped_ptr = nullptr; //TODO: currently we use this value to differentiate between used/not used
-            VkBuffer uboBuffer;
-            VkDeviceMemory uboMemory;
-            VkDescriptorSet uboDescriptor;
+            enum eState {
+                STATE_UNUSED = 0,
+                STATE_DISABLED = 1,
+                STATE_ENABLED = 2,
+            };
+
+            eState state = STATE_UNUSED;
+            size_t index=0;
+
             std::vector<engine::VertexHandle> vertIndices;
-            bool isEnabled = true;
-           
-            size_t index;
         };
 
         struct VerticeList
@@ -85,16 +81,6 @@ namespace vulk
             VkBuffer buffer;
             VkDeviceMemory memory;
             std::vector<Vertex> vertices; //original vertices
-        };
-
-        struct DrawableObjectHandle
-        {
-            friend class Render;
-        public:
-            void setModelTransormation(const glm::mat4& model);
-        private:
-            size_t index;
-            Render* renderer = nullptr; //TODO: use reference
         };
 
         enum class eDescriptorLayoutBinding: uint32_t {
@@ -142,8 +128,12 @@ namespace vulk
         glm::mat4 m_projection;
 
         struct {
-            BufferMemory objectBuff;
             BufferMemory environmentBuff;
+            EnvironmentData* environmentBuffPtr=nullptr;
+
+            BufferMemory objectBuff;
+            ObjectData* objectBuffPtr = nullptr;
+            
             VkDescriptorSet descriptorSet;
             VkDescriptorSetLayout descriptorSetLayout;
             VkDescriptorPool descriptorPool;

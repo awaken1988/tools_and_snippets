@@ -45,16 +45,26 @@ namespace blocks
             }
 
             //set camera
-            {
-                int width = 0, height = 0;
-                glfwGetWindowSize(&render.window(), &width, &height);
+            updateCamera();
+        }
 
-                glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 60.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
-                glm::mat4 proj = glm::perspective(glm::radians(34.0f), (float)width / (float)height, 0.1f, 60.0f);
-                proj[1][1] *= -1;
+        void updateCamera() {
+            int width = 0, height = 0;
+            glfwGetWindowSize(&m_render.window(), &width, &height);
 
-                render.setViewProjection(view, proj);
-            }
+            const double movingEye = m_camera_animation.counter;
+
+            glm::mat4 view = glm::lookAt(glm::vec3(movingEye, movingEye, 60.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+            glm::mat4 proj = glm::perspective(glm::radians(34.0f), (float)width / (float)height, 0.1f, 60.0f);
+            proj[1][1] *= -1;
+
+            m_render.setViewProjection(view, proj);
+
+            //update animation
+            //m_camera_animation.counter += m_camera_animation.countUp ?
+            //    m_camera_animation.step : -m_camera_animation.step;
+            //if (std::abs(m_camera_animation.counter) > m_camera_animation.maxValue)
+            //    m_camera_animation.countUp = !m_camera_animation.countUp;
         }
 
         glm::mat4 toWorldTransform(glm::vec2 pos) {
@@ -92,6 +102,7 @@ namespace blocks
             
             updateMove();
             updateDrawable();
+            updateCamera();
 
             m_next = tNextMove{};
         }
@@ -179,6 +190,13 @@ namespace blocks
         std::vector<DrawableHandle> m_drawMoving;
 
         VertexHandle m_vertex;
+
+        struct {
+            double counter = 0.0;
+            const double step = 0.8;
+            const double maxValue = 35.0;
+            bool countUp = true;
+        } m_camera_animation;
     };
 
     struct MoveDir {
@@ -188,7 +206,7 @@ namespace blocks
 
     void start(engine::Render& render) {
         GameState gamestate{render};
-        engine::RetryTimer timeout{ std::chrono::seconds{2} };
+        engine::RetryTimer timeout{ std::chrono::seconds{1} };
         
         auto&& window = &render.window();
 

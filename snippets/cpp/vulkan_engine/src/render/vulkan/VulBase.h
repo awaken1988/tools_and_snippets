@@ -71,6 +71,12 @@ namespace vulk
 		std::cout << "[Vulkan] " << str << std::endl;
 	}
 
+	static inline void THROW_ON_ERR(VkResult result, std::source_location loc = std::source_location::current()) {
+		if (result == VK_SUCCESS)
+			return;
+		throw std::format("[Vulkan] command {} failed in {}:{}:{}", "todo", loc.file_name(), loc.line(), loc.function_name());
+	}
+
 	struct BufferMemory
 	{
 		VkBuffer buffer;

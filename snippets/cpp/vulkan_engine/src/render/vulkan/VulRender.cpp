@@ -7,7 +7,13 @@ namespace vulk
     Render::Render(std::unique_ptr<Device> device, Settings settings)
         : m_device{std::move(device)}, m_settings{settings}
     {
-        m_drawableObject.resize(m_settings.max_objects);
+        for (size_t iDraw = 0; iDraw < m_settings.max_objects; iDraw++) {
+            m_drawableObject.push_back(DrawableObject{
+                .state = DrawableObject::STATE_UNUSED,
+                .index = iDraw,
+            });
+        }
+
         m_verticesOjects.resize(m_settings.max_vertices_lists);
 
         initRenderProperties();
@@ -16,86 +22,32 @@ namespace vulk
 
     engine::DrawableHandle Render::addDrawable()
     {
-        //const auto index = std::invoke([&]() -> size_t {
-        //    for(int iObj=0; iObj<m_drawableObject.size(); iObj++) {
-        //        if(m_drawableObject[iObj].mapped_ptr==nullptr)
-        //            return iObj;
-        //    }
-        //    throw std::string{"no free drawable slot"};
-        //});
+        DrawableObject* drawable = std::invoke([&]() {
+            for (auto& iDrawable : m_drawableObject) {
+                if (iDrawable.state == DrawableObject::STATE_UNUSED)
+                    return &iDrawable;
+            }
+            throw std::string{"no free drawable"};
+        });
 
-        //DrawableObject& drawable = m_drawableObject[index];
+        drawable->state = DrawableObject::STATE_DISABLED;
 
-        ////create UBO + map
-        //{
-        //    const size_t uboSize = sizeof(UniformBufferObject);
-        //    auto [uboBuffer, uboMemory] = m_device->createBuffer(
-        //        uboSize, 
-        //        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
-        //        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        //    drawable.uboBuffer = uboBuffer;
-        //    drawable.uboMemory = uboMemory;
-
-        //    if(vkMapMemory(m_device->logicalDevice(), drawable.uboMemory, 0, uboSize, 0, &drawable.mapped_ptr)) {
-        //        throw std::string{"mapping ubo to memory failed"};
-        //    }
-        //}
-
-        ////Write DescriptorSet
-        //{
-        //    VkDescriptorSetAllocateInfo allocInfo{};
-        //    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        //    allocInfo.descriptorPool = m_descriptorPool;
-        //    allocInfo.descriptorSetCount = 1;
-        //    allocInfo.pSetLayouts = &m_descriptor_set_layout;
-
-        //    if (vkAllocateDescriptorSets(m_device->logicalDevice(), &allocInfo, &drawable.uboDescriptor) != VK_SUCCESS) {
-        //        throw std::string("failed to allocate descriptor sets!");
-        //    }
-
-        //    VkDescriptorBufferInfo bufferInfo{};
-        //    bufferInfo.buffer = drawable.uboBuffer;
-        //    bufferInfo.offset = 0;
-        //    bufferInfo.range = sizeof(UniformBufferObject);
-
-        //    std::array<VkWriteDescriptorSet, 1> descriptorWrite{};
-        //    descriptorWrite[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        //    descriptorWrite[0].dstSet = drawable.uboDescriptor;
-        //    descriptorWrite[0].dstBinding = 0;
-        //    descriptorWrite[0].dstArrayElement = 0;
-        //    descriptorWrite[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        //    descriptorWrite[0].descriptorCount = 1;
-        //    descriptorWrite[0].pBufferInfo = &bufferInfo;
-        //    descriptorWrite[0].pImageInfo = nullptr; // Optional
-        //    descriptorWrite[0].pTexelBufferView = nullptr; // Optional
-
-        //    vkUpdateDescriptorSets(m_device->logicalDevice(), descriptorWrite.size(), descriptorWrite.data(), 0, nullptr);
-        //}
-
-        return engine::DrawableHandle{0}; //original: index
+        return engine::DrawableHandle{drawable->index};
     }
-
+  
     void Render::setViewProjection(const glm::mat4& view, const glm::mat4& projection)
     {
-        //TODO: remember if we set the view,project and skip it
+        EnvironmentData* data = m_renderProps.environmentBuffPtr;
 
-        //for(const auto iDrawableObject: m_drawableObject) {
-        //    if(iDrawableObject.mapped_ptr == nullptr)
-        //        continue;
-
-        //    UniformBufferObject* ubo = reinterpret_cast<UniformBufferObject*>(iDrawableObject.mapped_ptr);
-        //    ubo->proj = projection;
-        //    ubo->view = view;
-        //}
+        data->view = view;
+        data->proj = projection;
     }
 
     void Render::setWorldTransform(const engine::DrawableHandle& handle, const glm::mat4& transform)
     {
- /*       auto& drawable = m_drawableObject[handle.index];
-        
-        UniformBufferObject* ubo = reinterpret_cast<UniformBufferObject*>(drawable.mapped_ptr);
+        ObjectData* data = &m_renderProps.objectBuffPtr[handle.index];
 
-        ubo->model = transform;*/
+        data->model = transform;
     }
 
 
@@ -204,21 +156,19 @@ namespace vulk
 
 
         for(auto& iDrawableObj: m_drawableObject) {
-            if (iDrawableObj.mapped_ptr == nullptr || !iDrawableObj.isEnabled) {
+            if (iDrawableObj.state != DrawableObject::STATE_ENABLED)
                 continue;
-            }
            
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &iDrawableObj.uboDescriptor, 0, nullptr);
+            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_renderProps.descriptorSet, 0, nullptr);
 
-            for(auto iVerticeIndice: iDrawableObj.vertIndices) {
-                auto& vert = m_verticesOjects[iVerticeIndice.index];
+            for(auto iVertIdx: iDrawableObj.vertIndices) {
+                auto& vert = m_verticesOjects[iVertIdx.index];
 
                 VkBuffer vertexBuffers[] = { vert.buffer};
 
                 vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-                vkCmdDraw(commandBuffer, vert.vertices.size(), 1, 0, 0);
+                vkCmdDraw(commandBuffer, vert.vertices.size(), 1, 0, iDrawableObj.index);
             }
-
         }
 
         vkCmdEndRenderPass(commandBuffer);
@@ -320,6 +270,14 @@ namespace vulk
                 sizeof(EnvironmentData),
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+            THROW_ON_ERR(vkMapMemory(
+                m_device->logicalDevice(),
+                m_renderProps.environmentBuff.memory,
+                0,
+                m_renderProps.environmentBuff.size,
+                0,
+                reinterpret_cast<void**>(&m_renderProps.environmentBuffPtr)));
         }
 
         //per object data (e.g model transormation)
@@ -341,9 +299,17 @@ namespace vulk
             poolSizes.push_back(pool);
 
             m_renderProps.objectBuff = m_device->createBuffer(
-                sizeof(UniformBufferObject) * m_settings.max_objects,
+                sizeof(ObjectData) * m_settings.max_objects,
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+            THROW_ON_ERR(vkMapMemory(
+                m_device->logicalDevice(),
+                m_renderProps.objectBuff.memory,
+                0,
+                m_renderProps.objectBuff.size,
+                0,
+                reinterpret_cast<void**>(&m_renderProps.objectBuffPtr)));
         }
 
         // create layout
@@ -424,8 +390,8 @@ namespace vulk
 
     void Render::initPipeline()
     {
-        VkShaderModule vertShaderModule = m_device->loadShaderFile("../shaders2/vert.spv");
-        VkShaderModule fragShaderModule = m_device->loadShaderFile("../shaders2/frag.spv");;
+        VkShaderModule vertShaderModule = m_device->loadShaderFile("../shaders3/vert.spv");
+        VkShaderModule fragShaderModule = m_device->loadShaderFile("../shaders3/frag.spv");;
 
         VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
         vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -585,15 +551,6 @@ namespace vulk
         vkDestroyShaderModule(m_device->logicalDevice(), vertShaderModule, nullptr);
     }
 
-    void Render::DrawableObjectHandle::setModelTransormation(const glm::mat4 &model)
-    {
-        auto& drawableObject = renderer->m_drawableObject[index];
-        auto& gameObject = renderer->m_drawableObject[index];
-
-        UniformBufferObject* ubo = reinterpret_cast<UniformBufferObject*>(gameObject.mapped_ptr);
-        ubo->model = model;
-    }
-
     void Render::setVertex(engine::DrawableHandle drawable, engine::VertexHandle vertexHandle)
     {
         auto& drawableObject = m_drawableObject[drawable.index];
@@ -603,13 +560,10 @@ namespace vulk
     void Render::setEnabled(engine::DrawableHandle drawHdnl, bool isEnabled)
     {
         auto& drawObj = m_drawableObject[drawHdnl.index];
-        drawObj.isEnabled = isEnabled;
+      
+        if (drawObj.state == DrawableObject::STATE_UNUSED)
+            throw std::string{"enable unused DrawableHandle"};
+        
+        drawObj.state = isEnabled ? DrawableObject::STATE_ENABLED : DrawableObject::STATE_DISABLED;
     }
-
-    //void Render::DrawableObjectHandle::addVertices(VertexHandle vertexHandle)
-    //{
-    //    auto& drawableObject = renderer->m_drawableObject[index];
-    //    auto& gameObject = renderer->m_drawableObject[index];
-    //    drawableObject.vertIndices.push_back(vertexHandle);
-    //}
 }

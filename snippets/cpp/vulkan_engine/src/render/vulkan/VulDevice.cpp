@@ -171,6 +171,11 @@ namespace vulk
             queueInfos.push_back(queueInfo);
         };
 
+        //VkPhysicalDeviceShaderDrawParametersFeatures shader_draw_parameters_features = {};
+        //shader_draw_parameters_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
+        //shader_draw_parameters_features.pNext = nullptr;
+        //shader_draw_parameters_features.shaderDrawParameters = VK_TRUE;
+
         VkDeviceCreateInfo deviceInfo{};
         deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         deviceInfo.queueCreateInfoCount = queueInfos.size();
@@ -179,6 +184,7 @@ namespace vulk
         deviceInfo.enabledExtensionCount = extension_used.size();
         deviceInfo.ppEnabledExtensionNames = extension_used.data();
         deviceInfo.enabledLayerCount = 0;
+        deviceInfo.pNext = nullptr;
 
         if(vkCreateDevice(m_physical_device, &deviceInfo, nullptr, &m_logical_device)) {
             throw string{"cannot create logical Device"};
