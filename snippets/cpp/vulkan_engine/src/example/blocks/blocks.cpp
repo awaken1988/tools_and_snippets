@@ -20,22 +20,10 @@ namespace blocks
         GameState(engine::Render& render) : 
             m_worldSize{10, 15},
             m_render{ render }, 
-            m_world{ ivec2{0,0}, BoolField{m_worldSize} },
-            m_drawField { m_worldSize }
+            m_world{ ivec2{0,0}, BoolField{m_worldSize} }
         {
             auto rectangle = engine::primitive::rectanglePrimitive(); //TODO: fix addVertex...
             m_vertex = render.addVertex(rectangle);
-
-            //init enough drawhandles from the render
-            {
-                const size_t drawing_elements = m_world.getField().size() + maxFigureBlocks();
-                for (auto iHdnl = 0; iHdnl < drawing_elements; iHdnl++) {
-                    auto drawHndl = m_render.addDrawable();
-                    render.setVertex(drawHndl, m_vertex);
-                    render.setEnabled(drawHndl, false);
-                    m_drawMoving.push_back(drawHndl);
-                }
-            }
 
             //init world
             for(auto iCell: m_world.getField()) {
@@ -138,12 +126,7 @@ namespace blocks
         }
 
         void updateDrawable() {
-            //reset drawobjects -> non drawing
-            for (size_t iHndl = 0; iHndl < m_drawMoving.size(); iHndl++) {
-                m_render.setEnabled(m_drawMoving[iHndl], false);
-            }
-
-            size_t drawIndex = 0;
+            m_render.clearDrawable();
 
             //update world 
             for(auto iCell: m_world.getField()) {
@@ -152,11 +135,10 @@ namespace blocks
 
                 const auto pos = m_world.getPos() + iCell.pos;
 
-                auto draw = m_drawMoving[drawIndex];
-                m_render.setWorldTransform(draw, toWorldTransform(pos));
-                m_render.setEnabled(draw, true);
-
-                drawIndex++;
+                auto drawable = m_render.addDrawable();
+                m_render.setWorldTransform(drawable, toWorldTransform(pos));
+                m_render.setVertex(drawable, m_vertex);
+                m_render.setEnabled(drawable, true);
             }
 
             //update moving object
@@ -167,11 +149,10 @@ namespace blocks
 
                     const auto pos =  m_moving->getPos() + iCell.pos;
 
-                    auto draw = m_drawMoving[drawIndex];
-                    m_render.setWorldTransform(draw, toWorldTransform(pos));
-                    m_render.setEnabled(draw, true);
-
-                    drawIndex++;
+                    auto drawable = m_render.addDrawable();
+                    m_render.setWorldTransform(drawable, toWorldTransform(pos));
+                    m_render.setVertex(drawable, m_vertex);
+                    m_render.setEnabled(drawable, true);
                 }
             }
         }
@@ -186,9 +167,6 @@ namespace blocks
         std::optional<Block> m_moving;
         tNextMove m_next;
        
-        Field<DrawableHandle, DrawableHandle{}> m_drawField;
-        std::vector<DrawableHandle> m_drawMoving;
-
         VertexHandle m_vertex;
 
         struct {

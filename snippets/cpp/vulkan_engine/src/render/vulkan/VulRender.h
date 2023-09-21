@@ -64,12 +64,11 @@ namespace vulk
         struct DrawableObject
         {
             enum eState {
-                STATE_UNUSED = 0,
-                STATE_DISABLED = 1,
-                STATE_ENABLED = 2,
+                STATE_DISABLED = 0,
+                STATE_ENABLED = 1,
             };
 
-            eState state = STATE_UNUSED;
+            eState state = STATE_DISABLED;
             size_t index=0;
 
             std::vector<engine::VertexHandle> vertIndices;
@@ -97,6 +96,7 @@ namespace vulk
         virtual void setWorldTransform(const engine::DrawableHandle& handle, const glm::mat4& transform) override;
         virtual void setVertex(engine::DrawableHandle drawable, engine::VertexHandle vertexHandle) override;
         virtual void setEnabled(engine::DrawableHandle drawHdnl, bool isEnabled) override;
+        virtual void clearDrawable() override;
         virtual GLFWwindow& window() override;
 
         void draw() override;

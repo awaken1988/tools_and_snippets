@@ -10,3 +10,6 @@ rust_snippets/*/target
 /snippets/cpp/vulkan_example/build
 /snippets/cpp/vulkan_helper/build
 *.project
+/snippets/cpp/blocks_with_bgfx/build/.vs
+/snippets/cpp/blocks_with_bgfx/build
+/snippets/cpp/blocks_with_diligent/build

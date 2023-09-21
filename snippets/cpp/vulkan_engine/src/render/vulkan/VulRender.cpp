@@ -7,13 +7,6 @@ namespace vulk
     Render::Render(std::unique_ptr<Device> device, Settings settings)
         : m_device{std::move(device)}, m_settings{settings}
     {
-        for (size_t iDraw = 0; iDraw < m_settings.max_objects; iDraw++) {
-            m_drawableObject.push_back(DrawableObject{
-                .state = DrawableObject::STATE_UNUSED,
-                .index = iDraw,
-            });
-        }
-
         m_verticesOjects.resize(m_settings.max_vertices_lists);
 
         initRenderProperties();
@@ -22,17 +15,17 @@ namespace vulk
 
     engine::DrawableHandle Render::addDrawable()
     {
-        DrawableObject* drawable = std::invoke([&]() {
-            for (auto& iDrawable : m_drawableObject) {
-                if (iDrawable.state == DrawableObject::STATE_UNUSED)
-                    return &iDrawable;
-            }
+        const auto nextIndex = m_drawableObject.size();
+
+        if(nextIndex >= m_settings.max_objects)
             throw std::string{"no free drawable"};
+
+        m_drawableObject.push_back(DrawableObject{
+            .state = DrawableObject::STATE_ENABLED,
+            .index = nextIndex,
         });
 
-        drawable->state = DrawableObject::STATE_DISABLED;
-
-        return engine::DrawableHandle{drawable->index};
+        return engine::DrawableHandle{nextIndex};
     }
   
     void Render::setViewProjection(const glm::mat4& view, const glm::mat4& projection)
@@ -560,10 +553,11 @@ namespace vulk
     void Render::setEnabled(engine::DrawableHandle drawHdnl, bool isEnabled)
     {
         auto& drawObj = m_drawableObject[drawHdnl.index];
-      
-        if (drawObj.state == DrawableObject::STATE_UNUSED)
-            throw std::string{"enable unused DrawableHandle"};
         
         drawObj.state = isEnabled ? DrawableObject::STATE_ENABLED : DrawableObject::STATE_DISABLED;
+    }
+    void Render::clearDrawable()
+    {
+        m_drawableObject.clear();
     }
 }
