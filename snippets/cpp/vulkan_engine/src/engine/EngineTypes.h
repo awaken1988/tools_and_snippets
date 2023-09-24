@@ -13,6 +13,7 @@
 #include <format>
 #include <vector>
 #include <array>
+#include <map>
 #include <variant>
 #include <set>
 #include <span>
@@ -110,6 +111,8 @@ namespace engine
 		}
 	}
 
+	// is true if time exceeded
+	//	after fetich the state time resets
 	class RetryTimer
 	{
 	public:
@@ -134,5 +137,41 @@ namespace engine
 	private:
 		std::chrono::microseconds m_timeout;
 		std::chrono::steady_clock::time_point m_last;
+	};
+
+	// mask key press event for the duration for 'keyTimeout'
+	class KeyPressed
+	{
+	public:
+		KeyPressed(GLFWwindow& glfwWindow, std::chrono::milliseconds keyTimeout) 
+			: m_glfwWindow{ glfwWindow }, m_keyTimeout{keyTimeout}
+		{}
+
+		bool isKey(int glfwKey) const {
+			using namespace std::chrono;
+
+			if (glfwGetKey(&m_glfwWindow, glfwKey) != GLFW_PRESS)
+				return false;
+			if (!m_last.contains(glfwKey)) {
+				return true;
+			}
+
+			return duration_cast<milliseconds>(steady_clock::now() - m_last.at(glfwKey)) > m_keyTimeout;
+		}
+
+		bool consumeKey(int glfwKey) {
+			using namespace std::chrono;
+
+			if (!isKey(glfwKey))
+				return false;
+			m_last[glfwKey] = steady_clock::now();
+
+			return true;
+		}
+
+	private:
+		std::map<int, std::chrono::steady_clock::time_point> m_last;
+		GLFWwindow& m_glfwWindow;
+		std::chrono::milliseconds m_keyTimeout;
 	};
 }

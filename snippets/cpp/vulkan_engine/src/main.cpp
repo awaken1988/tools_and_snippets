@@ -65,9 +65,8 @@ void app() {
     switch (app) {
     case AppType::BLOCKS_GAME: {
         const blocks::tSettings settings {
-            .updateInterval = 800ms,
             .blockMoveInterval = 200ms,
-            .tableSize = glm::ivec2{ 25, 20 },
+            .tableSize = glm::ivec2{ 25, 30 },
         };
         blocks::start(*render, settings);
     } break;

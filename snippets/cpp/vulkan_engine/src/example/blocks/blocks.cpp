@@ -25,7 +25,7 @@ namespace blocks
     struct StateMoving : public StateTimer {
         int nextRotation;
         int nextLeftRight;
-        bool isFastMode;
+        bool isFastMode = false;
         Block movingBlock;
 
         StateMoving() {
@@ -35,7 +35,6 @@ namespace blocks
         void clearInput() {
             nextRotation = 0;
             nextLeftRight = 0;
-            isFastMode = 0;
         }
     };
 
@@ -123,44 +122,50 @@ namespace blocks
 
         void updateMove() {
             auto& movingState = std::get<StateMoving>(m_state);
-            auto& movingBlock = movingState.movingBlock;
-
-            bool isCollision = false;
+            const auto& originalBlock = movingState.movingBlock;
+            std::optional<Block> moved;
 
             //first try to rotate/move with the user input
-            if(!movingState.isFastMode)
-            {
-                const auto movedBlock = movingBlock
+            if (movingState.isFastMode) {
+                const auto moveFast = originalBlock.move({ 0,-4 });
+                const auto isCollision = checkCollision(moveFast);
+                if (!isCollision)
+                    moved = moveFast;
+            }
+            else {
+                const auto movedBlock = originalBlock
                     .move(glm::ivec2{movingState.nextLeftRight, 0 })
                     .move({ 0,-1 }  )
                     .rotate(movingState.nextRotation);
-                isCollision = checkCollision(movedBlock);
+                const auto isCollision = checkCollision(movedBlock);
 
                 if (!isCollision)
-                    movingBlock = movedBlock;
+                    moved = movedBlock;
             }
 
-            //otherwise simply go downward
-            if (isCollision) {
-                const auto movedDownward = movingBlock.move({ 0,-1 });
-                isCollision = checkCollision(movedDownward);
-
+            // if all variants above have a collision simply go down 1
+            if (!moved) {
+                const auto movedDownward = originalBlock.move({ 0,-1 });
+                const auto isCollision = checkCollision(movedDownward);
                 if (!isCollision)
-                    movingBlock = movedDownward;
+                    moved = movedDownward;
             }
 
             movingState.clearInput();
             movingState.resetTimer();
 
-            if (!isCollision)
+            // if there is no collision -> update
+            if (moved) {
+                movingState.movingBlock = *moved;
                 return;
-
+            }
+                
             //copy to world
-            for (auto iSrc: movingBlock.getField()) {
+            for (auto iSrc: originalBlock.getField()) {
                 if (!iSrc.get())
                     continue;
 
-                const ivec2 worldPos = movingBlock.getPos() + iSrc.pos;
+                const ivec2 worldPos = originalBlock.getPos() + iSrc.pos;
                 m_world.getField().set(worldPos, iSrc.get());
             }
 
@@ -236,20 +241,6 @@ namespace blocks
                 }
             }
 
- /*           if (m_moving.has_value()) {
-                for (auto iCell : m_moving->getField()) {
-                    if (!iCell.get())
-                        continue;
-
-                    const auto pos = m_moving->getPos() + iCell.pos;
-
-                    auto drawable = m_render.addDrawable();
-                    m_render.setWorldTransform(drawable, toWorldTransform(pos));
-                    m_render.setVertex(drawable, m_vertex);
-                    m_render.setEnabled(drawable, true);
-                }
-            }*/
-
             m_render.draw();
         }
 
@@ -289,30 +280,31 @@ namespace blocks
 
   
     void start(engine::Render& render, const tSettings& settings) {
+        auto&& window = &render.window();
+        
         GameLogik gamestate{settings};
         GameRender blocksRender{ render, gamestate };
-        
-        auto&& window = &render.window();
 
-        ivec2 direction{ 0,0 };
-        int rotation = 0;
+        engine::KeyPressed keys{*window, 80ms};
 
+        constexpr auto keyTimeout = 40ms;
+       
         while (!glfwWindowShouldClose(window)) {
             glfwWaitEventsTimeout(0.01);
 
-            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+            if (keys.consumeKey(GLFW_KEY_A)) {
                 gamestate.inputDirection(-1);
             }
-            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+            if (keys.consumeKey(GLFW_KEY_D)) {
                 gamestate.inputDirection(1);
             }
-            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+            if (keys.consumeKey(GLFW_KEY_S)) {
                 gamestate.inputFastMove();
             }
-            if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+            if (keys.consumeKey(GLFW_KEY_Q)) {
                 gamestate.inputRotation(-1);
             }
-            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+            if (keys.consumeKey(GLFW_KEY_E)) {
                 gamestate.inputRotation(1);
             }
 
