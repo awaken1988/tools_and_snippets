@@ -6,6 +6,10 @@ using namespace std::chrono;
 
 namespace blocks
 {
+    //--------------------------------------------------
+    // States
+    //--------------------------------------------------
+
     struct StateTimer {
         StateTimer() {
             resetTimer();
@@ -39,11 +43,16 @@ namespace blocks
     };
 
     struct StateIdle : public StateTimer {
-        double progressPercent = 0.0;
+       
     };
 
     using tStates = std::variant<StateMoving, StateIdle> ;
 
+
+
+    //--------------------------------------------------
+    // Logik   
+    //--------------------------------------------------
     class GameLogik
     {
     private:
@@ -128,8 +137,7 @@ namespace blocks
             //first try to rotate/move with the user input
             if (movingState.isFastMode) {
                 const auto moveFast = originalBlock.move({ 0,-4 });
-                const auto isCollision = checkCollision(moveFast);
-                if (!isCollision)
+                if (!checkCollision(moveFast))
                     moved = moveFast;
             }
             else {
@@ -137,17 +145,14 @@ namespace blocks
                     .move(glm::ivec2{movingState.nextLeftRight, 0 })
                     .move({ 0,-1 }  )
                     .rotate(movingState.nextRotation);
-                const auto isCollision = checkCollision(movedBlock);
-
-                if (!isCollision)
+                if (!checkCollision(movedBlock))
                     moved = movedBlock;
             }
 
             // if all variants above have a collision simply go down 1
             if (!moved) {
                 const auto movedDownward = originalBlock.move({ 0,-1 });
-                const auto isCollision = checkCollision(movedDownward);
-                if (!isCollision)
+                if (!checkCollision(movedDownward))
                     moved = movedDownward;
             }
 
@@ -194,6 +199,9 @@ namespace blocks
         tStates m_state;
     };
 
+    //--------------------------------------------------
+    // Render   
+    //--------------------------------------------------
     class GameRender
     {
     public:
