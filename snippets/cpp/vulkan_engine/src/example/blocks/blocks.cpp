@@ -9,16 +9,17 @@ namespace blocks
     private:
         struct tNextMove {
             int rotation = 0;
-            ivec2 direction = {0,0};
+            int leftRight = 0;
+            bool isFast = false;
 
             auto isMove() const {
-                return !(rotation == 0 && direction == ivec2{0, 0});
+                return !(rotation == 0 && leftRight == 0);
             }
         };
 
     public:
-        GameState(engine::Render& render) : 
-            m_worldSize{10, 15},
+        GameState(engine::Render& render, const tSettings& settings) :
+            m_worldSize{settings.tableSize},
             m_render{ render }, 
             m_world{ ivec2{0,0}, BoolField{m_worldSize} }
         {
@@ -70,12 +71,16 @@ namespace blocks
             return toWorldTransform(glm::vec2(pos.x, pos.y));
         }
 
-        void inputDirection(ivec2 direction) {
-            m_next.direction = direction;
+        void inputDirection(int leftRight) {
+            m_next.leftRight += leftRight ;
         }
 
         void inputRotation(int rotation) {
             m_next.rotation = rotation;
+        }
+
+        void inputFastMove() {
+            m_next.isFast = true;
         }
 
         bool checkCollision(const Block& other) const {
@@ -104,7 +109,8 @@ namespace blocks
             //first try to rotate/move with the user input
             if (m_next.isMove()) {
                 const auto movedBlock = (*m_moving)
-                    .move(m_next.direction)
+                    .move(glm::ivec2{m_next.leftRight, 0 })
+                    .move({ 0,-1 }  )
                     .rotate(m_next.rotation);
                 isCollision = checkCollision(movedBlock);
 
@@ -123,6 +129,17 @@ namespace blocks
 
             if (!isCollision)
                 return;
+
+            //copy to world
+            for (auto iSrc: m_moving->getField()) {
+                if (!iSrc.get())
+                    continue;
+
+                const ivec2 worldPos = m_moving->getPos() + iSrc.pos;
+                m_world.getField().set(worldPos, iSrc.get());
+            }
+            m_moving.reset();
+
         }
 
         void updateDrawable() {
@@ -182,9 +199,10 @@ namespace blocks
         static constexpr ivec2 RIGHT = { -1,0 };
     };
 
-    void start(engine::Render& render) {
-        GameState gamestate{render};
-        engine::RetryTimer timeout{ std::chrono::seconds{1} };
+    void start(engine::Render& render, const tSettings& settings) {
+        GameState gamestate{render, settings};
+        
+        engine::RetryTimer updateTimer{ settings.updateInterval };
         
         auto&& window = &render.window();
 
@@ -192,13 +210,17 @@ namespace blocks
         int rotation = 0;
 
         while (!glfwWindowShouldClose(window)) {
-            glfwPollEvents();
+            const auto timeoutSec = std::chrono::duration_cast<std::chrono::duration<double>>(settings.updateInterval).count();
+            glfwWaitEventsTimeout(timeoutSec);
 
             if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-                gamestate.inputDirection(MoveDir::LEFT);
+                gamestate.inputDirection(-1);
             }
             if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-                gamestate.inputDirection(MoveDir::RIGHT);
+                gamestate.inputDirection(1);
+            }
+            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+                gamestate.inputFastMove();
             }
             if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
                 gamestate.inputRotation(-1);
@@ -207,7 +229,7 @@ namespace blocks
                 gamestate.inputRotation(1);
             }
 
-            if (timeout) {
+            if (updateTimer) {
                 gamestate.update();
             }
             

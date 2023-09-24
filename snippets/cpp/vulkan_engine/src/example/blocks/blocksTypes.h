@@ -48,11 +48,20 @@ namespace blocks
         }
 
         auto rotate(int x90) const {
-            Field<T, D> ret{ {m_size.y, m_size.x} };
-            for (const auto i : *this) {
-                std::cout << std::format("{} {} {}", i.pos.y, i.pos.x, i.get()) << std::endl;
-                ret.set({ i.pos.y, i.pos.x }, i.get());
+            auto ret = *this;
+            
+            x90 = x90 % 4;
+            int rotationCount = x90 < 0 ? 4 - x90 : x90;
+
+            for (int iRot = 0; iRot < rotationCount; iRot++) {
+                Field<T, D> rotField{ {m_size.y, m_size.x} };
+                for (const auto i : *this) {
+                    std::cout << std::format("{} {} {}", i.pos.y, i.pos.x, i.get()) << std::endl;
+                    rotField.set({ i.pos.y, m_size.x - 1 - i.pos.x }, i.get());
+                }
+                ret = rotField;
             }
+
             return ret;
         }
 

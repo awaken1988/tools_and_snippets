@@ -64,12 +64,16 @@ void app() {
 
     switch (app) {
     case AppType::BLOCKS_GAME: {
-        blocks::start(*render);
+        const blocks::tSettings settings {
+            .updateInterval = 800ms,
+            .tableSize = glm::ivec2{ 25, 20 },
+        };
+        blocks::start(*render, settings);
     } break;
     case AppType::TRIANGLE_DEMO: {
         using namespace engine;
 
-        blocks::start(*render);
+        //blocks::start(*render);
 
         auto testPrimitiveTriangle = primitive::rectanglePrimitive();
         auto testPrimitiveRectangle = primitive::trianglePrimitive();
