@@ -24,9 +24,9 @@ namespace blocks
         static Field fromArray(T(&arg)[X][Y]) {
             Field ret{ {static_cast<int>(X), static_cast<int>(Y)} };
 
-            ret.foreach([&](glm::ivec2 pos, auto&& data) {
-                data = arg[pos.x][pos.y];
-                });
+            for (auto iField : ret) {
+                ret.set(iField.pos, arg[iField.pos.x][iField.pos.y]);
+            }
 
             return ret;
         }
@@ -63,26 +63,6 @@ namespace blocks
             }
 
             return ret;
-        }
-
-        template<typename F>
-        void foreach(F f) const {
-            for (int x = 0; x < m_size.x; x++) {
-                for (int y = 0; y < m_size.y; y++) {
-                    const ivec2 pos{ x,y };
-                    f(pos, m_data[indexOf(pos)]);
-                }
-            }
-        }
-
-        template<typename F>
-        void foreach(F f) {
-            for (int x = 0; x < m_size.x; x++) {
-                for (int y = 0; y < m_size.y; y++) {
-                    const ivec2 pos{ x,y };
-                    f(pos, m_data[indexOf(pos)]);
-                }
-            }
         }
 
         struct iteratorSentinel {};
