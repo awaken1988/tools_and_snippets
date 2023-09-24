@@ -13,6 +13,7 @@
 #include <format>
 #include <vector>
 #include <array>
+#include <variant>
 #include <set>
 #include <span>
 #include <optional>

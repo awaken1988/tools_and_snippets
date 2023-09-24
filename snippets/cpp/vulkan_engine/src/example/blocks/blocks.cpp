@@ -2,9 +2,50 @@
 
 #include "blocksTypes.h"
 
+using namespace std::chrono;
+
 namespace blocks
 {
-    class GameState
+    struct StateTimer {
+        StateTimer() {
+            resetTimer();
+        }
+
+        milliseconds timePassed() {
+            return duration_cast<milliseconds>(steady_clock::now() - startTime);
+        }
+
+        void resetTimer() {
+            startTime = steady_clock::now();
+        }
+
+        std::chrono::steady_clock::time_point startTime;
+    };
+
+    struct StateMoving : public StateTimer {
+        int nextRotation;
+        int nextLeftRight;
+        bool isFastMode;
+        Block movingBlock;
+
+        StateMoving() {
+            clearInput();
+        }
+
+        void clearInput() {
+            nextRotation = 0;
+            nextLeftRight = 0;
+            isFastMode = 0;
+        }
+    };
+
+    struct StateIdle : public StateTimer {
+        double progressPercent = 0.0;
+    };
+
+    using tStates = std::variant<StateMoving, StateIdle> ;
+
+    class GameLogik
     {
     private:
         struct tNextMove {
@@ -18,139 +59,160 @@ namespace blocks
         };
 
     public:
-        GameState(engine::Render& render, const tSettings& settings) :
+        GameLogik(const tSettings& settings) :
             m_worldSize{settings.tableSize},
-            m_render{ render }, 
-            m_world{ ivec2{0,0}, BoolField{m_worldSize} }
+            m_world{ ivec2{0,0}, BoolField{m_worldSize}},
+            m_state{StateIdle{}},
+            m_settings{settings}
         {
-            auto rectangle = engine::primitive::rectanglePrimitive(); //TODO: fix addVertex...
-            m_vertex = render.addVertex(rectangle);
-
             //init world
             for(auto iCell: m_world.getField()) {
                 if (iCell.pos.y < 3) {
                     iCell.set(1);
                 }
             }
-
-            //set camera
-            updateCamera();
-        }
-
-        void updateCamera() {
-            int width = 0, height = 0;
-            glfwGetWindowSize(&m_render.window(), &width, &height);
-
-            const double movingEye = m_camera_animation.counter;
-
-            glm::mat4 view = glm::lookAt(glm::vec3(movingEye, movingEye, 60.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
-            glm::mat4 proj = glm::perspective(glm::radians(34.0f), (float)width / (float)height, 0.1f, 60.0f);
-            proj[1][1] *= -1;
-
-            m_render.setViewProjection(view, proj);
-
-            //update animation
-            //m_camera_animation.counter += m_camera_animation.countUp ?
-            //    m_camera_animation.step : -m_camera_animation.step;
-            //if (std::abs(m_camera_animation.counter) > m_camera_animation.maxValue)
-            //    m_camera_animation.countUp = !m_camera_animation.countUp;
-        }
-
-        glm::mat4 toWorldTransform(glm::vec2 pos) {
-            const float offset = 10.0f;
-            const glm::vec3 translatePos {
-                offset - (pos.x * 1.1f),
-                    offset * 1.5f - (pos.y * 1.1f),
-                    0.0f
-            };
-
-            return glm::translate(glm::mat4{1.0f}, translatePos);
-        }
-
-        glm::mat4 toWorldTransform(ivec2 pos) {
-            return toWorldTransform(glm::vec2(pos.x, pos.y));
         }
 
         void inputDirection(int leftRight) {
-            m_next.leftRight += leftRight ;
+            if (auto movingState = getMovingState(); movingState) {
+                movingState->nextLeftRight = leftRight;
+            }
         }
 
         void inputRotation(int rotation) {
-            m_next.rotation = rotation;
+            if (auto movingState = getMovingState(); movingState) {
+                movingState->nextRotation = rotation;
+            }
         }
 
         void inputFastMove() {
-            m_next.isFast = true;
+            if (auto movingState = getMovingState(); movingState) {
+                movingState->isFastMode = true;
+            }
         }
 
         bool checkCollision(const Block& other) const {
             return m_world.checkCollision(other);
         }
 
-        void update() {
-            if (!m_moving.has_value()) {
-                const glm::ivec2 startPos {m_worldSize.x/2, m_worldSize.y-6};
-                m_moving = Block{ startPos, getFigures()[0] };
-            }
-            
-            updateMove();
-            updateDrawable();
-            updateCamera();
+        void toIdleState() {
+            m_state = StateIdle{};
+        }
 
-            m_next = tNextMove{};
+        void toMovingState() {
+            StateMoving movingState;
+
+            const glm::ivec2 startPos{ m_worldSize.x / 2, m_worldSize.y - 6 };
+            movingState.movingBlock = Block{ startPos, getFigures()[0] };
+
+            m_state = movingState;
+        }
+
+        void update() {
+            if (auto state = std::get_if<StateIdle>(&m_state); state) {
+                if (state->timePassed() > 800ms) {
+                    toMovingState();
+                }
+            }
+            else if (auto state = std::get_if<StateMoving>(&m_state); state) {
+                if (state->timePassed() > m_settings.blockMoveInterval) {
+                    updateMove();
+                }
+            }
         }
 
         void updateMove() {
-            if (!m_moving.has_value())
-                return;
+            auto& movingState = std::get<StateMoving>(m_state);
+            auto& movingBlock = movingState.movingBlock;
 
             bool isCollision = false;
 
             //first try to rotate/move with the user input
-            if (m_next.isMove()) {
-                const auto movedBlock = (*m_moving)
-                    .move(glm::ivec2{m_next.leftRight, 0 })
+            if(!movingState.isFastMode)
+            {
+                const auto movedBlock = movingBlock
+                    .move(glm::ivec2{movingState.nextLeftRight, 0 })
                     .move({ 0,-1 }  )
-                    .rotate(m_next.rotation);
+                    .rotate(movingState.nextRotation);
                 isCollision = checkCollision(movedBlock);
 
                 if (!isCollision)
-                    m_moving = movedBlock;
+                    movingBlock = movedBlock;
             }
 
             //otherwise simply go downward
-            if (!m_next.isMove() || isCollision) {
-                const auto movedDownward = (*m_moving).move({ 0,-1 });
+            if (isCollision) {
+                const auto movedDownward = movingBlock.move({ 0,-1 });
                 isCollision = checkCollision(movedDownward);
 
                 if (!isCollision)
-                    m_moving = movedDownward;
+                    movingBlock = movedDownward;
             }
+
+            movingState.clearInput();
+            movingState.resetTimer();
 
             if (!isCollision)
                 return;
 
             //copy to world
-            for (auto iSrc: m_moving->getField()) {
+            for (auto iSrc: movingBlock.getField()) {
                 if (!iSrc.get())
                     continue;
 
-                const ivec2 worldPos = m_moving->getPos() + iSrc.pos;
+                const ivec2 worldPos = movingBlock.getPos() + iSrc.pos;
                 m_world.getField().set(worldPos, iSrc.get());
             }
-            m_moving.reset();
 
+            toIdleState();
         }
 
-        void updateDrawable() {
+        const Block& getWorld() const {
+            return m_world;
+        }
+
+        const tStates& getState() const {
+            return m_state;
+        }
+
+    private:
+        StateMoving* getMovingState() {
+            return std::get_if<StateMoving>(&m_state);
+        }
+
+    private:
+        const ivec2 m_worldSize;
+
+        tSettings m_settings;
+
+        Block m_world;
+        tStates m_state;
+    };
+
+    class GameRender
+    {
+    public:
+        GameRender(engine::Render& render, GameLogik& gameLogik) 
+            :   m_render{ render },
+                m_gameLogik{ gameLogik }
+        {
+            auto rectangle = engine::primitive::rectanglePrimitive(); //TODO: fix addVertex...
+            m_vertex = render.addVertex(rectangle);
+        }
+
+        void draw() {
             m_render.clearDrawable();
 
+            const auto& world = m_gameLogik.getWorld();
+
+            updateCamera();
+
             //update world 
-            for(auto iCell: m_world.getField()) {
+            for (auto iCell : world.getField()) {
                 if (!iCell.get())
                     continue;
 
-                const auto pos = m_world.getPos() + iCell.pos;
+                const auto pos = world.getPos() + iCell.pos;
 
                 auto drawable = m_render.addDrawable();
                 m_render.setWorldTransform(drawable, toWorldTransform(pos));
@@ -159,12 +221,13 @@ namespace blocks
             }
 
             //update moving object
-            if (m_moving.has_value()) {
-                for(auto iCell: m_moving->getField()) {
+            if (auto* state = std::get_if<StateMoving>(&m_gameLogik.getState()); state) {
+                const auto& movingBlock = state->movingBlock;
+                for (auto iCell : movingBlock.getField()) {
                     if (!iCell.get())
                         continue;
 
-                    const auto pos =  m_moving->getPos() + iCell.pos;
+                    const auto pos = movingBlock.getPos() + iCell.pos;
 
                     auto drawable = m_render.addDrawable();
                     m_render.setWorldTransform(drawable, toWorldTransform(pos));
@@ -172,37 +235,62 @@ namespace blocks
                     m_render.setEnabled(drawable, true);
                 }
             }
+
+ /*           if (m_moving.has_value()) {
+                for (auto iCell : m_moving->getField()) {
+                    if (!iCell.get())
+                        continue;
+
+                    const auto pos = m_moving->getPos() + iCell.pos;
+
+                    auto drawable = m_render.addDrawable();
+                    m_render.setWorldTransform(drawable, toWorldTransform(pos));
+                    m_render.setVertex(drawable, m_vertex);
+                    m_render.setEnabled(drawable, true);
+                }
+            }*/
+
+            m_render.draw();
         }
 
+        void updateCamera() {
+            int width = 0, height = 0;
+            glfwGetWindowSize(&m_render.window(), &width, &height);
+
+            const double movingEye = 0.0;
+
+            glm::mat4 view = glm::lookAt(glm::vec3(movingEye, movingEye, 60.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+            glm::mat4 proj = glm::perspective(glm::radians(34.0f), (float)width / (float)height, 0.1f, 60.0f);
+            proj[1][1] *= -1;
+
+            m_render.setViewProjection(view, proj);
+        }
+
+        glm::mat4 toWorldTransform(glm::vec2 pos) {
+            const float offset = 10.0f;
+            const glm::vec3 translatePos{
+                offset - (pos.x * 1.1f),
+                    offset * 1.5f - (pos.y * 1.1f),
+                    0.0f
+            };
+
+            return glm::translate(glm::mat4{ 1.0f }, translatePos);
+        }
+
+        glm::mat4 toWorldTransform(ivec2 pos) {
+            return toWorldTransform(glm::vec2(pos.x, pos.y));
+        }
 
     private:
+        GameLogik& m_gameLogik;
         engine::Render& m_render;
-
-        const ivec2 m_worldSize;
-
-        Block m_world;
-        std::optional<Block> m_moving;
-        tNextMove m_next;
-       
         VertexHandle m_vertex;
-
-        struct {
-            double counter = 0.0;
-            const double step = 0.8;
-            const double maxValue = 35.0;
-            bool countUp = true;
-        } m_camera_animation;
     };
 
-    struct MoveDir {
-        static constexpr ivec2 LEFT = { -1,0 };
-        static constexpr ivec2 RIGHT = { -1,0 };
-    };
-
+  
     void start(engine::Render& render, const tSettings& settings) {
-        GameState gamestate{render, settings};
-        
-        engine::RetryTimer updateTimer{ settings.updateInterval };
+        GameLogik gamestate{settings};
+        GameRender blocksRender{ render, gamestate };
         
         auto&& window = &render.window();
 
@@ -210,8 +298,7 @@ namespace blocks
         int rotation = 0;
 
         while (!glfwWindowShouldClose(window)) {
-            const auto timeoutSec = std::chrono::duration_cast<std::chrono::duration<double>>(settings.updateInterval).count();
-            glfwWaitEventsTimeout(timeoutSec);
+            glfwWaitEventsTimeout(0.01);
 
             if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
                 gamestate.inputDirection(-1);
@@ -229,11 +316,8 @@ namespace blocks
                 gamestate.inputRotation(1);
             }
 
-            if (updateTimer) {
-                gamestate.update();
-            }
-            
-            render.draw();
+            gamestate.update();
+            blocksRender.draw();
         }
 
     }
