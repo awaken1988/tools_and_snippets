@@ -65,6 +65,9 @@ namespace blocks
             return ret;
         }
 
+        //-------------------------------------------
+        // iterator
+        //-------------------------------------------
         struct iteratorSentinel {};
 
         struct IteratorItemConst {
@@ -172,36 +175,46 @@ namespace blocks
         ivec2 lowerLeft() const {
             return m_pos;
         }
+        
         ivec2 upperRight() const {
             return m_pos + m_field.dimensions();
         }
+        
         int left() const {
             return m_pos.x;
         }
+        
         int right() const {
             return m_pos.x + m_field.dimensions().x;
         }
+        
         int top() const {
             return m_pos.y + m_field.dimensions().y;
         }
+        
         int bottom() const {
             return m_pos.y;
         }
+        
         Block move(ivec2 direction) const {
             return Block(m_pos + direction, m_field);
         }
+        
         Block rotate(int x90) const {
             auto ret = Block(m_pos, m_field.rotate(x90));
             //ret.m_pos += m_pivot;
 
             return ret;
         }
+        
         bool containsX(int pos) const {
             return engine::betweenStartEnd(left(), right(), pos);
         }
+        
         bool containsY(int pos) const {
             return engine::betweenStartEnd(bottom(), top(), pos);
         }
+
         bool checkCollision(const Block& other) const {
             const int leftPos = std::max(left(), other.left());
             const int rightPos = std::min(right(), other.right());
@@ -241,6 +254,8 @@ namespace blocks
         const ivec2& getPos() const {
             return m_pos;
         }
+
+        //TODO: make a view with worldPos,pos,data
 
     private:
         BoolField m_field;
