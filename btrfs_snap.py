@@ -13,12 +13,13 @@ for iDir in sys.argv[1:]:
     if subvol.endswith("/"):    subvol = subvol[0:-1]
 
     name      = path.basename(subvol)
-    snapbase  = path.join(subvol, "../.snapshot_{}".format(name))
+    snapbase  = path.join(".snapshots/{}".format(name))
     snap      = path.join(snapbase, now)
-
+    
+    print(snapbase)
  
     if not path.isdir(snapbase):
-        os.mkdir(cmd)
+        os.mkdir(snapbase)
 
     entry = {}
     entry["cmd"]      = "btrfs subvolume snapshot -r {} {}".format(subvol, snap)
