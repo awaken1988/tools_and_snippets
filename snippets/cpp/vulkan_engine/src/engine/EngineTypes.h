@@ -75,7 +75,7 @@ namespace engine
 	//some math helper
 	template<typename T>
 	bool betweenStartEnd(T start, T end, T value) {
-		return value >= start && value < end;
+		return value >= start && value <= end;
 	}
 
 	template<typename T>

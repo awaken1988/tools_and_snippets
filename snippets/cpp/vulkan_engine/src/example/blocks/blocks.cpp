@@ -100,7 +100,11 @@ namespace blocks
         }
 
         bool checkCollision(const Block& other) const {
-            return m_world.checkCollision(other);
+            const bool isLeft = other.left() < 0;
+            const bool isRight = other.right() > m_worldSize.x;
+            const bool isBottom = other.bottom() < 0;
+
+            return isLeft || isRight || isBottom || m_world.checkCollision(other);
         }
 
         void toIdleState() {
