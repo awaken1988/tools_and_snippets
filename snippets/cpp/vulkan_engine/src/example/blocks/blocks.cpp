@@ -114,7 +114,7 @@ namespace blocks
         void toMovingState() {
             StateMoving movingState;
 
-            const glm::ivec2 startPos{ m_worldSize.x / 2, m_worldSize.y - 6 };
+            const glm::ivec2 startPos{ m_worldSize.x / 2, m_worldSize.y };
             movingState.movingBlock = Block{ startPos, getFigures()[0] };
 
             m_state = movingState;
@@ -178,6 +178,13 @@ namespace blocks
                 m_world.getField().set(worldPos, iSrc.get());
             }
 
+            //find full rows
+            std::cout << "---" << std::endl;
+            for (const auto iRowRange : m_world.getField().getFullRows()) {
+                std::cout << "start: " << iRowRange.start << "; count=" << iRowRange.count << std::endl;
+            }
+
+
             toIdleState();
         }
 
@@ -209,32 +216,64 @@ namespace blocks
     class GameRender
     {
     public:
+        static std::vector<engine::Vertex> createRectangle(glm::vec3 color)
+        {
+            using namespace engine::primitive;
+
+            return {
+                 {{l, l, 1.0f}, color},
+                 {{h, l, 1.0f}, color},
+                 {{h, h, 1.0f}, color},
+
+                 {{h, h, 1.0f}, color},
+                 {{l, h, 1.0f}, color},
+                 {{l, l, 1.0f}, color},
+            };
+        }
+
+
         GameRender(engine::Render& render, GameLogik& gameLogik) 
             :   m_render{ render },
                 m_gameLogik{ gameLogik }
         {
-            auto rectangle = engine::primitive::rectanglePrimitive(); //TODO: fix addVertex...
-            m_vertex = render.addVertex(rectangle);
+            auto redRectangle = createRectangle({1.0f, 0.0f, 0.0f});
+            m_figureRectangle = render.addVertex(redRectangle);
+
+            auto greyRectangle = createRectangle({ 0.1f, 0.1f, 0.1f });
+            m_levelBoundary = render.addVertex(greyRectangle);
+        }
+
+        void drawRectangle(const glm::ivec2& pos, const VertexHandle& vertex) {
+            auto drawable = m_render.addDrawable();
+            m_render.setWorldTransform(drawable, toWorldTransform(pos));
+            m_render.setVertex(drawable, vertex);
+            m_render.setEnabled(drawable, true);
         }
 
         void draw() {
             m_render.clearDrawable();
 
             const auto& world = m_gameLogik.getWorld();
+            const auto& field = world.getField();
 
             updateCamera();
 
-            //update world 
+            //draw world boundary
+            for (int iX = 0; iX < field.dimensions().x; iX++) {
+                drawRectangle({ iX, -1 }, m_levelBoundary);
+            }
+            for (const auto iX : { -1, field.dimensions().x }) {
+                for (int iY = 0; iY < field.dimensions().y; iY++) {
+                    drawRectangle({ iX, iY }, m_levelBoundary);
+                }
+            }
+           
+            //draw world figures
             for (auto iCell : world.getField()) {
                 if (!iCell.get())
                     continue;
-
                 const auto pos = world.getPos() + iCell.pos;
-
-                auto drawable = m_render.addDrawable();
-                m_render.setWorldTransform(drawable, toWorldTransform(pos));
-                m_render.setVertex(drawable, m_vertex);
-                m_render.setEnabled(drawable, true);
+                drawRectangle(pos, m_figureRectangle);
             }
 
             //update moving object
@@ -243,13 +282,8 @@ namespace blocks
                 for (auto iCell : movingBlock.getField()) {
                     if (!iCell.get())
                         continue;
-
                     const auto pos = movingBlock.getPos() + iCell.pos;
-
-                    auto drawable = m_render.addDrawable();
-                    m_render.setWorldTransform(drawable, toWorldTransform(pos));
-                    m_render.setVertex(drawable, m_vertex);
-                    m_render.setEnabled(drawable, true);
+                    drawRectangle(pos, m_figureRectangle);
                 }
             }
 
@@ -287,7 +321,8 @@ namespace blocks
     private:
         GameLogik& m_gameLogik;
         engine::Render& m_render;
-        VertexHandle m_vertex;
+        VertexHandle m_figureRectangle;
+        VertexHandle m_levelBoundary;
     };
 
   

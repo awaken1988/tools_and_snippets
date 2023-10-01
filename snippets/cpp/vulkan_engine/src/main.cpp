@@ -66,7 +66,7 @@ void app() {
     case AppType::BLOCKS_GAME: {
         const blocks::tSettings settings {
             .blockMoveInterval = 200ms,
-            .tableSize = glm::ivec2{ 15, 30 },
+            .tableSize = glm::ivec2{ 25, 20 },
         };
         blocks::start(*render, settings);
     } break;

@@ -65,6 +65,45 @@ namespace blocks
             return ret;
         }
 
+        struct tStartCount {
+            int start = 0;
+            int count = 0;
+        };
+
+        auto getFullRows() const {
+            std::vector<tStartCount> ret;
+            
+            const auto xWidth = m_size.x;
+            const auto xHeight = m_size.y;
+
+            bool isOpen = false;
+
+            for (int iY = 0; iY < xHeight; iY++) {
+                bool isFilled = true;
+                for (int iX = 0; iX < xWidth; iX++) {
+                    if (get({ iX, iY }))
+                        continue;
+                    isFilled = false;
+                    break;
+                }
+                
+                if (isFilled) {
+                    if (!isOpen) {
+                        ret.emplace_back(tStartCount{ iY, 0 });
+                        isOpen = true;
+                    }
+                    ret.back().count++;
+                }
+                else {
+                    if (isOpen) {
+                        isOpen = false;
+                    }
+                }
+            }
+
+            return ret;
+        }
+
         //-------------------------------------------
         // iterator
         //-------------------------------------------
