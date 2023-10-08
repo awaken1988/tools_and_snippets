@@ -42,11 +42,16 @@ namespace blocks
         }
     };
 
+    struct StateClearBlocks : public StateTimer {
+        std::vector<tStartCount> blockRange;
+        int columnPos = 0;  //current column pos which disappear
+    };
+
     struct StateIdle : public StateTimer {
        
     };
 
-    using tStates = std::variant<StateMoving, StateIdle> ;
+    using tStates = std::variant<StateMoving, StateIdle, StateClearBlocks> ;
 
 
 
@@ -111,6 +116,13 @@ namespace blocks
             m_state = StateIdle{};
         }
 
+        void toStateClearBlocks(const std::vector<tStartCount>& blockRange ) {
+            m_state = StateClearBlocks{
+                .blockRange = blockRange,
+                .columnPos = 0,
+            };
+        }
+
         void toMovingState() {
             StateMoving movingState;
 
@@ -130,6 +142,9 @@ namespace blocks
                 if (state->timePassed() > m_settings.blockMoveInterval) {
                     updateMove();
                 }
+            }
+            else if (auto state = std::get_if<StateClearBlocks>(&m_state); state) {
+                updateStateClearBlocks();
             }
         }
 
@@ -179,13 +194,37 @@ namespace blocks
             }
 
             //find full rows
-            std::cout << "---" << std::endl;
-            for (const auto iRowRange : m_world.getField().getFullRows()) {
-                std::cout << "start: " << iRowRange.start << "; count=" << iRowRange.count << std::endl;
+            const auto fullRows = m_world.getField().getFullRows();
+
+            if (fullRows.empty())
+                toIdleState();
+            else
+                toStateClearBlocks(fullRows);
+        }
+
+        void updateStateClearBlocks()
+        {
+            auto& state = std::get<StateClearBlocks>(m_state);
+            auto& blockRange = state.blockRange;
+            auto& columnPos = state.columnPos;
+
+            if (state.timePassed() < m_settings.blocksClearDelay)
+                return;
+            if (state.columnPos > m_worldSize.x) {
+                blockRange.back().count--;
+                columnPos = 0;
+                if (blockRange.back().count <= 0) {
+                    blockRange.pop_back();
+                }
+            }
+            if (blockRange.empty()) {
+                toIdleState();
+                return;
             }
 
-
-            toIdleState();
+            m_world.getField().set({ columnPos, blockRange.back().start }, false);
+            columnPos++;
+            state.resetTimer();
         }
 
         const Block& getWorld() const {

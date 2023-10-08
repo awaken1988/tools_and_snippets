@@ -7,6 +7,11 @@ namespace blocks
 
     using ivec2 = glm::ivec2;
 
+    struct tStartCount {
+        int start = 0;
+        int count = 0;
+    };
+
     template<typename T, T D>
     class Field
     {
@@ -64,11 +69,6 @@ namespace blocks
 
             return ret;
         }
-
-        struct tStartCount {
-            int start = 0;
-            int count = 0;
-        };
 
         auto getFullRows() const {
             std::vector<tStartCount> ret;
