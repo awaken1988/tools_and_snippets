@@ -3,6 +3,7 @@
 #include "blocksTypes.h"
 
 using namespace std::chrono;
+using namespace std::ranges;
 
 namespace blocks
 {
@@ -211,20 +212,35 @@ namespace blocks
             if (state.timePassed() < m_settings.blocksClearDelay)
                 return;
             if (state.columnPos > m_worldSize.x) {
-                blockRange.back().count--;
+                auto& currRange = blockRange.back();
+                
+                collapseRow(currRange.last());
                 columnPos = 0;
-                if (blockRange.back().count <= 0) {
+
+                if (currRange.count == 1) {
                     blockRange.pop_back();
                 }
-            }
-            if (blockRange.empty()) {
-                toIdleState();
-                return;
-            }
-
-            m_world.getField().set({ columnPos, blockRange.back().start }, false);
+                else {
+                    currRange.count--;
+                }
+                if (blockRange.empty()) {
+                    toIdleState();
+                    return;
+                }
+            }  
+          
+            m_world.getField().set({ columnPos, blockRange.back().last()}, false);
             columnPos++;
             state.resetTimer();
+        }
+
+        void collapseRow(int posY) {
+            for (const auto y : views::iota(posY, m_worldSize.y)) {
+                for (const auto x : views::iota(0, m_worldSize.x)) {
+                    const bool value = (y == m_worldSize.y - 1) ? false : m_world.getField().get({ x, y + 1 });
+                    m_world.getField().set({ x, y }, value);
+                }
+            }
         }
 
         const Block& getWorld() const {

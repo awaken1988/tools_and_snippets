@@ -10,6 +10,9 @@ namespace blocks
     struct tStartCount {
         int start = 0;
         int count = 0;
+        int last() const {
+            return start + count - 1;
+        }
     };
 
     template<typename T, T D>
