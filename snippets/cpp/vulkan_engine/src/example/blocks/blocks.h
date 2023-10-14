@@ -3,7 +3,8 @@
 namespace blocks
 {
     struct tSettings {
-        std::chrono::microseconds updateInterval;
+        std::chrono::microseconds blockMoveInterval;
+        std::chrono::microseconds blocksClearDelay;
         glm::ivec2 tableSize;
     };
 
