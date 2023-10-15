@@ -5,6 +5,27 @@
 #include <string>
 #include <vector>
 
+//shader
+const char* shaderSource = R"(
+@vertex
+fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) vec4f {
+	var p = vec2f(0.0, 0.0);
+	if (in_vertex_index == 0u) {
+		p = vec2f(-0.5, -0.5);
+	} else if (in_vertex_index == 1u) {
+		p = vec2f(0.5, -0.5);
+	} else {
+		p = vec2f(0.0, 0.5);
+	}
+	return vec4f(p, 0.0, 1.0);
+}
+
+@fragment
+fn fs_main() -> @location(0) vec4f {
+	return vec4f(0.0, 0.4, 1.0, 1.0);
+}
+)";  
+
 using namespace std;
 
 void onAdapterRequestEnded(
@@ -42,7 +63,9 @@ struct Render
 	WGPUDevice m_device;
 	WGPUQueue m_queue;
 	WGPUCommandEncoder m_encoder;
+	WGPUTextureFormat m_swapChainFormat;
 	WGPUSwapChain m_swapChain;
+	WGPURenderPipeline m_pipeline;
 
 	Render() {
 		if (!glfwInit())
@@ -111,18 +134,88 @@ struct Render
 
 		//swapchain
 		{
-			WGPUTextureFormat swapChainFormat = WGPUTextureFormat_BGRA8Unorm; //wgpuSurfaceGetPreferredFormat(m_surface, m_adapter);
+			m_swapChainFormat = WGPUTextureFormat_BGRA8Unorm; //wgpuSurfaceGetPreferredFormat(m_surface, m_adapter);
 
 			WGPUSwapChainDescriptor swapChainDesc = {};
 			swapChainDesc.nextInChain = nullptr;
 			swapChainDesc.width = WINDOW_WIDTH;
 			swapChainDesc.height = WINDOW_HEIGHT;
-			swapChainDesc.format = swapChainFormat;
+			swapChainDesc.format = m_swapChainFormat;
 			swapChainDesc.usage = WGPUTextureUsage_RenderAttachment;
 			swapChainDesc.presentMode = WGPUPresentMode_Fifo;
 
 			m_swapChain = wgpuDeviceCreateSwapChain(m_device, m_surface, &swapChainDesc);
 			std::cout << "Swapchain: " << m_swapChain << std::endl;
+		}
+
+		//pipeline
+		{
+			//shader
+			WGPUShaderModuleWGSLDescriptor shaderCodeDesc{};
+			shaderCodeDesc.chain.next = nullptr;
+			shaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+			shaderCodeDesc.code = shaderSource;
+			
+			WGPUShaderModuleDescriptor shaderDesc{};
+			shaderDesc.nextInChain = &shaderCodeDesc.chain;
+			WGPUShaderModule shaderModule = wgpuDeviceCreateShaderModule(m_device, &shaderDesc);
+
+			//pipeline
+			WGPURenderPipelineDescriptor pipelineDesc = {};
+			pipelineDesc.nextInChain = nullptr;
+
+			pipelineDesc.vertex.bufferCount = 0;
+			pipelineDesc.vertex.buffers = nullptr;
+
+			pipelineDesc.vertex.module = shaderModule;
+			pipelineDesc.vertex.entryPoint = "vs_main";
+			pipelineDesc.vertex.constantCount = 0;
+			pipelineDesc.vertex.constants = nullptr;
+
+			pipelineDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+			pipelineDesc.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
+			pipelineDesc.primitive.frontFace = WGPUFrontFace_CCW;
+			pipelineDesc.primitive.cullMode = WGPUCullMode_None;
+
+			WGPUFragmentState fragmentState = {};
+			fragmentState.nextInChain = nullptr;
+			pipelineDesc.fragment = &fragmentState;
+			fragmentState.module = shaderModule;
+			fragmentState.entryPoint = "fs_main";
+			fragmentState.constantCount = 0;
+			fragmentState.constants = nullptr;
+
+			WGPUBlendState blendState{};
+			blendState.color.srcFactor = WGPUBlendFactor_SrcAlpha;
+			blendState.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
+			blendState.color.operation = WGPUBlendOperation_Add;
+			blendState.alpha.srcFactor = WGPUBlendFactor_Zero;
+			blendState.alpha.dstFactor = WGPUBlendFactor_One;
+			blendState.alpha.operation = WGPUBlendOperation_Add;
+
+			WGPUColorTargetState colorTarget{};
+			colorTarget.nextInChain = nullptr;
+			colorTarget.format = m_swapChainFormat;
+			colorTarget.blend = &blendState;
+			colorTarget.writeMask = WGPUColorWriteMask_All; // We could write to only some of the color channels.
+
+			fragmentState.targetCount = 1;
+			fragmentState.targets = &colorTarget;
+
+			pipelineDesc.depthStencil = nullptr;
+
+			pipelineDesc.multisample.count = 1;
+			pipelineDesc.multisample.mask = ~0u;
+			pipelineDesc.multisample.alphaToCoverageEnabled = false;
+
+
+			//pipelineDesc.fragment = &fragmentState;  
+			
+			pipelineDesc.layout = nullptr;
+
+			m_pipeline = wgpuDeviceCreateRenderPipeline(m_device, &pipelineDesc);
+
+
 		}
 
 	}
@@ -137,7 +230,7 @@ struct Render
 				std::cerr << "Cannot acquire next swap chain texture" << std::endl;
 				break;
 			}
-			std::cout << "nextTexture: " << nextTexture << std::endl;
+			//std::cout << "nextTexture: " << nextTexture << std::endl;
 
 			WGPUCommandEncoderDescriptor commandEncoderDesc = {};
 			commandEncoderDesc.nextInChain = nullptr;
@@ -146,6 +239,7 @@ struct Render
 
 			// Describe a render pass, which targets the texture view
 			WGPURenderPassDescriptor renderPassDesc = {};
+			renderPassDesc.nextInChain = nullptr;
 
 			WGPURenderPassColorAttachment renderPassColorAttachment = {};
 			renderPassColorAttachment.view = nextTexture;
@@ -153,6 +247,7 @@ struct Render
 			renderPassColorAttachment.loadOp = WGPULoadOp_Clear;
 			renderPassColorAttachment.storeOp = WGPUStoreOp_Store;
 			renderPassColorAttachment.clearValue = WGPUColor{ 0.9, 0.1, 0.2, 1.0 };
+			
 			renderPassDesc.colorAttachmentCount = 1;
 			renderPassDesc.colorAttachments = &renderPassColorAttachment;
 
@@ -163,11 +258,11 @@ struct Render
 			renderPassDesc.timestampWriteCount = 0;
 			renderPassDesc.timestampWrites = nullptr;
 
-			renderPassDesc.nextInChain = nullptr;
-
 			// Create a render pass. We end it immediately because we use its built-in
 			// mechanism for clearing the screen when it begins (see descriptor).
 			WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
+			wgpuRenderPassEncoderSetPipeline(renderPass, m_pipeline);
+			wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
 			wgpuRenderPassEncoderEnd(renderPass);
 
 			wgpuTextureViewRelease(nextTexture);
