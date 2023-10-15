@@ -127,6 +127,7 @@ struct Render
 
 	}
 
+	bool isSecond = false;
 	void run() {
 		while (!glfwWindowShouldClose(m_window)) {
 			glfwPollEvents();
@@ -138,9 +139,36 @@ struct Render
 				break;
 			}
 			
+			//if (isSecond)
+			//	continue;
+			//isSecond = true;
+
 			std::cout << "nextTexture: " << nextTexture << std::endl;
 
+			WGPURenderPassDescriptor renderPassDesc = {};
+			WGPURenderPassColorAttachment renderPassColorAttachment = {};
+			renderPassColorAttachment.view = nextTexture;
+			renderPassColorAttachment.resolveTarget = nullptr;
+			renderPassColorAttachment.loadOp = WGPULoadOp_Clear;
+			renderPassColorAttachment.storeOp = WGPUStoreOp_Store;
+			renderPassColorAttachment.clearValue = WGPUColor{ 0.9, 0.1, 0.2, 1.0 };
+			renderPassDesc.colorAttachmentCount = 1;
+			renderPassDesc.colorAttachments = &renderPassColorAttachment;
+			renderPassDesc.depthStencilAttachment = nullptr;
+			renderPassDesc.timestampWriteCount = 0;
+			renderPassDesc.timestampWrites = nullptr;
+			renderPassDesc.nextInChain = nullptr;
+
+			WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(m_encoder, &renderPassDesc);
+			
+			wgpuRenderPassEncoderEnd(renderPass);
 			wgpuTextureViewRelease(nextTexture);
+
+			WGPUCommandBufferDescriptor cmdBufferDescriptor = {};
+			cmdBufferDescriptor.nextInChain = nullptr;
+			cmdBufferDescriptor.label = "Command buffer";
+			WGPUCommandBuffer command = wgpuCommandEncoderFinish(m_encoder, &cmdBufferDescriptor);
+			wgpuQueueSubmit(m_queue, 1, &command);
 
 			wgpuSwapChainPresent(m_swapChain);
 
