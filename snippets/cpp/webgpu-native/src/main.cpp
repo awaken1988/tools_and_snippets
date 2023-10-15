@@ -215,7 +215,7 @@ struct Render
 
 			m_pipeline = wgpuDeviceCreateRenderPipeline(m_device, &pipelineDesc);
 
-
+			//TODO: https://eliemichel.github.io/LearnWebGPU/basic-3d-rendering/input-geometry/index.html
 		}
 
 	}
