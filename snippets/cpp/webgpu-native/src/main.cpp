@@ -131,21 +131,22 @@ struct Render
 	void run() {
 		while (!glfwWindowShouldClose(m_window)) {
 			glfwPollEvents();
-
-			//get TextureView from the swapchain
-			WGPUTextureView nextTexture = wgpuSwapChainGetCurrentTextureView(m_swapChain);
+			
+			WGPUTextureView nextTexture = wgpuSwapChainGetCurrentTextureView(m_swapChain);.
 			if (!nextTexture) {
 				std::cerr << "Cannot acquire next swap chain texture" << std::endl;
 				break;
 			}
-			
-			//if (isSecond)
-			//	continue;
-			//isSecond = true;
-
 			std::cout << "nextTexture: " << nextTexture << std::endl;
 
+			WGPUCommandEncoderDescriptor commandEncoderDesc = {};
+			commandEncoderDesc.nextInChain = nullptr;
+			commandEncoderDesc.label = "Command Encoder";
+			WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(m_device, &commandEncoderDesc);
+
+			// Describe a render pass, which targets the texture view
 			WGPURenderPassDescriptor renderPassDesc = {};
+
 			WGPURenderPassColorAttachment renderPassColorAttachment = {};
 			renderPassColorAttachment.view = nextTexture;
 			renderPassColorAttachment.resolveTarget = nullptr;
@@ -154,25 +155,31 @@ struct Render
 			renderPassColorAttachment.clearValue = WGPUColor{ 0.9, 0.1, 0.2, 1.0 };
 			renderPassDesc.colorAttachmentCount = 1;
 			renderPassDesc.colorAttachments = &renderPassColorAttachment;
+
+			// No depth buffer for now
 			renderPassDesc.depthStencilAttachment = nullptr;
+
+			// We do not use timers for now neither
 			renderPassDesc.timestampWriteCount = 0;
 			renderPassDesc.timestampWrites = nullptr;
+
 			renderPassDesc.nextInChain = nullptr;
 
-			WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(m_encoder, &renderPassDesc);
-			
+			// Create a render pass. We end it immediately because we use its built-in
+			// mechanism for clearing the screen when it begins (see descriptor).
+			WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
 			wgpuRenderPassEncoderEnd(renderPass);
+
 			wgpuTextureViewRelease(nextTexture);
 
 			WGPUCommandBufferDescriptor cmdBufferDescriptor = {};
 			cmdBufferDescriptor.nextInChain = nullptr;
 			cmdBufferDescriptor.label = "Command buffer";
-			WGPUCommandBuffer command = wgpuCommandEncoderFinish(m_encoder, &cmdBufferDescriptor);
+			WGPUCommandBuffer command = wgpuCommandEncoderFinish(encoder, &cmdBufferDescriptor);
 			wgpuQueueSubmit(m_queue, 1, &command);
 
+			// We can tell the swap chain to present the next texture.
 			wgpuSwapChainPresent(m_swapChain);
-
-			//https://eliemichel.github.io/LearnWebGPU/getting-started/first-color.html
 		}
 	}
 
