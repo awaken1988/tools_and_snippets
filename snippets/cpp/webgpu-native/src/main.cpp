@@ -132,7 +132,7 @@ struct Render
 		while (!glfwWindowShouldClose(m_window)) {
 			glfwPollEvents();
 			
-			WGPUTextureView nextTexture = wgpuSwapChainGetCurrentTextureView(m_swapChain);.
+			WGPUTextureView nextTexture = wgpuSwapChainGetCurrentTextureView(m_swapChain);
 			if (!nextTexture) {
 				std::cerr << "Cannot acquire next swap chain texture" << std::endl;
 				break;
