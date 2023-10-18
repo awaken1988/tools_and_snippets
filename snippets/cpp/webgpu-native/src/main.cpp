@@ -5,19 +5,17 @@
 #include <string>
 #include <vector>
 
+const static std::vector<float> vertices = {
+		   -0.5, -0.5,
+		   +0.5, -0.5,
+		   +0.0, +0.5,
+};
+
 //shader
 const char* shaderSource = R"(
 @vertex
-fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) vec4f {
-	var p = vec2f(0.0, 0.0);
-	if (in_vertex_index == 0u) {
-		p = vec2f(-0.5, -0.5);
-	} else if (in_vertex_index == 1u) {
-		p = vec2f(0.5, -0.5);
-	} else {
-		p = vec2f(0.0, 0.5);
-	}
-	return vec4f(p, 0.0, 1.0);
+fn vs_main(@location(0) in_vertex_position: vec2f) -> @builtin(position) vec4f {
+	return vec4f(in_vertex_position, 0.0, 1.0);
 }
 
 @fragment
@@ -66,6 +64,8 @@ struct Render
 	WGPUTextureFormat m_swapChainFormat;
 	WGPUSwapChain m_swapChain;
 	WGPURenderPipeline m_pipeline;
+	WGPUBuffer m_vertexBuffer;
+	WGPUBufferDescriptor m_vertexBufferDescriptor = {};
 
 	Render() {
 		if (!glfwInit())
@@ -164,9 +164,20 @@ struct Render
 			WGPURenderPipelineDescriptor pipelineDesc = {};
 			pipelineDesc.nextInChain = nullptr;
 
-			pipelineDesc.vertex.bufferCount = 0;
-			pipelineDesc.vertex.buffers = nullptr;
+			WGPUVertexAttribute vertexAttribute = {};
+			vertexAttribute.format = WGPUVertexFormat_Float32x2;
+			vertexAttribute.offset = 0;
+			vertexAttribute.shaderLocation = 0;
 
+			WGPUVertexBufferLayout vertexBufferLayout = {};
+			vertexBufferLayout.attributeCount = 1;
+			vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
+			vertexBufferLayout.arrayStride = 2 * sizeof(float);
+			vertexBufferLayout.attributes = &vertexAttribute;
+			vertexBufferLayout.attributeCount = 1;
+
+			pipelineDesc.vertex.bufferCount = 1;
+			pipelineDesc.vertex.buffers = &vertexBufferLayout;
 			pipelineDesc.vertex.module = shaderModule;
 			pipelineDesc.vertex.entryPoint = "vs_main";
 			pipelineDesc.vertex.constantCount = 0;
@@ -218,6 +229,20 @@ struct Render
 			//TODO: https://eliemichel.github.io/LearnWebGPU/basic-3d-rendering/input-geometry/index.html
 		}
 
+		//create vertex buffer
+		{
+			WGPUBufferDescriptor m_vertexBufferDescriptor = {};
+			m_vertexBufferDescriptor.nextInChain = nullptr;
+			m_vertexBufferDescriptor.label = "My first Vertex Buffer";
+			m_vertexBufferDescriptor.size = vertices.size() * sizeof(float);
+			m_vertexBufferDescriptor.mappedAtCreation = false;
+			m_vertexBufferDescriptor.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex;
+
+			m_vertexBuffer = wgpuDeviceCreateBuffer(m_device, &m_vertexBufferDescriptor);
+
+			wgpuQueueWriteBuffer(m_queue, m_vertexBuffer, 0, vertices.data(), m_vertexBufferDescriptor.size);
+		}
+
 	}
 
 	bool isSecond = false;
@@ -262,7 +287,8 @@ struct Render
 			// mechanism for clearing the screen when it begins (see descriptor).
 			WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
 			wgpuRenderPassEncoderSetPipeline(renderPass, m_pipeline);
-			wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
+			wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, m_vertexBuffer, 0, m_vertexBufferDescriptor.size);
+			wgpuRenderPassEncoderDraw(renderPass, vertices.size()/2, 1, 0, 0);
 			wgpuRenderPassEncoderEnd(renderPass);
 
 			wgpuTextureViewRelease(nextTexture);
