@@ -82,6 +82,12 @@ void onQueueWorkDone(
 	WGPUQueueWorkDoneStatus status,
 	void* pUserData);
 
+void onShaderDone(
+	WGPUCompilationInfoRequestStatus status, 
+	struct WGPUCompilationInfo const* compilationInfo, 
+	void* userdata);
+
+
 struct Render
 {
 	static constexpr int WINDOW_WIDTH = 1024;
@@ -210,6 +216,9 @@ struct Render
 			WGPUShaderModuleDescriptor shaderDesc{};
 			shaderDesc.nextInChain = &shaderCodeDesc.chain;
 			WGPUShaderModule shaderModule = wgpuDeviceCreateShaderModule(m_device, &shaderDesc);
+
+			wgpuShaderModuleGetCompilationInfo(shaderModule, &onShaderDone, this);
+
 
 			//pipeline
 			WGPURenderPipelineDescriptor pipelineDesc = {};
@@ -424,6 +433,16 @@ void onQueueWorkDone(
 	cout << "queue work done" << endl;     
 }
 
+void onShaderDone(
+	WGPUCompilationInfoRequestStatus status,
+	struct WGPUCompilationInfo const* compilationInfo,
+	void* userdata)
+{
+	for (size_t i = 0; i < compilationInfo->messageCount; i++) {
+		cout << compilationInfo->messages[i].message << endl; 
+	}
+	
+}
 
 int main() 
 {	
