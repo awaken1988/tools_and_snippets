@@ -7,23 +7,35 @@
 
 struct VertexPosition
 {
-	float x, y;
+	float x, y, z;
 };
 
-const static std::vector<VertexPosition> vertices = {
-		   VertexPosition{-0.5, -0.5},
-		   VertexPosition{+0.5, -0.5},
-		   VertexPosition{+0.0, +0.5},
-		   VertexPosition{-0.1, -0.1},
-		   VertexPosition{+0.1, -0.1},
-		   VertexPosition{+0.9, +0.9},
+struct VertexColor
+{
+	float r, g, b;
+};
+
+struct Vertex
+{
+	VertexPosition position;
+	VertexColor color;
+};
+
+
+const static std::vector<Vertex> vertices = {
+		   Vertex{VertexPosition{-0.5, -0.5, 0.0}, VertexColor{0.1, 0.9, 0.1}},
+		   Vertex{VertexPosition{+0.5, -0.5, 0.0}, VertexColor{0.1, 0.9, 0.1}},
+		   Vertex{VertexPosition{+0.0, +0.5, 0.0}, VertexColor{0.1, 0.9, 0.1}},
+		   Vertex{VertexPosition{-0.1, -0.1, 0.0}, VertexColor{0.1, 0.9, 0.1}},
+		   Vertex{VertexPosition{+0.1, -0.1, 0.0}, VertexColor{0.1, 0.9, 0.1}},
+		   Vertex{VertexPosition{+0.9, +0.9, 0.0}, VertexColor{0.1, 0.9, 0.1}},
 };
 
 //shader
 const char* shaderSource = R"(
 @vertex
-fn vs_main(@location(0) in_vertex_position: vec2f) -> @builtin(position) vec4f {
-	return vec4f(in_vertex_position, 0.0, 1.0);
+fn vs_main(@location(0) in_vertex_position: vec3f) -> @builtin(position) vec4f {
+	return vec4f(in_vertex_position, 1.0);
 }
 
 @fragment
@@ -130,7 +142,7 @@ struct Render
 			requiredLimits.limits.maxVertexAttributes = 1;
 			requiredLimits.limits.maxVertexBuffers = 1;
 			requiredLimits.limits.maxBufferSize = 6 * 2 * sizeof(float);
-			requiredLimits.limits.maxVertexBufferArrayStride = 2 * sizeof(float);
+			requiredLimits.limits.maxVertexBufferArrayStride = sizeof(Vertex);
 			requiredLimits.limits.minStorageBufferOffsetAlignment = supportedLimits.limits.minStorageBufferOffsetAlignment;
 
 			WGPUDeviceDescriptor descriptor = {};
@@ -190,14 +202,14 @@ struct Render
 			pipelineDesc.nextInChain = nullptr;
 
 			WGPUVertexAttribute vertexAttribute = {};
-			vertexAttribute.format = WGPUVertexFormat_Float32x2;
+			vertexAttribute.format = WGPUVertexFormat_Float32x3;
 			vertexAttribute.offset = 0;
 			vertexAttribute.shaderLocation = 0;
 
 			WGPUVertexBufferLayout vertexBufferLayout = {};
 			vertexBufferLayout.attributeCount = 1;
 			vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
-			vertexBufferLayout.arrayStride = sizeof(VertexPosition);
+			vertexBufferLayout.arrayStride = sizeof(Vertex);
 			vertexBufferLayout.attributes = &vertexAttribute;
 			vertexBufferLayout.attributeCount = 1;
 
@@ -259,7 +271,7 @@ struct Render
 			m_vertexBufferDescriptor = WGPUBufferDescriptor{};
 			m_vertexBufferDescriptor.nextInChain = nullptr;
 			m_vertexBufferDescriptor.label = "My first Vertex Buffer";
-			m_vertexBufferDescriptor.size = vertices.size() * sizeof(VertexPosition);
+			m_vertexBufferDescriptor.size = vertices.size() * sizeof(vertices[0]);
 			m_vertexBufferDescriptor.mappedAtCreation = false;
 			m_vertexBufferDescriptor.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex;
 
