@@ -5,10 +5,18 @@
 #include <string>
 #include <vector>
 
-const static std::vector<float> vertices = {
-		   -0.5, -0.5,
-		   +0.5, -0.5,
-		   +0.0, +0.5,
+struct VertexPosition
+{
+	float x, y;
+};
+
+const static std::vector<VertexPosition> vertices = {
+		   VertexPosition{-0.5, -0.5},
+		   VertexPosition{+0.5, -0.5},
+		   VertexPosition{+0.0, +0.5},
+		   VertexPosition{-0.1, -0.1},
+		   VertexPosition{+0.1, -0.1},
+		   VertexPosition{+0.9, +0.9},
 };
 
 //shader
@@ -108,10 +116,27 @@ struct Render
 
 		//request device
 		{
+			WGPUSupportedLimits supportedLimits{};
+			supportedLimits.nextInChain = nullptr;
+			wgpuAdapterGetLimits(m_adapter, &supportedLimits);
+			
+			cout << "maxBufferSize:                      " << supportedLimits.limits.maxBufferSize << endl;
+			cout << "maxVertexBuffers:                   " << supportedLimits.limits.maxVertexBuffers << endl;
+			cout << "minStorageBufferOffsetAlignment:    " << supportedLimits.limits.minStorageBufferOffsetAlignment << endl;
+			cout << "minUniformBufferOffsetAlignment:    " << supportedLimits.limits.minUniformBufferOffsetAlignment << endl;
+
+			WGPURequiredLimits requiredLimits = {};
+			requiredLimits.limits = supportedLimits.limits; 
+			requiredLimits.limits.maxVertexAttributes = 1;
+			requiredLimits.limits.maxVertexBuffers = 1;
+			requiredLimits.limits.maxBufferSize = 6 * 2 * sizeof(float);
+			requiredLimits.limits.maxVertexBufferArrayStride = 2 * sizeof(float);
+			requiredLimits.limits.minStorageBufferOffsetAlignment = supportedLimits.limits.minStorageBufferOffsetAlignment;
+
 			WGPUDeviceDescriptor descriptor = {};
 			descriptor.label = "My first WebGPU device";
 			descriptor.requiredFeaturesCount = 0;
-			descriptor.requiredLimits = nullptr;
+			descriptor.requiredLimits = &requiredLimits;
 			descriptor.defaultQueue.nextInChain = nullptr;
 			descriptor.defaultQueue.nextInChain = nullptr;
 			wgpuAdapterRequestDevice(m_adapter, &descriptor, &onDeviceRequestEnded, this);
@@ -172,7 +197,7 @@ struct Render
 			WGPUVertexBufferLayout vertexBufferLayout = {};
 			vertexBufferLayout.attributeCount = 1;
 			vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
-			vertexBufferLayout.arrayStride = 2 * sizeof(float);
+			vertexBufferLayout.arrayStride = sizeof(VertexPosition);
 			vertexBufferLayout.attributes = &vertexAttribute;
 			vertexBufferLayout.attributeCount = 1;
 
@@ -231,10 +256,10 @@ struct Render
 
 		//create vertex buffer
 		{
-			WGPUBufferDescriptor m_vertexBufferDescriptor = {};
+			m_vertexBufferDescriptor = WGPUBufferDescriptor{};
 			m_vertexBufferDescriptor.nextInChain = nullptr;
 			m_vertexBufferDescriptor.label = "My first Vertex Buffer";
-			m_vertexBufferDescriptor.size = vertices.size() * sizeof(float);
+			m_vertexBufferDescriptor.size = vertices.size() * sizeof(VertexPosition);
 			m_vertexBufferDescriptor.mappedAtCreation = false;
 			m_vertexBufferDescriptor.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex;
 
@@ -286,9 +311,10 @@ struct Render
 			// Create a render pass. We end it immediately because we use its built-in
 			// mechanism for clearing the screen when it begins (see descriptor).
 			WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
+			
 			wgpuRenderPassEncoderSetPipeline(renderPass, m_pipeline);
 			wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, m_vertexBuffer, 0, m_vertexBufferDescriptor.size);
-			wgpuRenderPassEncoderDraw(renderPass, vertices.size()/2, 1, 0, 0);
+			wgpuRenderPassEncoderDraw(renderPass, vertices.size(), 1, 0, 0);
 			wgpuRenderPassEncoderEnd(renderPass);
 
 			wgpuTextureViewRelease(nextTexture);
