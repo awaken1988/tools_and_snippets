@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <array>
 
 struct VertexPosition
 {
@@ -23,24 +24,37 @@ struct Vertex
 
 
 const static std::vector<Vertex> vertices = {
-		   Vertex{VertexPosition{-0.5, -0.5, 0.0}, VertexColor{0.1, 0.9, 0.1}},
-		   Vertex{VertexPosition{+0.5, -0.5, 0.0}, VertexColor{0.1, 0.9, 0.1}},
-		   Vertex{VertexPosition{+0.0, +0.5, 0.0}, VertexColor{0.1, 0.9, 0.1}},
-		   Vertex{VertexPosition{-0.1, -0.1, 0.0}, VertexColor{0.1, 0.9, 0.1}},
-		   Vertex{VertexPosition{+0.1, -0.1, 0.0}, VertexColor{0.1, 0.9, 0.1}},
-		   Vertex{VertexPosition{+0.9, +0.9, 0.0}, VertexColor{0.1, 0.9, 0.1}},
+		   Vertex{VertexPosition{-0.5, -0.5, 0.0}, VertexColor{0.5, 0.5, 0.5}},
+		   Vertex{VertexPosition{+0.5, -0.5, 0.0}, VertexColor{0.6, 0.9, 0.1}},
+		   Vertex{VertexPosition{+0.0, +0.5, 0.0}, VertexColor{0.1, 0.9, 0.8}},
+		   Vertex{VertexPosition{-0.1, -0.1, 0.0}, VertexColor{0.8, 0.9, 0.8}},
+		   Vertex{VertexPosition{+0.1, -0.1, 0.0}, VertexColor{0.8, 0.9, 0.8}},
+		   Vertex{VertexPosition{+0.9, +0.9, 0.0}, VertexColor{0.8, 0.9, 0.8}},
 };
 
 //shader
 const char* shaderSource = R"(
+struct VertexInput {
+    @location(0) position: vec3f,
+    @location(1) color: vec3f,
+};
+
+struct VertexOutput {
+    @builtin(position) position: vec4f,
+    @location(0) color: vec3f,
+};
+
 @vertex
-fn vs_main(@location(0) in_vertex_position: vec3f) -> @builtin(position) vec4f {
-	return vec4f(in_vertex_position, 1.0);
+fn vs_main(in: VertexInput) -> VertexOutput {
+    var out: VertexOutput;
+    out.position = vec4f(in.position, 1.0);
+    out.color = in.color; // forward to the fragment shader
+    return out;
 }
 
 @fragment
-fn fs_main() -> @location(0) vec4f {
-	return vec4f(0.0, 0.4, 1.0, 1.0);
+fn fs_main(in: VertexOutput) -> @location(0) vec4f {
+    return vec4f(in.color, 1.0);
 }
 )";  
 
@@ -201,17 +215,27 @@ struct Render
 			WGPURenderPipelineDescriptor pipelineDesc = {};
 			pipelineDesc.nextInChain = nullptr;
 
-			WGPUVertexAttribute vertexAttribute = {};
-			vertexAttribute.format = WGPUVertexFormat_Float32x3;
-			vertexAttribute.offset = 0;
-			vertexAttribute.shaderLocation = 0;
+			WGPUVertexAttribute vertexPositionAttribute = {};
+			vertexPositionAttribute.format = WGPUVertexFormat_Float32x3;
+			vertexPositionAttribute.offset = 0;
+			vertexPositionAttribute.shaderLocation = 0;
+
+			WGPUVertexAttribute vertexColorAttribute = {};
+			vertexColorAttribute.format = WGPUVertexFormat_Float32x3;
+			vertexColorAttribute.offset = offsetof(Vertex, color);
+			vertexColorAttribute.shaderLocation = 1;
+
+			std::vector<WGPUVertexAttribute> vertexAttributes = {
+				 vertexPositionAttribute,
+				 vertexColorAttribute,
+			};
 
 			WGPUVertexBufferLayout vertexBufferLayout = {};
 			vertexBufferLayout.attributeCount = 1;
 			vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
 			vertexBufferLayout.arrayStride = sizeof(Vertex);
-			vertexBufferLayout.attributes = &vertexAttribute;
-			vertexBufferLayout.attributeCount = 1;
+			vertexBufferLayout.attributes = vertexAttributes.data();
+			vertexBufferLayout.attributeCount = vertexAttributes.size();
 
 			pipelineDesc.vertex.bufferCount = 1;
 			pipelineDesc.vertex.buffers = &vertexBufferLayout;
